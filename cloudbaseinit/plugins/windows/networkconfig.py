@@ -66,8 +66,8 @@ class NetworkConfigPlugin():
 
         osutils = OSUtilsFactory().get_os_utils()
 
-        network_adapter = CONF.network_adapter
-        if not network_adapter:
+        network_adapter_name = CONF.network_adapter
+        if not network_adapter_name:
             # Get the first available one
             available_adapters = osutils.get_network_adapters()
             if not len(available_adapters):
