@@ -55,3 +55,10 @@ class BaseOSUtils(object):
     def set_static_network_config(self, adapter_name, address, netmask,
         broadcast, gateway, dnsdomain, dnsnameservers):
         pass
+
+    def set_config_value(self, name, value):
+        pass
+
+    def get_config_value(self, name):
+        pass
+

@@ -58,6 +58,8 @@ class WindowsUtils(BaseOSUtils):
     ERROR_MEMBER_IN_ALIAS = 1378
     ERROR_INVALID_MEMBER = 1388
 
+    _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
+
     def reboot(self):
         conn = wmi.WMI(moniker='//./root/cimv2')
         conn.Win32_OperatingSystem()[0].Reboot()
@@ -244,3 +246,21 @@ class WindowsUtils(BaseOSUtils):
         reboot_required = reboot_required or ret_val == 1
 
         return reboot_required
+
+    def set_config_value(self, name, value):
+        with _winreg.CreateKey(_winreg.HKEY_LOCAL_MACHINE,
+            self._config_key) as key:
+            if type(value) == int:
+                regtype = _winreg.REG_DWORD
+            else:
+                regtype = _winreg.REG_SZ
+            _winreg.SetValueEx(key, name, 0, regtype, value)
+
+    def get_config_value(self, name):
+        try:
+            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+                self._config_key) as key:
+                (value, regtype) = _winreg.QueryValueEx(key, name)
+                return value
+        except WindowsError:
+            return None

@@ -28,8 +28,21 @@ LOG = logging.getLogger(__name__)
 
 
 class InitManager(object):
+    _config_done_key = 'config_done'
+
+    def _is_already_configured(self, osutils):
+        return osutils.get_config_value(self._config_done_key) == 1
+
+    def _mark_as_configured(self, osutils):
+        osutils.set_config_value(self._config_done_key, 1)
+        
     def configure_host(self):
         osutils = OSUtilsFactory().get_os_utils()
+        
+        if self._is_already_configured(osutils):
+            LOG.info('Host already configured, skipping configuration')
+            return
+        
         plugins = PluginFactory().load_plugins()
         service = MetadataServiceFactory().get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
@@ -50,6 +63,8 @@ class InitManager(object):
         finally:
             service.cleanup()
 
+        self._mark_as_configured(osutils)
+            
         if reboot_required:
             try:
                 osutils.reboot()
