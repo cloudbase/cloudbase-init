@@ -16,8 +16,7 @@
 
 import setuptools
 
-from nova.openstack.common import setup as common_setup
-from nova import version
+from cloudbaseinit.openstack.common import setup as common_setup
 
 requires = common_setup.parse_requirements()
 dependency_links = common_setup.parse_dependency_links()
