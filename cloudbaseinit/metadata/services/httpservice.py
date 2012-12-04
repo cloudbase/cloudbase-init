@@ -14,12 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import posixpath
 import urllib2
 
 from cloudbaseinit.metadata.services.base import *
 from cloudbaseinit.openstack.common import cfg
+from cloudbaseinit.openstack.common import log as logging
 
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',

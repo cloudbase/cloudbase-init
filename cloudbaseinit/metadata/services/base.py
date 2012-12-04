@@ -15,9 +15,10 @@
 #    under the License.
 
 import json
-import logging
 import os
 import posixpath
+
+from cloudbaseinit.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

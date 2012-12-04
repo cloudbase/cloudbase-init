@@ -16,12 +16,12 @@
 
 import _winreg
 import ctypes
-import logging
 import wmi
 
 from ctypes import windll
 from ctypes import wintypes
 
+from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils.base import *
 
 advapi32 = windll.advapi32

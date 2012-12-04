@@ -15,7 +15,6 @@
 #    under the License.
 
 import json
-import logging
 import os
 import shutil
 import tempfile
@@ -23,6 +22,7 @@ import uuid
 
 from cloudbaseinit.metadata.services.base import *
 from cloudbaseinit.openstack.common import cfg
+from cloudbaseinit.openstack.common import log as logging
 from manager import *
 
 opts = [

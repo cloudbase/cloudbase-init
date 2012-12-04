@@ -15,7 +15,6 @@
 #    under the License.
 
 import ctypes
-import logging
 import os
 import shutil
 import sys
@@ -24,6 +23,8 @@ import uuid
 import wmi
 
 from ctypes import wintypes
+
+from cloudbaseinit.openstack.common import log as logging
 
 from windows.disk.physical_disk import *
 from windows.disk.virtual_disk import *
