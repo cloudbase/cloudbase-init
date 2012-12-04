@@ -48,7 +48,7 @@ class ConfigDriveManager(object):
             q1 = conn.query('SELECT Label FROM Win32_Volume WHERE Name = \'%(drive)s\'' % locals())
             for r1 in q1:
                 if r1.Label == "config-2" and \
-                    os.path.exists(os.path.join(drive, 'openstack\\latest\meta_data.json')):
+                    os.path.exists(os.path.join(drive, 'openstack\\latest\\meta_data.json')):
                     return drive
         return None
 

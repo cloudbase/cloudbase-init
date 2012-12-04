@@ -15,12 +15,14 @@
 #    under the License.
 
 from cloudbaseinit.openstack.common import cfg
+from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import *
 
 opts = [
     cfg.ListOpt('metadata_services', default=[
         'cloudbaseinit.metadata.services.configdrive.configdrive.'
-            'ConfigDriveService'
+            'ConfigDriveService',
+        'cloudbaseinit.metadata.services.httpservice.HttpService',
         ],
         help='List of enabled metadata service classes, '
             'to be tested fro availability in the provided order. '
@@ -29,6 +31,7 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
+LOG = logging.getLogger(__name__)
 
 
 class MetadataServiceFactory(object):
@@ -37,6 +40,11 @@ class MetadataServiceFactory(object):
         utils = Utils()
         for class_path in CONF.metadata_services:
             service = utils.load_class(class_path)()
-            if service.load():
-                return service
+            try:
+                if service.load():
+                    return service
+            except Exception, ex:
+                LOG.error('Failed to load metadata service \'%(class_path)s\' '
+                    'with error: %(ex)s'%
+                    locals())
         raise Exception("No available service found")
