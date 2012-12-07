@@ -52,7 +52,10 @@ class BaseMetadataService(object):
     def get_meta_data(self, data_type, version='latest'):
         path = posixpath.normpath(
             posixpath.join(data_type, version, 'meta_data.json'))
-        return json.loads(self._get_cache_data(path))
-
+        data = self._get_cache_data(path)
+        if type(data) is str:
+           return json.loads(self._get_cache_data(path))
+        else:
+           return data
     def cleanup(self):
         pass
