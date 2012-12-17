@@ -209,7 +209,8 @@ class WindowsUtils(BaseOSUtils):
         l = []
         conn = wmi.WMI(moniker='//./root/cimv2')
         # Get Ethernet adapters only
-        q = conn.query('SELECT * FROM Win32_NetworkAdapter where AdapterTypeId = 0')
+        q = conn.query('SELECT * FROM Win32_NetworkAdapter WHERE '
+            'AdapterTypeId = 0 AND PhysicalAdapter = True')
         for r in q:
             l.append(r.Name)
         return l
