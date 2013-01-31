@@ -215,13 +215,6 @@ class WindowsUtils(base.BaseOSUtils):
         else:
             return False
 
-    def check_powershell_exec_policy(self):
-        LOG.debug('Check Powershell execution policy')
-        args = ['powershell.exe',
-            'if ((Get-ExecutionPolicy).value__ -gt 1) '
-            '{ set-executionpolicy RemoteSigned}']
-        self.execute_process(args, False)
-
     def get_network_adapters(self):
         l = []
         conn = wmi.WMI(moniker='//./root/cimv2')

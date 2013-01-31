@@ -46,8 +46,8 @@ class UserDataPlugin():
             shell = False
         elif re.search(r'^#ps1\s', user_data, re.I):
             target_path += '.ps1'
-            args = ['powershell.exe', target_path]
-            osutils.check_powershell_exec_policy()
+            args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
+                    '-NonInteractive', target_path]
             shell = False
         else:
             # Unsupported
