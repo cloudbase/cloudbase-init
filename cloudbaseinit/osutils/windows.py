@@ -16,13 +16,15 @@
 
 import _winreg
 import ctypes
+import win32security
+import win32process
 import wmi
 
 from ctypes import windll
 from ctypes import wintypes
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.base import *
+from cloudbaseinit.osutils import base
 
 advapi32 = windll.advapi32
 kernel32 = windll.kernel32
@@ -51,7 +53,7 @@ class Win32_LOCALGROUP_MEMBERS_INFO_3(ctypes.Structure):
     ]
 
 
-class WindowsUtils(BaseOSUtils):
+class WindowsUtils(base.BaseOSUtils):
     NERR_GroupNotFound = 2220
     ERROR_ACCESS_DENIED = 5
     ERROR_NO_SUCH_MEMBER = 1387
@@ -60,9 +62,24 @@ class WindowsUtils(BaseOSUtils):
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
 
+    def _enable_shutdown_privilege(self):
+        process = win32process.GetCurrentProcess()
+        token = win32security.OpenProcessToken(
+            process,
+            win32security.TOKEN_ADJUST_PRIVILEGES |
+            win32security.TOKEN_QUERY)
+        priv_luid = win32security.LookupPrivilegeValue(
+            None, win32security.SE_SHUTDOWN_NAME)
+        privilege = [(priv_luid, win32security.SE_PRIVILEGE_ENABLED)]
+        win32security.AdjustTokenPrivileges(token, False, privilege)
+
     def reboot(self):
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        conn.Win32_OperatingSystem()[0].Reboot()
+        self._enable_shutdown_privilege()
+
+        ret_val = advapi32.InitiateSystemShutdownW(0, "Cloudbase-Init reboot",
+                                                   0, True, True)
+        if not ret_val:
+            raise Exception("Reboot failed")
 
     def _get_user_wmi_object(self, username):
         conn = wmi.WMI(moniker='//./root/cimv2')

@@ -26,8 +26,8 @@ from ctypes import wintypes
 
 from cloudbaseinit.openstack.common import log as logging
 
-from windows.disk.physical_disk import *
-from windows.disk.virtual_disk import *
+from windows.disk import physical_disk
+from windows.disk import virtual_disk
 
 LOG = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class ConfigDriveManager(object):
                 offset += bytes_read
 
     def _copy_iso_files(self, iso_file_path, target_path):
-        virt_disk = VirtualDisk(iso_file_path)
+        virt_disk = virtual_disk.VirtualDisk(iso_file_path)
         virt_disk.open()
         try:
             virt_disk.attach()
@@ -130,7 +130,7 @@ class ConfigDriveManager(object):
     def _extract_iso_disk_file(self, iso_file_path):
         iso_disk_found = False
         for path in self._get_physical_disks_path():
-            phys_disk = PhysicalDisk(path)
+            phys_disk = physical_disk.PhysicalDisk(path)
             try:
                 phys_disk.open()
                 iso_file_size = self._get_iso_disk_size(phys_disk)

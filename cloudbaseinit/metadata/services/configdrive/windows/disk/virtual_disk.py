@@ -20,7 +20,8 @@ from ctypes import windll
 from ctypes import wintypes
 
 kernel32 = windll.kernel32
-virtdisk = windll.virtdisk
+# VirtDisk.dll is available starting from Windows Server 2008 R2 / Windows7
+virtdisk = None
 
 
 class Win32_GUID(ctypes.Structure):
@@ -60,9 +61,16 @@ class VirtualDisk(object):
         self._path = path
         self._handle = 0
 
+    def _load_virtdisk_dll(self):
+        global virtdisk
+        if not virtdisk:
+            virtdisk = windll.virtdisk
+
     def open(self):
         if self._handle:
             self.close()
+
+        self._load_virtdisk_dll()
 
         vst = Win32_VIRTUAL_STORAGE_TYPE()
         vst.DeviceId = self.VIRTUAL_STORAGE_TYPE_DEVICE_ISO
