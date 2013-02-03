@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import abc
 import json
 import os
 import posixpath
@@ -23,16 +24,21 @@ from cloudbaseinit.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
+class NotExistingMetadataException(Exception):
+    pass
+
+
 class BaseMetadataService(object):
     def load(self):
         self._cache = {}
 
+    @abc.abstractmethod
     def _get_data(self, path):
         pass
 
     def _get_cache_data(self, path):
         if path in self._cache:
-            LOG.debug('Using cached copy of metadata: \'%s\'' % path)
+            LOG.debug("Using cached copy of metadata: '%s'" % path)
             return self._cache[path]
         else:
             data = self._get_data(path)
@@ -57,5 +63,16 @@ class BaseMetadataService(object):
            return json.loads(self._get_cache_data(path))
         else:
            return data
+
+    def _post_data(self, path, data):
+        raise NotImplementedError()
+
+    def post_password(self, enc_password_b64, version='latest'):
+        path = posixpath.normpath(posixpath.join(path,
+                                                 'openstack',
+                                                 version,
+                                                 'password'))
+        return self._post_data(path, enc_password_b64)
+
     def cleanup(self):
         pass
