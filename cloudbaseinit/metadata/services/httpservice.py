@@ -49,7 +49,7 @@ class HttpService(BaseMetadataService):
             if ex.code == 404:
                 raise NotExistingMetadataException()
             else:
-                raise ex
+                raise
 
     def _get_data(self, path):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
@@ -74,6 +74,6 @@ class HttpService(BaseMetadataService):
                 # Password already set
                 return False
             else:
-                raise ex
+                raise
 
 
