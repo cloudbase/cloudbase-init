@@ -68,8 +68,7 @@ class BaseMetadataService(object):
         raise NotImplementedError()
 
     def post_password(self, enc_password_b64, version='latest'):
-        path = posixpath.normpath(posixpath.join(path,
-                                                 'openstack',
+        path = posixpath.normpath(posixpath.join('openstack',
                                                  version,
                                                  'password'))
         return self._post_data(path, enc_password_b64)

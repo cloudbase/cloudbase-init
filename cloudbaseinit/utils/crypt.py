@@ -21,11 +21,11 @@ import struct
 import sys
 
 if sys.platform == "win32":
-    openssl_lib_name = "libeay32"
+    openssl_lib_path = "libeay32.dll"
 else:
-    openssl_lib_name = "ssl"
+    openssl_lib_path = ctypes.util.find_library("ssl")
 
-openssl = ctypes.CDLL(ctypes.util.find_library(openssl_lib_name))
+openssl = ctypes.CDLL(openssl_lib_path)
 clib = ctypes.CDLL(ctypes.util.find_library("c"))
 
 class RSA(ctypes.Structure):
@@ -140,8 +140,8 @@ class CryptManager(object):
     def load_ssh_rsa_public_key(self, ssh_pub_key):
         ssh_rsa_prefix = "ssh-rsa "
 
-        i = ssh_pub_key.rindex(' ')
-        b64_pub_key = ssh_pub_key[len(ssh_rsa_prefix):i]
+        s = ssh_pub_key[len(ssh_rsa_prefix):]
+        b64_pub_key = s[:s.index(' ')]
 
         pub_key = base64.b64decode(b64_pub_key)
 

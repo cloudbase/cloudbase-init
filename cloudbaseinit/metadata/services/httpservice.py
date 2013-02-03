@@ -15,7 +15,6 @@
 #    under the License.
 
 import posixpath
-import urllib
 import urllib2
 
 from cloudbaseinit.metadata.services.base import *
@@ -47,25 +46,25 @@ class HttpService(BaseMetadataService):
         try:
             return urllib2.urlopen(req)
         except urllib2.HTTPError as ex:
-            if ex.code == 404:            
+            if ex.code == 404:
                 raise NotExistingMetadataException()
             else:
-                raise ex    
-            
+                raise ex
+
     def _get_data(self, path):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
         LOG.debug('Getting metadata from: %(norm_path)s' % locals())
         req = urllib2.Request(norm_path)
         response = self._get_response(req)
         return response.read()
-    
+
     def _post_data(self, path, data):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
         LOG.debug('Posting metadata to: %(norm_path)s' % locals())
-        req = urllib2.Request(norm_path, data=urllib.urlencode(data))
+        req = urllib2.Request(norm_path, data=data)
         self._get_response(req)
         return True
-        
+
     def post_password(self, enc_password_b64, version='latest'):
         try:
             return super(HttpService, self).post_password(enc_password_b64,
@@ -76,6 +75,5 @@ class HttpService(BaseMetadataService):
                 return False
             else:
                 raise ex
-            
-        
-    
+
+
