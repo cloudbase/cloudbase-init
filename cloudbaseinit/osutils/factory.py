@@ -16,7 +16,7 @@
 
 import os
 
-from cloudbaseinit.utils import *
+from cloudbaseinit.utils import classloader
 
 class OSUtilsFactory(object):
     def get_os_utils(self):
@@ -25,5 +25,5 @@ class OSUtilsFactory(object):
             'posix' : 'cloudbaseinit.osutils.posix.PosixUtils'
             }
 
-        utils = Utils()
-        return utils.load_class(osutils_class_paths[os.name])()
+        cl = classloader.ClassLoader()
+        return cl.load_class(osutils_class_paths[os.name])()

@@ -15,7 +15,7 @@
 #    under the License.
 
 from cloudbaseinit.openstack.common import cfg
-from cloudbaseinit.utils import *
+from cloudbaseinit.utils import classloader
 
 opts = [
     cfg.ListOpt('plugins', default=[
@@ -37,7 +37,7 @@ CONF.register_opts(opts)
 class PluginFactory(object):
     def load_plugins(self):
         plugins = []
-        utils = Utils()
+        cl = classloader.ClassLoader()
         for class_path in CONF.plugins:
-            plugins.append(utils.load_class(class_path)())
+            plugins.append(cl.load_class(class_path)())
         return plugins

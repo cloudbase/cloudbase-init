@@ -16,7 +16,7 @@
 
 from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.utils import *
+from cloudbaseinit.utils import classloader
 
 opts = [
     cfg.ListOpt('metadata_services', default=[
@@ -38,9 +38,9 @@ LOG = logging.getLogger(__name__)
 class MetadataServiceFactory(object):
     def get_metadata_service(self):
         # Return the first service that loads correctly
-        utils = Utils()
+        cl = classloader.ClassLoader()
         for class_path in CONF.metadata_services:
-            service = utils.load_class(class_path)()
+            service = cl.load_class(class_path)()
             try:
                 if service.load():
                     return service
