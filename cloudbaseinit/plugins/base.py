@@ -15,5 +15,5 @@
 #    under the License.
 
 class BasePlugin(object):
-    def execute(self, service, config):
+    def execute(self, service):
         pass
