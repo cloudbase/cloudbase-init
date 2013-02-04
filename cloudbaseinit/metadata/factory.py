@@ -20,9 +20,9 @@ from cloudbaseinit.utils import classloader
 
 opts = [
     cfg.ListOpt('metadata_services', default=[
+        'cloudbaseinit.metadata.services.httpservice.HttpService',
         'cloudbaseinit.metadata.services.configdrive.configdrive.'
             'ConfigDriveService',
-        'cloudbaseinit.metadata.services.httpservice.HttpService',
         'cloudbaseinit.metadata.services.ec2service.EC2Service'
         ],
         help='List of enabled metadata service classes, '
