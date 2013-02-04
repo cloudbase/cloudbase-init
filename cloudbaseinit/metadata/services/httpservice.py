@@ -42,6 +42,10 @@ class HttpService(BaseMetadataService):
                 CONF.metadata_base_url)
             return False
 
+    @property
+    def can_post_password(self):
+        return True
+                        
     def _get_response(self, req):
         try:
             return urllib2.urlopen(req)

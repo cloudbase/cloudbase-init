@@ -42,7 +42,7 @@ LOG = logging.getLogger(__name__)
 
 
 class CreateUserPlugin(base.BasePlugin):
-    _metadata_version = '2013-04-04'
+    _post_password_md_ver = '2013-04-04'
 
     def _generate_random_password(self, length):
         # On Windows os.urandom() uses CryptGenRandom, which is a
@@ -57,7 +57,8 @@ class CreateUserPlugin(base.BasePlugin):
         return base64.b64encode(enc_password)
 
     def _get_ssh_public_key(self, service):
-        meta_data = service.get_meta_data('openstack', self._metadata_version)
+        meta_data = service.get_meta_data('openstack',
+                                          self._post_password_md_ver)
         if not 'public_keys' in meta_data:
             return False
 
@@ -86,21 +87,29 @@ class CreateUserPlugin(base.BasePlugin):
                 enc_password_b64 = self._encrypt_password(ssh_pub_key,
                                                           password)
                 return service.post_password(enc_password_b64,
-                                             self._metadata_version)
+                                             self._post_password_md_ver)
             else:
                 LOG.info('No SSH public key available for password encryption')
                 return True
         except services_base.NotExistingMetadataException:
             # Requested version not available or password feature
             # not implemented
+            LOG.info('Cannot set the password in the metadata as it is not '
+                     'supported by this metadata version')
             return True
 
     def execute(self, service):
         user_name = CONF.username
 
         password = self._get_password(service)
-        md_pwd_already_set = not self._set_metadata_password(password,
-                                                             service)
+
+        if service.can_post_password:
+            md_pwd_already_set = not self._set_metadata_password(password,
+                                                                 service)
+        else:
+            md_pwd_already_set = False
+            LOG.info('Cannot set the password in the metadata as it is not '
+                     'supported by this service')
 
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
         if not osutils.user_exists(user_name):

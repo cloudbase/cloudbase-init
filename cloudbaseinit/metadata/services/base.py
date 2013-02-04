@@ -32,6 +32,10 @@ class BaseMetadataService(object):
     def load(self):
         self._cache = {}
 
+    @property
+    def can_post_password(self):
+        return False
+
     @abc.abstractmethod
     def _get_data(self, path):
         pass
@@ -65,7 +69,7 @@ class BaseMetadataService(object):
            return data
 
     def _post_data(self, path, data):
-        raise NotImplementedError()
+        raise NotExistingMetadataException()
 
     def post_password(self, enc_password_b64, version='latest'):
         path = posixpath.normpath(posixpath.join('openstack',
