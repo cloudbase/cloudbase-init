@@ -16,10 +16,23 @@
 
 import abc
 import json
-import os
 import posixpath
+import time
 
+from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
+
+opts = [
+    cfg.IntOpt('retry_count', default=5,
+        help='Max. number of attempts for fetching metadata in '
+             'case of transient errors'),
+    cfg.FloatOpt('retry_count_interval', default=4,
+        help='Interval between attempts in case of transient errors, '
+             'expressed in seconds'),
+  ]
+
+CONF = cfg.CONF
+CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -29,6 +42,10 @@ class NotExistingMetadataException(Exception):
 
 
 class BaseMetadataService(object):
+    def __init__(self):
+        self._cache = {}
+        self._enable_retry = False
+
     def load(self):
         self._cache = {}
 
@@ -40,12 +57,26 @@ class BaseMetadataService(object):
     def _get_data(self, path):
         pass
 
+    def _exec_with_retry(self, action):
+        i = 0
+        while True:
+            try:
+                return action()
+            except NotExistingMetadataException:
+                raise
+            except:
+                if self._enable_retry and i < CONF.retry_count:
+                    i += 1
+                    time.sleep(CONF.retry_count_interval)
+                else:
+                    raise
+
     def _get_cache_data(self, path):
         if path in self._cache:
             LOG.debug("Using cached copy of metadata: '%s'" % path)
             return self._cache[path]
         else:
-            data = self._get_data(path)
+            data = self._exec_with_retry(lambda: self._get_data(path))
             self._cache[path] = data
             return data
 
@@ -64,9 +95,9 @@ class BaseMetadataService(object):
             posixpath.join(data_type, version, 'meta_data.json'))
         data = self._get_cache_data(path)
         if type(data) is str:
-           return json.loads(self._get_cache_data(path))
+            return json.loads(self._get_cache_data(path))
         else:
-           return data
+            return data
 
     def _post_data(self, path, data):
         raise NotExistingMetadataException()
@@ -75,7 +106,8 @@ class BaseMetadataService(object):
         path = posixpath.normpath(posixpath.join('openstack',
                                                  version,
                                                  'password'))
-        return self._post_data(path, enc_password_b64)
+        action = lambda: self._post_data(path, enc_password_b64)
+        return self._exec_with_retry(action)
 
     def cleanup(self):
         pass

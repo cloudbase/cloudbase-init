@@ -17,7 +17,7 @@
 import posixpath
 import urllib2
 
-from cloudbaseinit.metadata.services.base import *
+from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 
@@ -31,7 +31,11 @@ CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
-class HttpService(BaseMetadataService):
+class HttpService(base.BaseMetadataService):
+    def __init__(self):
+        super(HttpService, self).__init__()
+        self._enable_retry = True
+
     def load(self):
         super(HttpService, self).load()
         try:
@@ -51,7 +55,7 @@ class HttpService(BaseMetadataService):
             return urllib2.urlopen(req)
         except urllib2.HTTPError as ex:
             if ex.code == 404:
-                raise NotExistingMetadataException()
+                raise base.NotExistingMetadataException()
             else:
                 raise
 
