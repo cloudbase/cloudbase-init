@@ -26,8 +26,10 @@ from ctypes import wintypes
 
 from cloudbaseinit.openstack.common import log as logging
 
-from windows.disk import physical_disk
-from windows.disk import virtual_disk
+from cloudbaseinit.metadata.services.configdrive.windows.disk \
+    import physical_disk
+from cloudbaseinit.metadata.services.configdrive.windows.disk \
+    import virtual_disk
 
 LOG = logging.getLogger(__name__)
 
@@ -38,41 +40,45 @@ class ConfigDriveManager(object):
         conn = wmi.WMI(moniker='//./root/cimv2')
         q = conn.query('SELECT DeviceID FROM Win32_DiskDrive')
         for r in q:
-           l.append(r.DeviceID)
+            l.append(r.DeviceID)
         return l
 
     def _get_config_drive_cdrom_mount_point(self):
         conn = wmi.WMI(moniker='//./root/cimv2')
-        q = conn.query('SELECT Drive FROM Win32_CDROMDrive WHERE MediaLoaded = True')
+        q = conn.query('SELECT Drive FROM Win32_CDROMDrive WHERE '
+                       'MediaLoaded = True')
         for r in q:
             drive = r.Drive + '\\'
-            q1 = conn.query('SELECT Label FROM Win32_Volume WHERE Name = \'%(drive)s\'' % locals())
+            q1 = conn.query('SELECT Label FROM Win32_Volume WHERE '
+                            'Name = \'%(drive)s\'' % locals())
             for r1 in q1:
                 if r1.Label == "config-2" and \
-                    os.path.exists(os.path.join(drive, 'openstack\\latest\\meta_data.json')):
+                    os.path.exists(os.path.join(drive,
+                                                'openstack\\latest\\'
+                                                'meta_data.json')):
                     return drive
         return None
 
     def _c_char_array_to_c_ushort(self, buf, offset):
         low = ctypes.cast(buf[offset],
-            ctypes.POINTER(wintypes.WORD)).contents
+                          ctypes.POINTER(wintypes.WORD)).contents
         high = ctypes.cast(buf[offset + 1],
-            ctypes.POINTER(wintypes.WORD)).contents
+                           ctypes.POINTER(wintypes.WORD)).contents
         return (high.value << 8) + low.value
 
     def _get_iso_disk_size(self, phys_disk):
         geom = phys_disk.get_geometry()
 
-        if geom.MediaType != Win32_DiskGeometry.FixedMedia:
+        if geom.MediaType != physical_disk.Win32_DiskGeometry.FixedMedia:
             return None
 
         disk_size = geom.Cylinders * geom.TracksPerCylinder * \
             geom.SectorsPerTrack * geom.BytesPerSector
 
-        boot_record_off = 0x8000;
-        id_off = 1;
-        volume_size_off = 80;
-        block_size_off = 128;
+        boot_record_off = 0x8000
+        id_off = 1
+        volume_size_off = 80
+        block_size_off = 128
         iso_id = 'CD001'
 
         offset = boot_record_off / geom.BytesPerSector * geom.BytesPerSector
@@ -85,7 +91,7 @@ class ConfigDriveManager(object):
         (buf, bytes_read) = phys_disk.read(bytes_to_read)
 
         buf_off = boot_record_off - offset + id_off
-        if iso_id != buf[buf_off : buf_off + len(iso_id)]:
+        if iso_id != buf[buf_off: buf_off + len(iso_id)]:
             return None
 
         buf_off = boot_record_off - offset + volume_size_off
@@ -136,7 +142,7 @@ class ConfigDriveManager(object):
                 iso_file_size = self._get_iso_disk_size(phys_disk)
                 if iso_file_size:
                     self._write_iso_file(phys_disk, iso_file_path,
-                        iso_file_size)
+                                         iso_file_size)
                     iso_disk_found = True
                     break
             except:
@@ -148,14 +154,15 @@ class ConfigDriveManager(object):
 
     def _os_supports_iso_virtual_disks(self):
         # Feature supported starting from Windows 8 / 2012
-        ver = sys.getwindowsversion();
+        ver = sys.getwindowsversion()
         supported = (ver[0] >= 6 and ver[1] >= 2)
         if not supported:
             LOG.debug('ISO virtual disks are not supported on '
-                'this version of Windows')
+                      'this version of Windows')
         return supported
 
-    def get_config_drive_files(self, target_path, check_raw_hhd=True, check_cdrom=True):
+    def get_config_drive_files(self, target_path, check_raw_hhd=True,
+                               check_cdrom=True):
         config_drive_found = False
         if check_raw_hhd and self._os_supports_iso_virtual_disks():
             LOG.debug('Looking for Config Drive in raw HDDs')
@@ -178,7 +185,7 @@ class ConfigDriveManager(object):
     def _get_conf_drive_from_raw_hdd(self, target_path):
         config_drive_found = False
         iso_file_path = os.path.join(tempfile.gettempdir(),
-            str(uuid.uuid4()) + '.iso')
+                                     str(uuid.uuid4()) + '.iso')
         try:
             if self._extract_iso_disk_file(iso_file_path):
                 self._copy_iso_files(iso_file_path, target_path)
@@ -187,4 +194,3 @@ class ConfigDriveManager(object):
             if os.path.exists(iso_file_path):
                 os.remove(iso_file_path)
         return config_drive_found
-

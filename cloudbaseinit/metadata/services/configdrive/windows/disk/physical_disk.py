@@ -93,7 +93,8 @@ class PhysicalDisk(object):
         low = wintypes.DWORD(offset & 0xFFFFFFFFL)
 
         ret_val = kernel32.SetFilePointer(self._handle, low,
-            ctypes.byref(high), self.FILE_BEGIN)
+                                          ctypes.byref(high),
+                                          self.FILE_BEGIN)
         if ret_val == self.INVALID_SET_FILE_POINTER:
             raise Exception("Seek error")
 
@@ -101,7 +102,7 @@ class PhysicalDisk(object):
         buf = ctypes.create_string_buffer(bytes_to_read)
         bytes_read = wintypes.DWORD()
         ret_val = kernel32.ReadFile(self._handle, buf, bytes_to_read,
-            ctypes.byref(bytes_read), 0)
+                                    ctypes.byref(bytes_read), 0)
         if not ret_val:
             raise Exception("Read exception")
         return (buf, bytes_read.value)

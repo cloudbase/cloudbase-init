@@ -18,22 +18,22 @@ import re
 
 from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.factory import *
-from cloudbaseinit.plugins.base import *
+from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins import base
 
 LOG = logging.getLogger(__name__)
 
 opts = [
-    cfg.StrOpt('network_adapter', default=None,
-        help='Network adapter to configure. If not specified, the first '
-             'available ethernet adapter will be chosen'),
-  ]
+    cfg.StrOpt('network_adapter', default=None, help='Network adapter to '
+               'configure. If not specified, the first available ethernet '
+               'adapter will be chosen'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
 
 
-class NetworkConfigPlugin():
+class NetworkConfigPlugin(base.BasePlugin):
     def execute(self, service):
         meta_data = service.get_meta_data('openstack')
         if 'network_config' not in meta_data:
@@ -50,11 +50,12 @@ class NetworkConfigPlugin():
 
         # TODO (alexpilotti): implement a proper grammar
         m = re.search(r'iface eth0 inet static\s+'
-                    'address\s+(?P<address>[^\s]+)\s+'
-                    'netmask\s+(?P<netmask>[^\s]+)\s+'
-                    'broadcast\s+(?P<broadcast>[^\s]+)\s+'
-                    'gateway\s+(?P<gateway>[^\s]+)\s+'
-                    'dns\-nameservers\s+(?P<dnsnameservers>[^\r\n]+)\s+', debian_network_conf)
+                      r'address\s+(?P<address>[^\s]+)\s+'
+                      r'netmask\s+(?P<netmask>[^\s]+)\s+'
+                      r'broadcast\s+(?P<broadcast>[^\s]+)\s+'
+                      r'gateway\s+(?P<gateway>[^\s]+)\s+'
+                      r'dns\-nameservers\s+(?P<dnsnameservers>[^\r\n]+)\s+',
+                      debian_network_conf)
         if not m:
             raise Exception("network_config format not recognized")
 
@@ -64,7 +65,7 @@ class NetworkConfigPlugin():
         gateway = m.group('gateway')
         dnsnameservers = m.group('dnsnameservers').strip().split(' ')
 
-        osutils = OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 
         network_adapter_name = CONF.network_adapter
         if not network_adapter_name:

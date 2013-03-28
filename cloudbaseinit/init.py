@@ -14,16 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-
-from cloudbaseinit.metadata.factory import *
-from cloudbaseinit.openstack.common import cfg
+from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.factory import *
-from cloudbaseinit.plugins.factory import *
-from cloudbaseinit.utils import *
+from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins import factory as plugins_factory
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -35,18 +30,19 @@ class InitManager(object):
 
     def _mark_as_configured(self, osutils):
         osutils.set_config_value(self._config_done_key, 1)
-        
+
     def configure_host(self):
-        osutils = OSUtilsFactory().get_os_utils()
-        
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+
         if self._is_already_configured(osutils):
             LOG.info('Host already configured, skipping configuration')
             return
-        
-        plugins = PluginFactory().load_plugins()
-        service = MetadataServiceFactory().get_metadata_service()
+
+        plugins = plugins_factory.PluginFactory().load_plugins()
+        mdsf = metadata_factory.MetadataServiceFactory()
+        service = mdsf.get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
-            service.__class__.__name__)
+                 service.__class__.__name__)
 
         reboot_required = False
         try:
@@ -59,12 +55,12 @@ class InitManager(object):
                         reboot_required = True
                 except Exception, ex:
                     LOG.error('plugin \'%(plugin_name)s\' failed '
-                        'with error \'%(ex)s\'' % locals())
+                              'with error \'%(ex)s\'' % locals())
         finally:
             service.cleanup()
 
         self._mark_as_configured(osutils)
-            
+
         if reboot_required:
             try:
                 osutils.reboot()

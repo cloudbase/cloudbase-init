@@ -14,18 +14,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 import re
 import tempfile
 import uuid
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.factory import *
-from cloudbaseinit.plugins.base import *
+from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins import base
 
 LOG = logging.getLogger(__name__)
 
 
-class UserDataPlugin():
+class UserDataPlugin(base.BasePlugin):
     def execute(self, service):
         user_data = service.get_user_data('openstack')
         if not user_data:
@@ -33,7 +34,7 @@ class UserDataPlugin():
 
         LOG.debug('User data content:\n%s' % user_data)
 
-        osutils = OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 
         target_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
         if re.search(r'^rem cmd\s', user_data, re.I):
@@ -63,10 +64,10 @@ class UserDataPlugin():
             LOG.debug('User_data stdout:\n%s' % out)
             LOG.debug('User_data stderr:\n%s' % err)
         except Exception, ex:
-            LOG.warning('An error occurred during user_data execution: \'%s\'' % ex)
+            LOG.warning('An error occurred during user_data execution: \'%s\''
+                        % ex)
         finally:
             if os.path.exists(target_path):
                 os.remove(target_path)
 
         return False
-

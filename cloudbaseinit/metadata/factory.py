@@ -19,16 +19,18 @@ from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import classloader
 
 opts = [
-    cfg.ListOpt('metadata_services', default=[
-        'cloudbaseinit.metadata.services.httpservice.HttpService',
-        'cloudbaseinit.metadata.services.configdrive.configdrive.'
-            'ConfigDriveService',
-        'cloudbaseinit.metadata.services.ec2service.EC2Service'
-        ],
-        help='List of enabled metadata service classes, '
-            'to be tested fro availability in the provided order. '
-            'The first available service will be used to retrieve metadata')
-  ]
+    cfg.ListOpt('metadata_services',
+                default=[
+                'cloudbaseinit.metadata.services.httpservice.HttpService',
+                'cloudbaseinit.metadata.services.configdrive.configdrive.'
+                'ConfigDriveService',
+                'cloudbaseinit.metadata.services.ec2service.EC2Service'
+                ],
+                help='List of enabled metadata service classes, '
+                'to be tested fro availability in the provided order. '
+                'The first available service will be used to retrieve '
+                'metadata')
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
@@ -46,6 +48,5 @@ class MetadataServiceFactory(object):
                     return service
             except Exception, ex:
                 LOG.error('Failed to load metadata service \'%(class_path)s\' '
-                    'with error: %(ex)s'%
-                    locals())
+                          'with error: %(ex)s' % locals())
         raise Exception("No available service found")

@@ -84,15 +84,17 @@ class WindowsUtils(base.BaseOSUtils):
     def _get_user_wmi_object(self, username):
         conn = wmi.WMI(moniker='//./root/cimv2')
         username_san = self._sanitize_wmi_input(username)
-        q = conn.query('SELECT * FROM Win32_Account where name = \'%(username_san)s\'' % locals())
+        q = conn.query('SELECT * FROM Win32_Account where name = '
+                       '\'%(username_san)s\'' % locals())
         if len(q) > 0:
             return q[0]
         return None
 
     def user_exists(self, username):
-        return self._get_user_wmi_object(username) != None
+        return self._get_user_wmi_object(username) is not None
 
-    def _create_or_change_user(self, username, password, create, password_expires):
+    def _create_or_change_user(self, username, password, create,
+                               password_expires):
         username_san = self.sanitize_shell_input(username)
         password_san = self.sanitize_shell_input(password)
 
@@ -119,12 +121,12 @@ class WindowsUtils(base.BaseOSUtils):
 
     def create_user(self, username, password, password_expires=False):
         if not self._create_or_change_user(username, password, True,
-            password_expires):
+                                           password_expires):
             raise Exception("Create user failed")
 
     def set_user_password(self, username, password, password_expires=False):
         if not self._create_or_change_user(username, password, False,
-            password_expires):
+                                           password_expires):
             raise Exception("Set user password failed")
 
     def _get_user_sid_and_domain(self, username):
@@ -135,10 +137,9 @@ class WindowsUtils(base.BaseOSUtils):
             ctypes.sizeof(domainName) / ctypes.sizeof(wintypes.WCHAR))
         sidNameUse = wintypes.DWORD()
 
-        ret_val = advapi32.LookupAccountNameW(0, unicode(username), sid,
-            ctypes.byref(cbSid), domainName,
-            ctypes.byref(cchReferencedDomainName),
-            ctypes.byref(sidNameUse))
+        ret_val = advapi32.LookupAccountNameW(
+            0, unicode(username), sid, ctypes.byref(cbSid), domainName,
+            ctypes.byref(cchReferencedDomainName), ctypes.byref(sidNameUse))
         if not ret_val:
             raise Exception("Cannot get user SID")
 
@@ -150,7 +151,7 @@ class WindowsUtils(base.BaseOSUtils):
         lmi.lgrmi3_domainandname = unicode(username)
 
         ret_val = netapi32.NetLocalGroupAddMembers(0, unicode(groupname), 3,
-            ctypes.addressof(lmi), 1)
+                                                   ctypes.addressof(lmi), 1)
 
         if ret_val == self.NERR_GroupNotFound:
             raise Exception('Group not found')
@@ -172,10 +173,12 @@ class WindowsUtils(base.BaseOSUtils):
             return None
         return r.SID
 
-    def create_user_logon_session(self, username, password, domain='.', load_profile=True):
+    def create_user_logon_session(self, username, password, domain='.',
+                                  load_profile=True):
         token = wintypes.HANDLE()
         ret_val = advapi32.LogonUserW(unicode(username), unicode(domain),
-            unicode(password), 2, 0, ctypes.byref(token))
+                                      unicode(password), 2, 0,
+                                      ctypes.byref(token))
         if not ret_val:
             raise Exception("User logon failed")
 
@@ -196,10 +199,10 @@ class WindowsUtils(base.BaseOSUtils):
     def get_user_home(self, username):
         user_sid = self.get_user_sid(username)
         if user_sid:
-            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\%s'
-                % user_sid) as key:
-                    return _winreg.QueryValueEx(key, 'ProfileImagePath')[0]
+            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, 'SOFTWARE\\'
+                                 'Microsoft\\Windows NT\\CurrentVersion\\'
+                                 'ProfileList\\%s' % user_sid) as key:
+                return _winreg.QueryValueEx(key, 'ProfileImagePath')[0]
         LOG.debug('Home directory not found for user \'%s\'' % username)
         return None
 
@@ -220,18 +223,18 @@ class WindowsUtils(base.BaseOSUtils):
         conn = wmi.WMI(moniker='//./root/cimv2')
         # Get Ethernet adapters only
         q = conn.query('SELECT * FROM Win32_NetworkAdapter WHERE '
-            'AdapterTypeId = 0 AND PhysicalAdapter = True')
+                       'AdapterTypeId = 0 AND PhysicalAdapter = True')
         for r in q:
             l.append(r.Name)
         return l
 
     def set_static_network_config(self, adapter_name, address, netmask,
-        broadcast, gateway, dnsnameservers):
+                                  broadcast, gateway, dnsnameservers):
         conn = wmi.WMI(moniker='//./root/cimv2')
 
         adapter_name_san = self._sanitize_wmi_input(adapter_name)
         q = conn.query('SELECT * FROM Win32_NetworkAdapter '
-            'where Name = \'%(adapter_name_san)s\'' % locals())
+                       'where Name = \'%(adapter_name_san)s\'' % locals())
         if not len(q):
             raise Exception("Network adapter not found")
 
@@ -260,7 +263,7 @@ class WindowsUtils(base.BaseOSUtils):
 
     def set_config_value(self, name, value):
         with _winreg.CreateKey(_winreg.HKEY_LOCAL_MACHINE,
-            self._config_key) as key:
+                               self._config_key) as key:
             if type(value) == int:
                 regtype = _winreg.REG_DWORD
             else:
@@ -270,7 +273,7 @@ class WindowsUtils(base.BaseOSUtils):
     def get_config_value(self, name):
         try:
             with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                self._config_key) as key:
+                                 self._config_key) as key:
                 (value, regtype) = _winreg.QueryValueEx(key, name)
                 return value
         except WindowsError:

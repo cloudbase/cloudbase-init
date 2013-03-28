@@ -24,12 +24,12 @@ from cloudbaseinit.openstack.common import log as logging
 
 opts = [
     cfg.IntOpt('retry_count', default=5,
-        help='Max. number of attempts for fetching metadata in '
-             'case of transient errors'),
+               help='Max. number of attempts for fetching metadata in '
+               'case of transient errors'),
     cfg.FloatOpt('retry_count_interval', default=4,
-        help='Interval between attempts in case of transient errors, '
-             'expressed in seconds'),
-  ]
+                 help='Interval between attempts in case of transient errors, '
+                 'expressed in seconds'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)

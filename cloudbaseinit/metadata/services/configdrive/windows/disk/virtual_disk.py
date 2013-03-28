@@ -36,7 +36,7 @@ def get_WIN32_VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT():
     guid.Data1 = 0xec984aec
     guid.Data2 = 0xa0f9
     guid.Data3 = 0x47e9
-    ByteArray8 = wintypes.BYTE * 8;
+    ByteArray8 = wintypes.BYTE * 8
     guid.Data4 = ByteArray8(0x90, 0x1f, 0x71, 0x41, 0x5a, 0x66, 0x34, 0x5b)
     return guid
 
@@ -77,31 +77,34 @@ class VirtualDisk(object):
         vst.VendorId = get_WIN32_VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT()
 
         handle = wintypes.HANDLE()
-        ret_val = virtdisk.OpenVirtualDisk(ctypes.byref(vst), ctypes.c_wchar_p(self._path),
-            self.VIRTUAL_DISK_ACCESS_ATTACH_RO | self.VIRTUAL_DISK_ACCESS_READ,
-            self.OPEN_VIRTUAL_DISK_FLAG_NONE, 0, ctypes.byref(handle))
+        ret_val = virtdisk.OpenVirtualDisk(ctypes.byref(vst),
+                                           ctypes.c_wchar_p(self._path),
+                                           self.VIRTUAL_DISK_ACCESS_ATTACH_RO |
+                                           self.VIRTUAL_DISK_ACCESS_READ,
+                                           self.OPEN_VIRTUAL_DISK_FLAG_NONE, 0,
+                                           ctypes.byref(handle))
         if ret_val:
             raise Exception("Cannot open virtual disk")
         self._handle = handle
 
     def attach(self):
-        ret_val = virtdisk.AttachVirtualDisk(self._handle, 0,
-            self.ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY,
-            0, 0, 0)
+        ret_val = virtdisk.AttachVirtualDisk(
+            self._handle, 0, self.ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY, 0, 0, 0)
         if ret_val:
             raise Exception("Cannot attach virtual disk")
 
     def detach(self):
-        ret_val = virtdisk.DetachVirtualDisk(self._handle,
-            self.DETACH_VIRTUAL_DISK_FLAG_NONE, 0)
+        ret_val = virtdisk.DetachVirtualDisk(
+            self._handle, self.DETACH_VIRTUAL_DISK_FLAG_NONE, 0)
         if ret_val:
             raise Exception("Cannot detach virtual disk")
 
     def get_physical_path(self):
         buf = ctypes.create_unicode_buffer(1024)
-        bufLen = wintypes.DWORD(ctypes.sizeof(buf));
+        bufLen = wintypes.DWORD(ctypes.sizeof(buf))
         ret_val = virtdisk.GetVirtualDiskPhysicalPath(self._handle,
-            ctypes.byref(bufLen), buf)
+                                                      ctypes.byref(bufLen),
+                                                      buf)
         if ret_val:
             raise Exception("Cannot get virtual disk physical path")
         return buf.value
@@ -120,12 +123,13 @@ class VirtualDisk(object):
 
         i = 0
         while not mount_point and i < buf_len:
-            curr_drive = ctypes.wstring_at(ctypes.addressof(buf) + \
-                i * ctypes.sizeof(wintypes.WCHAR))[:-1]
+            curr_drive = ctypes.wstring_at(ctypes.addressof(buf) + i *
+                                           ctypes.sizeof(wintypes.WCHAR))[:-1]
 
             dev = ctypes.create_unicode_buffer(2048)
             ret_val = kernel32.QueryDosDeviceW(curr_drive, dev,
-                ctypes.sizeof(dev) / ctypes.sizeof(wintypes.WCHAR))
+                                               ctypes.sizeof(dev) /
+                                               ctypes.sizeof(wintypes.WCHAR))
             if not ret_val:
                 raise Exception("Cannot query NT device")
 

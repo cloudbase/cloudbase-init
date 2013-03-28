@@ -16,8 +16,9 @@
 
 import os
 
-from cloudbaseinit.osutils.base import *
+from cloudbaseinit.osutils import base
 
-class PosixUtil(BaseOSUtils):
+
+class PosixUtil(base.BaseOSUtils):
     def reboot(self):
         os.system('reboot')

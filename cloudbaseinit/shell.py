@@ -16,9 +16,9 @@
 
 import sys
 
+from cloudbaseinit import init
 from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging2
-from cloudbaseinit.init import *
 
 CONF = cfg.CONF
 LOG = logging2.getLogger(__name__)
@@ -28,7 +28,4 @@ def main():
     CONF(sys.argv[1:])
     logging2.setup('cloudbaseinit')
 
-    init = InitManager()
-    init.configure_host()
-
-
+    init.InitManager().configure_host()

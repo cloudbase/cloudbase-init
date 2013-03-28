@@ -18,17 +18,19 @@ from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.utils import classloader
 
 opts = [
-    cfg.ListOpt('plugins', default=[
+    cfg.ListOpt(
+        'plugins',
+        default=[
         'cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin',
         'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
         'cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin',
         'cloudbaseinit.plugins.windows.sshpublickeys.'
-            'SetUserSSHPublicKeysPlugin',
+        'SetUserSSHPublicKeysPlugin',
         'cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
         ],
         help='List of enabled plugin classes, '
-            'to executed in the provided order'),
-  ]
+        'to executed in the provided order'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)

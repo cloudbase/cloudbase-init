@@ -25,15 +25,15 @@ from cloudbaseinit.plugins import base
 from cloudbaseinit.utils import crypt
 
 opts = [
-    cfg.StrOpt('username', default='Admin',
-        help='User to be added to the system or updated if already existing'),
-    cfg.ListOpt('groups', default=['Administrators'],
-        help='List of local groups to which the user specified '
-            'in \'username\' will be added'),
-    cfg.BoolOpt('inject_user_password', default=True,
-        help='Set the password provided in the configuration. '
-            'If False or no password is provided, a random one will be set'),
-  ]
+    cfg.StrOpt('username', default='Admin', help='User to be added to the '
+               'system or updated if already existing'),
+    cfg.ListOpt('groups', default=['Administrators'], help='List of local '
+                'groups to which the user specified in \'username\' will '
+                'be added'),
+    cfg.BoolOpt('inject_user_password', default=True, help='Set the password '
+                'provided in the configuration. If False or no password is '
+                'provided, a random one will be set'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)

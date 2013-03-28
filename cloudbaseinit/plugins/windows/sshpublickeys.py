@@ -18,14 +18,14 @@ import os
 
 from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.factory import *
-from cloudbaseinit.plugins.base import *
+from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins import base
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class SetUserSSHPublicKeysPlugin(BasePlugin):
+class SetUserSSHPublicKeysPlugin(base.BasePlugin):
     def execute(self, service):
         meta_data = service.get_meta_data('openstack')
         if not 'public_keys' in meta_data:
@@ -33,7 +33,7 @@ class SetUserSSHPublicKeysPlugin(BasePlugin):
 
         username = CONF.username
 
-        osutils = OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
         user_home = osutils.get_user_home(username)
 
         if not user_home:

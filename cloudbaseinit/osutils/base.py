@@ -16,6 +16,7 @@
 
 import subprocess
 
+
 class BaseOSUtils(object):
     def reboot(self):
         pass
@@ -25,9 +26,9 @@ class BaseOSUtils(object):
 
     def execute_process(self, args, shell=True):
         p = subprocess.Popen(args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=shell)
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             shell=shell)
         (out, err) = p.communicate()
         return (out, err, p.returncode)
 
@@ -53,7 +54,8 @@ class BaseOSUtils(object):
         pass
 
     def set_static_network_config(self, adapter_name, address, netmask,
-        broadcast, gateway, dnsdomain, dnsnameservers):
+                                  broadcast, gateway, dnsdomain,
+                                  dnsnameservers):
         pass
 
     def set_config_value(self, name, value):
@@ -61,4 +63,3 @@ class BaseOSUtils(object):
 
     def get_config_value(self, name):
         pass
-

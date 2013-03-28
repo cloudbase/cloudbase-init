@@ -14,22 +14,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from cloudbaseinit.osutils.factory import *
-from cloudbaseinit.plugins.base import *
+from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins import base
 from cloudbaseinit.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
 
-class SetHostNamePlugin(BasePlugin):
+class SetHostNamePlugin(base.BasePlugin):
     def execute(self, service):
         meta_data = service.get_meta_data('openstack')
         if 'hostname' not in meta_data:
             LOG.debug('Hostname not found in metadata')
             return False
 
-        osutils = OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 
         new_host_name = meta_data['hostname'].split('.', 1)[0]
         return osutils.set_host_name(new_host_name)
-

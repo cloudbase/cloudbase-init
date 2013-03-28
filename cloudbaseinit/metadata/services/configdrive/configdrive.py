@@ -14,23 +14,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import os
 import shutil
 import tempfile
 import uuid
 
-from cloudbaseinit.metadata.services.base import *
+from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
-from manager import *
+from cloudbaseinit.metadata.services.configdrive import manager
 
 opts = [
     cfg.BoolOpt('config_drive_raw_hhd', default=True,
-        help='Look for an ISO config drive in raw HDDs'),
+                help='Look for an ISO config drive in raw HDDs'),
     cfg.BoolOpt('config_drive_cdrom', default=True,
-        help='Look for a config drive in the attached cdrom drives'),
-  ]
+                help='Look for a config drive in the attached cdrom drives'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
@@ -38,7 +37,7 @@ CONF.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-class ConfigDriveService(BaseMetadataService):
+class ConfigDriveService(base.BaseMetadataService):
     def __init__(self):
         self._metadata_path = None
 
@@ -47,12 +46,14 @@ class ConfigDriveService(BaseMetadataService):
 
         target_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
 
-        mgr = ConfigDriveManager()
+        mgr = manager.ConfigDriveManager()
         found = mgr.get_config_drive_files(target_path,
-            CONF.config_drive_raw_hhd, CONF.config_drive_cdrom)
+                                           CONF.config_drive_raw_hhd,
+                                           CONF.config_drive_cdrom)
         if found:
             self._metadata_path = target_path
-            LOG.debug('Metadata copied to folder: \'%s\'' % self._metadata_path)
+            LOG.debug('Metadata copied to folder: \'%s\'' %
+                      self._metadata_path)
         return found
 
     def _get_data(self, path):

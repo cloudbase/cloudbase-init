@@ -23,13 +23,14 @@ from cloudbaseinit.openstack.common import log as logging
 
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
-        help='The base URL where the service looks for metadata'),
-  ]
+               help='The base URL where the service looks for metadata'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
+
 
 class HttpService(base.BaseMetadataService):
     def __init__(self):
@@ -43,13 +44,13 @@ class HttpService(base.BaseMetadataService):
             return True
         except:
             LOG.debug('Metadata not found at URL \'%s\'' %
-                CONF.metadata_base_url)
+                      CONF.metadata_base_url)
             return False
 
     @property
     def can_post_password(self):
         return True
-                        
+
     def _get_response(self, req):
         try:
             return urllib2.urlopen(req)
@@ -83,5 +84,3 @@ class HttpService(base.BaseMetadataService):
                 return False
             else:
                 raise
-
-
