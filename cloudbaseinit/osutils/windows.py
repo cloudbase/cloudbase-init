@@ -16,8 +16,9 @@
 
 import _winreg
 import ctypes
-import win32security
+import time
 import win32process
+import win32security
 import wmi
 
 from ctypes import windll
@@ -278,3 +279,23 @@ class WindowsUtils(base.BaseOSUtils):
                 return value
         except WindowsError:
             return None
+
+    def wait_for_boot_completion(self):
+        try:
+            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+                                 "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
+                                 _winreg.KEY_READ) as key:
+                while True:
+                    gen_state = _winreg.QueryValueEx(key,
+                                                     "GeneralizationState")[0]
+                    if gen_state == 7:
+                        break
+                    time.sleep(1)
+                    LOG.debug('Waiting for sysprep completion. '
+                              'GeneralizationState: %d' % gen_state)
+        except WindowsError, ex:
+            if ex.winerror == 2:
+                LOG.debug('Sysprep data not found in the registry, '
+                          'skipping sysprep completion check.')
+            else:
+                raise ex

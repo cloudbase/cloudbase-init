@@ -63,3 +63,6 @@ class BaseOSUtils(object):
 
     def get_config_value(self, name):
         pass
+
+    def wait_for_boot_completion(self):
+        pass

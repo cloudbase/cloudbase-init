@@ -44,6 +44,8 @@ class InitManager(object):
         LOG.info('Metadata service loaded: \'%s\'' %
                  service.__class__.__name__)
 
+        osutils.wait_for_boot_completion()
+
         reboot_required = False
         try:
             for plugin in plugins:
