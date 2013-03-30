@@ -62,6 +62,7 @@ class WindowsUtils(base.BaseOSUtils):
     ERROR_INVALID_MEMBER = 1388
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
+    _service_name = 'cloudbase-init'
 
     def _enable_shutdown_privilege(self):
         process = win32process.GetCurrentProcess()
@@ -299,3 +300,20 @@ class WindowsUtils(base.BaseOSUtils):
                           'skipping sysprep completion check.')
             else:
                 raise ex
+
+    def _stop_service(self, service_name):
+        LOG.debug('Stopping service %s' % service_name)
+
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        service = conn.Win32_Service(Name=service_name)[0]
+
+        (ret_val,) = service.StopService()
+        if ret_val != 0:
+            raise Exception('Stopping service %(service_name)s failed with '
+                            'return value: %(ret_val)d' % locals())
+
+    def terminate(self):
+        # Wait for the service to start. Polling the service "Started" property
+        # is not enough
+        time.sleep(3)
+        self._stop_service(self._service_name)

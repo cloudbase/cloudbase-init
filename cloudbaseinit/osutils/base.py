@@ -66,3 +66,6 @@ class BaseOSUtils(object):
 
     def wait_for_boot_completion(self):
         pass
+
+    def terminate(self):
+        pass

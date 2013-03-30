@@ -36,6 +36,7 @@ class InitManager(object):
 
         if self._is_already_configured(osutils):
             LOG.info('Host already configured, skipping configuration')
+            osutils.terminate()
             return
 
         plugins = plugins_factory.PluginFactory().load_plugins()
@@ -68,3 +69,5 @@ class InitManager(object):
                 osutils.reboot()
             except Exception, ex:
                 LOG.error('reboot failed with error \'%s\'' % ex)
+
+        osutils.terminate()
