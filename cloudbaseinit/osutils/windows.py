@@ -207,10 +207,10 @@ class WindowsUtils(base.BaseOSUtils):
         LOG.debug('Home directory not found for user \'%s\'' % username)
         return None
 
-    def sanitize_shell_input(shell, value):
+    def sanitize_shell_input(self, value):
         return value.replace('"', '\\"')
 
-    def set_host_name(shell, new_host_name):
+    def set_host_name(self, new_host_name):
         conn = wmi.WMI(moniker='//./root/cimv2')
         comp = conn.Win32_ComputerSystem()[0]
         if comp.Name != new_host_name:

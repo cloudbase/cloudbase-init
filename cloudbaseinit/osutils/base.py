@@ -32,7 +32,7 @@ class BaseOSUtils(object):
         (out, err) = p.communicate()
         return (out, err, p.returncode)
 
-    def sanitize_shell_input(shell, value):
+    def sanitize_shell_input(self, value):
         pass
 
     def create_user(self, username, password, password_expires=False):
@@ -44,7 +44,7 @@ class BaseOSUtils(object):
     def add_user_to_local_group(self, username, groupname):
         pass
 
-    def set_host_name(shell, new_host_name):
+    def set_host_name(self, new_host_name):
         pass
 
     def get_user_home(self, username):
