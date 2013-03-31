@@ -69,5 +69,5 @@ class InitManager(object):
                 osutils.reboot()
             except Exception, ex:
                 LOG.error('reboot failed with error \'%s\'' % ex)
-
-        osutils.terminate()
+        else:
+            osutils.terminate()
