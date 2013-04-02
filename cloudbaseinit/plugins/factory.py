@@ -26,7 +26,8 @@ opts = [
         'cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin',
         'cloudbaseinit.plugins.windows.sshpublickeys.'
         'SetUserSSHPublicKeysPlugin',
-        'cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
+        'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
+        'cloudbaseinit.plugins.windows.userdata.UserDataPlugin',
         ],
         help='List of enabled plugin classes, '
         'to executed in the provided order'),
