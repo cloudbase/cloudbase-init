@@ -39,6 +39,7 @@ LOG = logging.getLogger(__name__)
 
 class ConfigDriveService(base.BaseMetadataService):
     def __init__(self):
+        super(ConfigDriveService, self).__init__()
         self._metadata_path = None
 
     def load(self):
