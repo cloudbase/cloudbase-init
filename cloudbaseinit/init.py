@@ -17,52 +17,59 @@
 from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins import base as plugins_base
 from cloudbaseinit.plugins import factory as plugins_factory
 
 LOG = logging.getLogger(__name__)
 
 
 class InitManager(object):
-    _config_done_key = 'config_done'
+    _PLUGINS_CONFIG_SECTION = 'Plugins'
 
-    def _is_already_configured(self, osutils):
-        return osutils.get_config_value(self._config_done_key) == 1
+    def _get_plugin_status(self, osutils, plugin_name):
+        return osutils.get_config_value(plugin_name,
+                                        self._PLUGINS_CONFIG_SECTION)
 
-    def _mark_as_configured(self, osutils):
-        osutils.set_config_value(self._config_done_key, 1)
+    def _set_plugin_status(self, osutils, plugin_name, status):
+        osutils.set_config_value(plugin_name, status,
+                                 self._PLUGINS_CONFIG_SECTION)
+
+    def _exec_plugin(self, osutils, service, plugin):
+        plugin_name = plugin.__class__.__name__
+
+        status = self._get_plugin_status(osutils, plugin_name)
+        if status == plugins_base.PLUGIN_EXECUTION_DONE:
+            LOG.debug('Plugin \'%(plugin_name)s\' execution already done, '
+                      'skipping' % locals())
+        else:
+            LOG.info('Executing plugin \'%(plugin_name)s\'' %
+                     locals())
+            try:
+                (status, reboot_required) = plugin.execute(service)
+                self._set_plugin_status(osutils, plugin_name, status)
+                return reboot_required
+            except Exception, ex:
+                LOG.error('plugin \'%(plugin_name)s\' failed '
+                          'with error \'%(ex)s\'' % locals())
 
     def configure_host(self):
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
-
-        if self._is_already_configured(osutils):
-            LOG.info('Host already configured, skipping configuration')
-            osutils.terminate()
-            return
-
-        plugins = plugins_factory.PluginFactory().load_plugins()
         mdsf = metadata_factory.MetadataServiceFactory()
         service = mdsf.get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
                  service.__class__.__name__)
 
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
         osutils.wait_for_boot_completion()
+
+        plugins = plugins_factory.PluginFactory().load_plugins()
 
         reboot_required = False
         try:
             for plugin in plugins:
-                plugin_name = plugin.__class__.__name__
-                LOG.info('Executing plugin \'%(plugin_name)s\'' % locals())
-                try:
-                    plugin_requires_reboot = plugin.execute(service)
-                    if plugin_requires_reboot:
-                        reboot_required = True
-                except Exception, ex:
-                    LOG.error('plugin \'%(plugin_name)s\' failed '
-                              'with error \'%(ex)s\'' % locals())
+                if self._exec_plugin(osutils, service, plugin):
+                    reboot_required = True
         finally:
             service.cleanup()
-
-        self._mark_as_configured(osutils)
 
         if reboot_required:
             try:

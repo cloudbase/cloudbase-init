@@ -166,3 +166,5 @@ class ExtendVolumesPlugin(base.BasePlugin):
             packs = self._query_packs(provider)
             for pack in packs:
                 self._extend_volumes(pack, volumes_to_extend)
+
+        return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)

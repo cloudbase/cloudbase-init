@@ -50,3 +50,5 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
             public_keys = meta_data['public_keys']
             for k in public_keys:
                 f.write(public_keys[k])
+
+        return (base.PLUGIN_EXECUTION_DONE, False)

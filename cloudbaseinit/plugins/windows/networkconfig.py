@@ -81,4 +81,4 @@ class NetworkConfigPlugin(base.BasePlugin):
             network_adapter_name, address, netmask, broadcast,
             gateway, dnsnameservers)
 
-        return reboot_required
+        return (base.PLUGIN_EXECUTION_DONE, reboot_required)

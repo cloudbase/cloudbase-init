@@ -263,19 +263,29 @@ class WindowsUtils(base.BaseOSUtils):
 
         return reboot_required
 
-    def set_config_value(self, name, value):
+    def _get_config_key_name(self, section):
+        key_name = self._config_key
+        if section:
+            key_name += section + '\\'
+        return key_name
+
+    def set_config_value(self, name, value, section=None):
+        key_name = self._get_config_key_name(section)
+
         with _winreg.CreateKey(_winreg.HKEY_LOCAL_MACHINE,
-                               self._config_key) as key:
+                               key_name) as key:
             if type(value) == int:
                 regtype = _winreg.REG_DWORD
             else:
                 regtype = _winreg.REG_SZ
             _winreg.SetValueEx(key, name, 0, regtype, value)
 
-    def get_config_value(self, name):
+    def get_config_value(self, name, section=None):
+        key_name = self._get_config_key_name(section)
+
         try:
             with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                                 self._config_key) as key:
+                                 key_name) as key:
                 (value, regtype) = _winreg.QueryValueEx(key, name)
                 return value
         except WindowsError:

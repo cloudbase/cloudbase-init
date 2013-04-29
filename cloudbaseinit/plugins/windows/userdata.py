@@ -70,4 +70,4 @@ class UserDataPlugin(base.BasePlugin):
             if os.path.exists(target_path):
                 os.remove(target_path)
 
-        return False
+        return (base.PLUGIN_EXECUTION_DONE, False)

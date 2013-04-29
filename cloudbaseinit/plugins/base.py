@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+PLUGIN_EXECUTION_DONE = 1
+PLUGIN_EXECUTE_ON_NEXT_BOOT = 2
+
 
 class BasePlugin(object):
     def execute(self, service):

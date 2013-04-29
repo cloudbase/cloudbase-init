@@ -58,10 +58,10 @@ class BaseOSUtils(object):
                                   dnsnameservers):
         pass
 
-    def set_config_value(self, name, value):
+    def set_config_value(self, name, value, section=None):
         pass
 
-    def get_config_value(self, name):
+    def get_config_value(self, name, section=None):
         pass
 
     def wait_for_boot_completion(self):
