@@ -29,7 +29,7 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
     def execute(self, service):
         meta_data = service.get_meta_data('openstack')
         if not 'public_keys' in meta_data:
-            return False
+            return (base.PLUGIN_EXECUTION_DONE, False)
 
         username = CONF.username
 

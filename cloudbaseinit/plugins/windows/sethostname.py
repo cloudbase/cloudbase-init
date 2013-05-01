@@ -26,7 +26,7 @@ class SetHostNamePlugin(base.BasePlugin):
         meta_data = service.get_meta_data('openstack')
         if 'hostname' not in meta_data:
             LOG.debug('Hostname not found in metadata')
-            return False
+            return (base.PLUGIN_EXECUTION_DONE, False)
 
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 

@@ -37,10 +37,11 @@ class NetworkConfigPlugin(base.BasePlugin):
     def execute(self, service):
         meta_data = service.get_meta_data('openstack')
         if 'network_config' not in meta_data:
-            return False
+            return (base.PLUGIN_EXECUTION_DONE, False)
+
         network_config = meta_data['network_config']
         if 'content_path' not in network_config:
-            return False
+            return (base.PLUGIN_EXECUTION_DONE, False)
 
         content_path = network_config['content_path']
         content_name = content_path.rsplit('/', 1)[-1]

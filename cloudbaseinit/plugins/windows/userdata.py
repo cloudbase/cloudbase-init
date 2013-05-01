@@ -19,6 +19,7 @@ import re
 import tempfile
 import uuid
 
+from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
@@ -28,9 +29,13 @@ LOG = logging.getLogger(__name__)
 
 class UserDataPlugin(base.BasePlugin):
     def execute(self, service):
-        user_data = service.get_user_data('openstack')
+        try:
+            user_data = service.get_user_data('openstack')
+        except metadata_services_base.NotExistingMetadataException:
+            return (base.PLUGIN_EXECUTION_DONE, False)
+
         if not user_data:
-            return False
+            return (base.PLUGIN_EXECUTION_DONE, False)
 
         LOG.debug('User data content:\n%s' % user_data)
 
@@ -53,7 +58,7 @@ class UserDataPlugin(base.BasePlugin):
         else:
             # Unsupported
             LOG.warning('Unsupported user_data format')
-            return False
+            return (base.PLUGIN_EXECUTION_DONE, False)
 
         try:
             with open(target_path, 'wb') as f:
