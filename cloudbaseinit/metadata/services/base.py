@@ -102,10 +102,17 @@ class BaseMetadataService(object):
     def _post_data(self, path, data):
         raise NotExistingMetadataException()
 
-    def post_password(self, enc_password_b64, version='latest'):
-        path = posixpath.normpath(posixpath.join('openstack',
+    def _get_password_path(self, version='latest'):
+        return posixpath.normpath(posixpath.join('openstack',
                                                  version,
                                                  'password'))
+
+    def is_password_set(self, version='latest'):
+        path = self._get_password_path(version)
+        return len(self._get_data(path)) > 0
+
+    def post_password(self, enc_password_b64, version='latest'):
+        path = self._get_password_path(version)
         action = lambda: self._post_data(path, enc_password_b64)
         return self._exec_with_retry(action)
 

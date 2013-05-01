@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
+import os
 import subprocess
 
 
@@ -23,6 +25,12 @@ class BaseOSUtils(object):
 
     def user_exists(self, username):
         pass
+
+    def generate_random_password(self, length):
+        # On Windows os.urandom() uses CryptGenRandom, which is a
+        # cryptographically secure pseudorandom number generator
+        b64_password = base64.b64encode(os.urandom(256))
+        return b64_password.replace('/', '').replace('+', '')[:length]
 
     def execute_process(self, args, shell=True):
         p = subprocess.Popen(args,

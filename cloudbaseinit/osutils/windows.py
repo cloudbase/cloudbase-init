@@ -107,8 +107,12 @@ class WindowsUtils(base.BaseOSUtils):
         (out, err, ret_val) = self.execute_process(args)
         if not ret_val:
             self._set_user_password_expiration(username, password_expires)
-
-        return ret_val == 0
+        else:
+            if create:
+                msg = "Create user failed: %(err)s"
+            else:
+                msg = "Set user password failed: %(err)s"
+            raise Exception(msg % locals())
 
     def _sanitize_wmi_input(self, value):
         return value.replace('\'', '\'\'')
@@ -122,14 +126,12 @@ class WindowsUtils(base.BaseOSUtils):
         return True
 
     def create_user(self, username, password, password_expires=False):
-        if not self._create_or_change_user(username, password, True,
-                                           password_expires):
-            raise Exception("Create user failed")
+        self._create_or_change_user(username, password, True,
+                                    password_expires)
 
     def set_user_password(self, username, password, password_expires=False):
-        if not self._create_or_change_user(username, password, False,
-                                           password_expires):
-            raise Exception("Set user password failed")
+        self._create_or_change_user(username, password, False,
+                                    password_expires)
 
     def _get_user_sid_and_domain(self, username):
         sid = ctypes.create_string_buffer(1024)
