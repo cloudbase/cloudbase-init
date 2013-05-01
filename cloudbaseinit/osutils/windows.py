@@ -327,3 +327,48 @@ class WindowsUtils(base.BaseOSUtils):
         # is not enough
         time.sleep(3)
         self._stop_service(self._service_name)
+
+    def get_default_gateway(self):
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        for net_adapter_config in conn.Win32_NetworkAdapterConfiguration():
+            if net_adapter_config.DefaultIPGateway:
+                return (net_adapter_config.InterfaceIndex,
+                        net_adapter_config.DefaultIPGateway[0])
+        return (None, None)
+
+    def check_static_route_exists(self, destination):
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        return len(conn.Win32_IP4RouteTable(Destination=destination)) > 0
+
+    def add_static_route(self, destination, mask, next_hop, interface_index,
+                         metric):
+        args = ['ROUTE', 'ADD', destination, 'MASK', mask, next_hop]
+        (out, err, ret_val) = self.execute_process(args)
+        # Cannot use the return value to determine the outcome
+        if err:
+            raise Exception('Unable to add route: %(err)s' % locals())
+
+        # TODO(alexpilotti): The following code creates the route properly and
+        # "route print" shows the added route, but routing to the destination
+        # fails. This option would be preferable compared to spawning a
+        # "ROUTE ADD" process.
+        '''
+        ROUTE_PROTOCOL_NETMGMT = 3
+        ROUTE_TYPE_INDIRECT = 4
+
+        conn = wmi.WMI(moniker='//./root/cimv2')
+
+        route = conn.Win32_IP4RouteTable.SpawnInstance_()
+        route.Destination = destination
+        route.Mask = mask
+        route.NextHop = next_hop
+        route.InterfaceIndex = interface_index
+        route.Metric1 = metric
+        route.Protocol = self.ROUTE_PROTOCOL_NETMGMT
+        route.Type = self.ROUTE_TYPE_INDIRECT
+        route.Put_()
+        '''
+
+    def get_os_version(self):
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        return conn.Win32_OperatingSystem()[0].Version

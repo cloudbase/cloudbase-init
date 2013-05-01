@@ -69,3 +69,16 @@ class BaseOSUtils(object):
 
     def terminate(self):
         pass
+
+    def get_default_gateway(self):
+        pass
+
+    def check_static_route_exists(self, destination):
+        pass
+
+    def add_static_route(self, destination, mask, next_hop, interface_index,
+                         metric):
+        pass
+
+    def get_os_version(self):
+        pass
