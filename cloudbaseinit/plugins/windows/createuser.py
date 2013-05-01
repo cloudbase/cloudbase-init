@@ -75,6 +75,7 @@ class CreateUserPlugin(base.BasePlugin):
         if 'admin_pass' in meta_data and CONF.inject_user_password:
             password = meta_data['admin_pass']
         else:
+            LOG.debug('Generating random password')
             # Generate a random password
             # Limit to 14 chars for compatibility with NT
             password = self._generate_random_password(14)

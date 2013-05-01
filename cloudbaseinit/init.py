@@ -51,6 +51,7 @@ class InitManager(object):
             except Exception, ex:
                 LOG.error('plugin \'%(plugin_name)s\' failed '
                           'with error \'%(ex)s\'' % locals())
+                LOG.exception(ex)
 
     def configure_host(self):
         mdsf = metadata_factory.MetadataServiceFactory()
