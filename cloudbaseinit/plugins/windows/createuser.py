@@ -39,10 +39,12 @@ LOG = logging.getLogger(__name__)
 class CreateUserPlugin(base.BasePlugin):
     def _get_password(self, service, osutils):
         meta_data = service.get_meta_data('openstack')
-        if 'admin_pass' in meta_data and CONF.inject_user_password:
+        meta = meta_data.get('meta')
+
+        if CONF.inject_user_password and meta and 'admin_pass' in meta:
             LOG.warn('Using admin_pass metadata user password. Consider '
                      'changing it as soon as possible')
-            password = meta_data['admin_pass']
+            password = meta['admin_pass']
         else:
             # Generate a temporary random password to be replaced
             # by SetUserPasswordPlugin (starting from Grizzly)
