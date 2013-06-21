@@ -55,9 +55,13 @@ class CreateUserPlugin(base.BasePlugin):
         user_name = CONF.username
 
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
-        if not osutils.user_exists(user_name):
-            password = self._get_password(service, osutils)
+        password = self._get_password(service, osutils)
 
+        if osutils.user_exists(user_name):
+            LOG.info('Setting password for existing user "%s"' % user_name)
+            osutils.set_user_password(user_name, password)
+        else:
+            LOG.info('Creating user "%s" and setting password' % user_name)
             osutils.create_user(user_name, password)
             # Create a user profile in order for other plugins
             # to access the user home, etc
