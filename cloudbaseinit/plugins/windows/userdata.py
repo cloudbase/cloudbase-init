@@ -56,20 +56,19 @@ class UserDataPlugin(base.BasePlugin):
                     '-NonInteractive', target_path]
             shell = False
         elif re.search(r'^#ps1_sysnative\s', user_data, re.I):
-            if os.path.isdir(os.path.expandvars("%windir%")
-                             + "\\sysnative\\WindowsPowerShell\\v1.0\\"):
+            if os.path.isdir(os.path.expandvars('%windir%\\sysnative')):
                 target_path += '.ps1'
-                args = [os.path.expandvars("%windir%")
-                        + '\\sysnative\\WindowsPowerShell\
-                        \\v1.0\\powershell.exe',
+                args = [os.path.expandvars('%windir%\\sysnative\\'
+                                           'WindowsPowerShell\\v1.0\\'
+                                           'powershell.exe'),
                         '-ExecutionPolicy',
                         'RemoteSigned', '-NonInteractive', target_path]
                 shell = False
             else:
                 # Unable to validate sysnative presence
-                LOG.warning('Unable to validate sysnative folder presence.\
-                        If Target OS is Server 2003, please ensure you have\
-                        KB942589 installed')
+                LOG.warning('Unable to validate sysnative folder presence. '
+                            'If Target OS is Server 2003, please ensure you '
+                            'have KB942589 installed')
                 return (base.PLUGIN_EXECUTION_DONE, False)
         else:
             # Unsupported
