@@ -374,3 +374,11 @@ class WindowsUtils(base.BaseOSUtils):
     def get_os_version(self):
         conn = wmi.WMI(moniker='//./root/cimv2')
         return conn.Win32_OperatingSystem()[0].Version
+
+    def get_volume_label(self, drive):
+        max_label_size = 261
+        label = ctypes.create_unicode_buffer(max_label_size)
+        ret_val = kernel32.GetVolumeInformationW(unicode(drive), label,
+                                                 max_label_size, 0, 0, 0, 0, 0)
+        if ret_val:
+            return label.value

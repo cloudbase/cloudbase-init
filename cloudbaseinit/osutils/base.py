@@ -90,3 +90,6 @@ class BaseOSUtils(object):
 
     def get_os_version(self):
         pass
+
+    def get_volume_label(self, drive):
+        pass

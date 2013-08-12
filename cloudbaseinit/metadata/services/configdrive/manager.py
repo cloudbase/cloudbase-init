@@ -30,6 +30,7 @@ from cloudbaseinit.metadata.services.configdrive.windows.disk \
     import physical_disk
 from cloudbaseinit.metadata.services.configdrive.windows.disk \
     import virtual_disk
+from cloudbaseinit.osutils import factory as osutils_factory
 
 LOG = logging.getLogger(__name__)
 
@@ -44,19 +45,18 @@ class ConfigDriveManager(object):
         return l
 
     def _get_config_drive_cdrom_mount_point(self):
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+
         conn = wmi.WMI(moniker='//./root/cimv2')
         q = conn.query('SELECT Drive FROM Win32_CDROMDrive WHERE '
                        'MediaLoaded = True')
         for r in q:
-            drive = r.Drive + '\\'
-            q1 = conn.query('SELECT Label FROM Win32_Volume WHERE '
-                            'Name = \'%(drive)s\'' % locals())
-            for r1 in q1:
-                if r1.Label == "config-2" and \
-                    os.path.exists(os.path.join(drive,
-                                                'openstack\\latest\\'
-                                                'meta_data.json')):
-                    return drive
+            label = osutils.get_volume_label(r.Drive)
+            if label == "config-2" and \
+                os.path.exists(os.path.join(r.Drive,
+                                            'openstack\\latest\\'
+                                            'meta_data.json')):
+                return r.Drive + "\\"
         return None
 
     def _c_char_array_to_c_ushort(self, buf, offset):
