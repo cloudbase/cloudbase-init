@@ -54,13 +54,13 @@ class InitManager(object):
                 LOG.exception(ex)
 
     def configure_host(self):
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils.wait_for_boot_completion()
+
         mdsf = metadata_factory.MetadataServiceFactory()
         service = mdsf.get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
                  service.__class__.__name__)
-
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
-        osutils.wait_for_boot_completion()
 
         plugins = plugins_factory.PluginFactory().load_plugins()
 
