@@ -15,21 +15,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import re
-import tempfile
-import uuid
-import email
-import tempfile
-import os
-import errno
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.factory import *
-from cloudbaseinit.plugins.windows.userdata import handle
+from cloudbaseinit.plugins.windows import userdata
 
 LOG = logging.getLogger("cloudbaseinit")
 
+
 def get_plugin(parent_set):
     return HeatUserDataHandler(parent_set)
+
 
 class HeatUserDataHandler:
 
@@ -37,11 +31,9 @@ class HeatUserDataHandler:
         LOG.info("Heat user data part handler is loaded.")
         self.type = "text/x-cfninitdata"
         self.name = "Heat userdata plugin"
-        return
 
     def process(self, part):
-        #Only user-data part of Heat multipart data is supported. All other cfinitdata part will be skipped
+        #Only user-data part of Heat multipart data is supported.
+        #All other cfinitdata part will be skipped
         if part.get_filename() == "cfn-userdata":
-            handle(part.get_payload())
-        return
- 
+            userdata.handle(part.get_payload())

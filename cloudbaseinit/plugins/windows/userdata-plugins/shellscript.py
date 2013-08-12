@@ -15,36 +15,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import re
-import tempfile
-import uuid
-import email
-import tempfile
 import os
-import errno
+import tempfile
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils.factory import *
+from cloudbaseinit.osutils import factory as osutils_factory
 
 LOG = logging.getLogger("cloudbaseinit")
+
 
 def get_plugin(parent_set):
     return ShellScriptHandler(parent_set)
 
+
 class ShellScriptHandler:
-    
     def __init__(self, parent_set):
         LOG.info("Shell-script part handler is loaded.")
         self.type = "text/x-shellscript"
         self.name = "Shell-script userdata plugin"
-        return
-    
+
     def process(self, part):
-        osutils = OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 
         file_name = part.get_filename()
         target_path = os.path.join(tempfile.gettempdir(), file_name)
-        
+
         if file_name.endswith(".cmd"):
             args = [target_path]
             shell = True
@@ -54,7 +49,7 @@ class ShellScriptHandler:
         elif file_name.endswith(".ps1"):
             args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
                     '-NonInteractive', target_path]
-            shell = False           
+            shell = False
         else:
             # Unsupported
             LOG.warning('Unsupported shell format')
@@ -69,10 +64,10 @@ class ShellScriptHandler:
             LOG.debug('User_data stdout:\n%s' % out)
             LOG.debug('User_data stderr:\n%s' % err)
         except Exception, ex:
-            LOG.warning('An error occurred during user_data execution: \'%s\'' % ex)
+            LOG.warning('An error occurred during user_data execution: \'%s\''
+                        % ex)
         finally:
             if os.path.exists(target_path):
                 os.remove(target_path)
 
         return False
-    
