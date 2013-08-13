@@ -30,6 +30,7 @@ LOG = logging.getLogger(__name__)
 
 class SetUserPasswordPlugin(base.BasePlugin):
     _post_password_md_ver = '2013-04-04'
+    _max_password_set_retry_count = 10
 
     def _encrypt_password(self, ssh_pub_key, password):
         cm = crypt.CryptManager()
@@ -75,6 +76,23 @@ class SetUserPasswordPlugin(base.BasePlugin):
                      'supported by this metadata version')
             return True
 
+    def _set_password(self, osutils, user_name):
+        i = 0
+        while True:
+            try:
+                # The retry is due to Windows not accepting some of
+                # the randomly generated passwords due to complexity
+                # constraints
+                password = self._get_password(osutils)
+                LOG.info('Setting the user\'s password')
+                osutils.set_user_password(user_name, password)
+                return password
+            except:
+                if i < self._max_password_set_retry_count:
+                    i += 1
+                else:
+                    raise
+
     def execute(self, service):
         user_name = CONF.username
 
@@ -88,9 +106,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
         else:
             osutils = osutils_factory.OSUtilsFactory().get_os_utils()
             if osutils.user_exists(user_name):
-                password = self._get_password(osutils)
-                LOG.info('Setting the user\'s password')
-                osutils.set_user_password(user_name, password)
+                password = self._set_password(osutils, user_name)
                 self._set_metadata_password(password, service)
 
         return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
