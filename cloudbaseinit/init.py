@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import sys
+
 from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
@@ -35,7 +37,7 @@ class InitManager(object):
                                  self._PLUGINS_CONFIG_SECTION)
 
     def _exec_plugin(self, osutils, service, plugin):
-        plugin_name = plugin.__class__.__name__
+        plugin_name = plugin.get_name()
 
         status = self._get_plugin_status(osutils, plugin_name)
         if status == plugins_base.PLUGIN_EXECUTION_DONE:
@@ -53,6 +55,26 @@ class InitManager(object):
                           'with error \'%(ex)s\'' % locals())
                 LOG.exception(ex)
 
+    def _check_plugin_os_requirements(self, osutils, plugin):
+        supported = False
+        plugin_name = plugin.get_name()
+
+        (required_platform, min_os_version) = plugin.get_os_requirements()
+        if required_platform and sys.platform != required_platform:
+            LOG.debug('Skipping plugin: \'%s\'. Platform not supported' %
+                      plugin_name)
+        else:
+            if not min_os_version:
+                supported = True
+            else:
+                os_version = map(int, osutils.get_os_version().split('.'))
+                if os_version >= list(min_os_version):
+                    supported = True
+                else:
+                    LOG.debug('Skipping plugin: \'%s\'. OS version not '
+                              'supported' % plugin_name)
+        return supported
+
     def configure_host(self):
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
         osutils.wait_for_boot_completion()
@@ -60,15 +82,16 @@ class InitManager(object):
         mdsf = metadata_factory.MetadataServiceFactory()
         service = mdsf.get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
-                 service.__class__.__name__)
+                 service.get_name())
 
         plugins = plugins_factory.PluginFactory().load_plugins()
 
         reboot_required = False
         try:
             for plugin in plugins:
-                if self._exec_plugin(osutils, service, plugin):
-                    reboot_required = True
+                if self._check_plugin_os_requirements(osutils, plugin):
+                    if self._exec_plugin(osutils, service, plugin):
+                        reboot_required = True
         finally:
             service.cleanup()
 

@@ -46,6 +46,9 @@ class BaseMetadataService(object):
         self._cache = {}
         self._enable_retry = False
 
+    def get_name(self):
+        return self.__class__.__name__
+
     def load(self):
         self._cache = {}
 

@@ -19,5 +19,11 @@ PLUGIN_EXECUTE_ON_NEXT_BOOT = 2
 
 
 class BasePlugin(object):
+    def get_name(self):
+        return self.__class__.__name__
+
+    def get_os_requirements(self):
+        return (None, None)
+
     def execute(self, service):
         pass

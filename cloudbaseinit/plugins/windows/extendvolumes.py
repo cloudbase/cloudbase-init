@@ -168,3 +168,6 @@ class ExtendVolumesPlugin(base.BasePlugin):
                 self._extend_volumes(pack, volumes_to_extend)
 
         return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+
+    def get_os_requirements(self):
+        return ('win32', (5, 2))
