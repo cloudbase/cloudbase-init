@@ -59,8 +59,11 @@ class ConfigDriveService(base.BaseMetadataService):
 
     def _get_data(self, path):
         norm_path = os.path.normpath(os.path.join(self._metadata_path, path))
-        with open(norm_path, 'rb') as f:
-            return f.read()
+        try:
+            with open(norm_path, 'rb') as f:
+                return f.read()
+        except IOError:
+            raise base.NotExistingMetadataException()
 
     def cleanup(self):
         if self._metadata_path:
