@@ -227,7 +227,8 @@ class WindowsUtils(base.BaseOSUtils):
         conn = wmi.WMI(moniker='//./root/cimv2')
         # Get Ethernet adapters only
         q = conn.query('SELECT * FROM Win32_NetworkAdapter WHERE '
-                       'AdapterTypeId = 0 AND PhysicalAdapter = True')
+                       'AdapterTypeId = 0 AND PhysicalAdapter = True AND '
+                       'MACAddress IS NOT NULL')
         for r in q:
             l.append(r.Name)
         return l
@@ -237,8 +238,9 @@ class WindowsUtils(base.BaseOSUtils):
         conn = wmi.WMI(moniker='//./root/cimv2')
 
         adapter_name_san = self._sanitize_wmi_input(adapter_name)
-        q = conn.query('SELECT * FROM Win32_NetworkAdapter '
-                       'where Name = \'%(adapter_name_san)s\'' % locals())
+        q = conn.query('SELECT * FROM Win32_NetworkAdapter WHERE '
+                       'MACAddress IS NOT NULL AND '
+                       'Name = \'%(adapter_name_san)s\'' % locals())
         if not len(q):
             raise Exception("Network adapter not found")
 
