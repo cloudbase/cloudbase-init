@@ -25,9 +25,6 @@ opts = [
     cfg.ListOpt('groups', default=['Administrators'], help='List of local '
                 'groups to which the user specified in \'username\' will '
                 'be added'),
-    cfg.BoolOpt('inject_user_password', default=True, help='Set the password '
-                'provided in the configuration. If False or no password is '
-                'provided, a random one will be set'),
 ]
 
 CONF = cfg.CONF
@@ -37,25 +34,16 @@ LOG = logging.getLogger(__name__)
 
 
 class CreateUserPlugin(base.BasePlugin):
-    def _get_password(self, service, osutils):
-        meta_data = service.get_meta_data('openstack')
-        meta = meta_data.get('meta')
-
-        if CONF.inject_user_password and meta and 'admin_pass' in meta:
-            LOG.warn('Using admin_pass metadata user password. Consider '
-                     'changing it as soon as possible')
-            password = meta['admin_pass']
-        else:
-            # Generate a temporary random password to be replaced
-            # by SetUserPasswordPlugin (starting from Grizzly)
-            password = osutils.generate_random_password(14)
-        return password
+    def _get_password(self, osutils):
+        # Generate a temporary random password to be replaced
+        # by SetUserPasswordPlugin (starting from Grizzly)
+        return osutils.generate_random_password(14)
 
     def execute(self, service):
         user_name = CONF.username
 
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
-        password = self._get_password(service, osutils)
+        password = self._get_password(osutils)
 
         if osutils.user_exists(user_name):
             LOG.info('Setting password for existing user "%s"' % user_name)

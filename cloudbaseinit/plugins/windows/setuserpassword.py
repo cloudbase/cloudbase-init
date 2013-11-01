@@ -23,14 +23,20 @@ from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
 from cloudbaseinit.utils import crypt
 
+opts = [
+    cfg.BoolOpt('inject_user_password', default=True, help='Set the password '
+                'provided in the configuration. If False or no password is '
+                'provided, a random one will be set'),
+]
+
 CONF = cfg.CONF
+CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
 
 class SetUserPasswordPlugin(base.BasePlugin):
     _post_password_md_ver = '2013-04-04'
-    _max_password_set_retry_count = 10
 
     def _encrypt_password(self, ssh_pub_key, password):
         cm = crypt.CryptManager()
@@ -52,11 +58,21 @@ class SetUserPasswordPlugin(base.BasePlugin):
             break
         return ssh_pub_key
 
-    def _get_password(self, osutils):
-        LOG.debug('Generating a random user password')
-        # Generate a random password
-        # Limit to 14 chars for compatibility with NT
-        return osutils.generate_random_password(14)
+    def _get_password(self, service, osutils):
+        meta_data = service.get_meta_data('openstack')
+        meta = meta_data.get('meta')
+
+        if CONF.inject_user_password and meta and 'admin_pass' in meta:
+            LOG.warn('Using admin_pass metadata user password. Consider '
+                     'changing it as soon as possible')
+            password = meta['admin_pass']
+        else:
+            LOG.debug('Generating a random user password')
+            # Generate a random password
+            # Limit to 14 chars for compatibility with NT
+            password = osutils.generate_random_password(14)
+
+        return password
 
     def _set_metadata_password(self, password, service):
         try:
@@ -76,22 +92,11 @@ class SetUserPasswordPlugin(base.BasePlugin):
                      'supported by this metadata version')
             return True
 
-    def _set_password(self, osutils, user_name):
-        i = 0
-        while True:
-            try:
-                # The retry is due to Windows not accepting some of
-                # the randomly generated passwords due to complexity
-                # constraints
-                password = self._get_password(osutils)
-                LOG.info('Setting the user\'s password')
-                osutils.set_user_password(user_name, password)
-                return password
-            except:
-                if i < self._max_password_set_retry_count:
-                    i += 1
-                else:
-                    raise
+    def _set_password(self, service, osutils, user_name):
+        password = self._get_password(service, osutils)
+        LOG.info('Setting the user\'s password')
+        osutils.set_user_password(user_name, password)
+        return password
 
     def execute(self, service):
         user_name = CONF.username
@@ -106,7 +111,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
         else:
             osutils = osutils_factory.OSUtilsFactory().get_os_utils()
             if osutils.user_exists(user_name):
-                password = self._set_password(osutils, user_name)
+                password = self._set_password(service, osutils, user_name)
                 self._set_metadata_password(password, service)
 
         return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
