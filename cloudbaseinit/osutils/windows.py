@@ -16,6 +16,7 @@
 
 import _winreg
 import ctypes
+import re
 import time
 import win32process
 import win32security
@@ -384,3 +385,15 @@ class WindowsUtils(base.BaseOSUtils):
                                                  max_label_size, 0, 0, 0, 0, 0)
         if ret_val:
             return label.value
+
+    def generate_random_password(self, length):
+        while True:
+            pwd = super(WindowsUtils, self).generate_random_password(length)
+            # Make sure that the Windows complexity requirements are met:
+            # http://technet.microsoft.com/en-us/library/cc786468(v=ws.10).aspx
+            valid = True
+            for r in ["[a-z]", "[A-Z]", "[0-9]"]:
+                if not re.search(r, pwd):
+                    valid = False
+            if valid:
+                return pwd
