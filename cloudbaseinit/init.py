@@ -92,6 +92,7 @@ class InitManager(object):
                 if self._check_plugin_os_requirements(osutils, plugin):
                     if self._exec_plugin(osutils, service, plugin):
                         reboot_required = True
+                        break
         finally:
             service.cleanup()
 
