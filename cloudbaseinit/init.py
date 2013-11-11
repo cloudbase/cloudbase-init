@@ -17,10 +17,19 @@
 import sys
 
 from cloudbaseinit.metadata import factory as metadata_factory
+from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base as plugins_base
 from cloudbaseinit.plugins import factory as plugins_factory
+
+opts = [
+    cfg.BoolOpt('allow_reboot', default=True, help='Allows OS reboots '
+                'requested by plugins'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -92,11 +101,12 @@ class InitManager(object):
                 if self._check_plugin_os_requirements(osutils, plugin):
                     if self._exec_plugin(osutils, service, plugin):
                         reboot_required = True
-                        break
+                        if CONF.allow_reboot:
+                            break
         finally:
             service.cleanup()
 
-        if reboot_required:
+        if reboot_required and CONF.allow_reboot:
             try:
                 osutils.reboot()
             except Exception, ex:
