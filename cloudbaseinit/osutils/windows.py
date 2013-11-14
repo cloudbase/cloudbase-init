@@ -33,6 +33,15 @@ kernel32 = windll.kernel32
 netapi32 = windll.netapi32
 userenv = windll.userenv
 
+kernel32.SetComputerNameExW.argtypes = [ctypes.c_int, wintypes.LPCWSTR]
+kernel32.SetComputerNameExW.restype = wintypes.BOOL
+
+kernel32.GetLogicalDriveStringsW.argtypes = [wintypes.DWORD, wintypes.LPWSTR]
+kernel32.GetLogicalDriveStringsW.restype = wintypes.DWORD
+
+kernel32.GetDriveTypeW.argtypes = [wintypes.LPCWSTR]
+kernel32.GetDriveTypeW.restype = wintypes.UINT
+
 LOG = logging.getLogger(__name__)
 
 
@@ -61,6 +70,10 @@ class WindowsUtils(base.BaseOSUtils):
     ERROR_NO_SUCH_MEMBER = 1387
     ERROR_MEMBER_IN_ALIAS = 1378
     ERROR_INVALID_MEMBER = 1388
+
+    DRIVE_CDROM = 5
+
+    ComputerNamePhysicalDnsHostname = 5
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
     _service_name = 'cloudbase-init'
@@ -215,13 +228,11 @@ class WindowsUtils(base.BaseOSUtils):
         return value.replace('"', '\\"')
 
     def set_host_name(self, new_host_name):
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        comp = conn.Win32_ComputerSystem()[0]
-        if comp.Name != new_host_name:
-            comp.Rename(new_host_name, None, None)
-            return True
-        else:
-            return False
+        ret_val = kernel32.SetComputerNameExW(
+            self.ComputerNamePhysicalDnsHostname,
+            unicode(new_host_name))
+        if not ret_val:
+            raise Exception("Cannot set host name")
 
     def get_network_adapters(self):
         l = []
@@ -397,3 +408,28 @@ class WindowsUtils(base.BaseOSUtils):
                     valid = False
             if valid:
                 return pwd
+
+    def _get_logical_drives(self):
+        buf_size = 260
+        buf = ctypes.create_unicode_buffer(buf_size + 1)
+        buf_len = kernel32.GetLogicalDriveStringsW(buf_size, buf)
+        if not buf_len:
+            raise Exception("GetLogicalDriveStringsW failed")
+
+        drives = []
+        i = 0
+        drive = ''
+        while i < buf_len:
+            c = buf[i]
+            if c != '\x00':
+                drive += c
+            else:
+                drives.append(drive)
+                drive = ''
+            i += 1
+        return drives
+
+    def get_cdrom_drives(self):
+        drives = self._get_logical_drives()
+        return [d for d in drives if kernel32.GetDriveTypeW(d) ==
+                self.DRIVE_CDROM]

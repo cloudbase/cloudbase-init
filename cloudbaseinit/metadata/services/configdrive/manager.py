@@ -47,16 +47,13 @@ class ConfigDriveManager(object):
     def _get_config_drive_cdrom_mount_point(self):
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        q = conn.query('SELECT Drive FROM Win32_CDROMDrive WHERE '
-                       'MediaLoaded = True')
-        for r in q:
-            label = osutils.get_volume_label(r.Drive)
+        for drive in osutils.get_cdrom_drives():
+            label = osutils.get_volume_label(drive)
             if label == "config-2" and \
-                os.path.exists(os.path.join(r.Drive,
+                os.path.exists(os.path.join(drive,
                                             'openstack\\latest\\'
                                             'meta_data.json')):
-                return r.Drive + "\\"
+                return drive
         return None
 
     def _c_char_array_to_c_ushort(self, buf, offset):
