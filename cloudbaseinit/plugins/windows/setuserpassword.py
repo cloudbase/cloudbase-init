@@ -101,17 +101,17 @@ class SetUserPasswordPlugin(base.BasePlugin):
     def execute(self, service):
         user_name = CONF.username
 
-        if not service.can_post_password:
-            LOG.info('Cannot set the password in the metadata as it is '
-                     'not supported by this service')
-            return (base.PLUGIN_EXECUTION_DONE, False)
-
-        if service.is_password_set(self._post_password_md_ver):
+        if (service.can_post_password and
+                service.is_password_set(self._post_password_md_ver)):
             LOG.debug('User\'s password already set in the instance metadata')
         else:
             osutils = osutils_factory.OSUtilsFactory().get_os_utils()
             if osutils.user_exists(user_name):
                 password = self._set_password(service, osutils, user_name)
-                self._set_metadata_password(password, service)
-
-        return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+                if not service.can_post_password:
+                    LOG.info('Cannot set the password in the metadata as it '
+                             'is not supported by this service')
+                    return (base.PLUGIN_EXECUTION_DONE, False)
+                else:
+                    self._set_metadata_password(password, service)
+                    return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
