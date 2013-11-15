@@ -26,6 +26,9 @@ from cloudbaseinit.plugins import factory as plugins_factory
 opts = [
     cfg.BoolOpt('allow_reboot', default=True, help='Allows OS reboots '
                 'requested by plugins'),
+    cfg.BoolOpt('stop_service_on_exit', default=True, help='In case of '
+                'execution as a service, specifies if the service '
+                'must be gracefully stopped before exiting'),
 ]
 
 CONF = cfg.CONF
@@ -111,5 +114,5 @@ class InitManager(object):
                 osutils.reboot()
             except Exception, ex:
                 LOG.error('reboot failed with error \'%s\'' % ex)
-        else:
+        elif CONF.stop_service_on_exit:
             osutils.terminate()
