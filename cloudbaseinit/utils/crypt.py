@@ -141,8 +141,15 @@ class CryptManager(object):
     def load_ssh_rsa_public_key(self, ssh_pub_key):
         ssh_rsa_prefix = "ssh-rsa "
 
+        if not ssh_pub_key.startswith(ssh_rsa_prefix):
+            raise CryptException('Invalid SSH key')
+
         s = ssh_pub_key[len(ssh_rsa_prefix):]
-        b64_pub_key = s[:s.index(' ')]
+        idx = s.find(' ')
+        if idx >= 0:
+            b64_pub_key = s[:idx]
+        else:
+            b64_pub_key = s
 
         pub_key = base64.b64decode(b64_pub_key)
 
