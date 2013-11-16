@@ -47,6 +47,6 @@ class MetadataServiceFactory(object):
                 if service.load():
                     return service
             except Exception, ex:
-                LOG.error('Failed to load metadata service \'%(class_path)s\' '
-                          'with error: %(ex)s' % locals())
+                LOG.error('Failed to load metadata service \'%(class_path)s\'')
+                LOG.exception(ex)
         raise Exception("No available service found")
