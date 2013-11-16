@@ -114,4 +114,5 @@ class SetUserPasswordPlugin(base.BasePlugin):
                     return (base.PLUGIN_EXECUTION_DONE, False)
                 else:
                     self._set_metadata_password(password, service)
-                    return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+
+        return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
