@@ -79,8 +79,8 @@ class InitManager(object):
             if not min_os_version:
                 supported = True
             else:
-                os_version = map(int, osutils.get_os_version().split('.'))
-                if os_version >= list(min_os_version):
+                os_major, os_minor = min_os_version
+                if osutils.check_os_version(os_major, os_minor):
                     supported = True
                 else:
                     LOG.debug('Skipping plugin: \'%s\'. OS version not '

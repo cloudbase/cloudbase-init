@@ -83,6 +83,32 @@ class Win32_MIB_IPFORWARDTABLE(ctypes.Structure):
     ]
 
 
+class Win32_OSVERSIONINFOEX_W(ctypes.Structure):
+    _fields_ = [
+        ('dwOSVersionInfoSize', wintypes.DWORD),
+        ('dwMajorVersion', wintypes.DWORD),
+        ('dwMinorVersion', wintypes.DWORD),
+        ('dwBuildNumber', wintypes.DWORD),
+        ('dwPlatformId', wintypes.DWORD),
+        ('szCSDVersion', wintypes.WCHAR * 128),
+        ('wServicePackMajor', wintypes.DWORD),
+        ('wServicePackMinor', wintypes.DWORD),
+        ('wSuiteMask', wintypes.DWORD),
+        ('wProductType', wintypes.BYTE),
+        ('wReserved', wintypes.BYTE)
+    ]
+
+
+kernel32.VerifyVersionInfoW.argtypes = [
+    ctypes.POINTER(Win32_OSVERSIONINFOEX_W),
+    wintypes.DWORD, wintypes.ULARGE_INTEGER]
+kernel32.VerifyVersionInfoW.restype = wintypes.BOOL
+
+kernel32.VerSetConditionMask.argtypes = [wintypes.ULARGE_INTEGER,
+                                         wintypes.DWORD,
+                                         wintypes.BYTE]
+kernel32.VerSetConditionMask.restype = wintypes.ULARGE_INTEGER
+
 kernel32.SetComputerNameExW.argtypes = [ctypes.c_int, wintypes.LPCWSTR]
 kernel32.SetComputerNameExW.restype = wintypes.BOOL
 
@@ -112,6 +138,12 @@ iphlpapi.GetIpForwardTable.restype = wintypes.DWORD
 
 Ws2_32.inet_ntoa.restype = ctypes.c_char_p
 
+VER_MAJORVERSION = 1
+VER_MINORVERSION = 2
+VER_BUILDNUMBER = 4
+
+VER_GREATER_EQUAL = 3
+
 
 class WindowsUtils(base.BaseOSUtils):
     NERR_GroupNotFound = 2220
@@ -121,6 +153,7 @@ class WindowsUtils(base.BaseOSUtils):
     ERROR_NO_SUCH_MEMBER = 1387
     ERROR_MEMBER_IN_ALIAS = 1378
     ERROR_INVALID_MEMBER = 1388
+    ERROR_OLD_WIN_VERSION = 1150
 
     DRIVE_CDROM = 5
 
@@ -467,9 +500,31 @@ class WindowsUtils(base.BaseOSUtils):
         if err:
             raise Exception('Unable to add route: %(err)s' % locals())
 
-    def get_os_version(self):
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        return conn.Win32_OperatingSystem()[0].Version
+    def check_os_version(self, major, minor, build=0):
+        vi = Win32_OSVERSIONINFOEX_W()
+        vi.dwOSVersionInfoSize = ctypes.sizeof(Win32_OSVERSIONINFOEX_W)
+
+        vi.dwMajorVersion = major
+        vi.dwMinorVersion = minor
+        vi.dwBuildNumber = build
+
+        mask = 0
+        for type_mask in [VER_MAJORVERSION, VER_MINORVERSION, VER_BUILDNUMBER]:
+            mask = kernel32.VerSetConditionMask(mask, type_mask,
+                                                VER_GREATER_EQUAL)
+
+        type_mask = VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER
+        ret_val = kernel32.VerifyVersionInfoW(ctypes.byref(vi), type_mask,
+                                              mask)
+        if ret_val:
+            return True
+        else:
+            err = kernel32.GetLastError()
+            if err == self.ERROR_OLD_WIN_VERSION:
+                return False
+            else:
+                raise Exception("VerifyVersionInfo failed with error: %s" %
+                                err)
 
     def get_volume_label(self, drive):
         max_label_size = 261

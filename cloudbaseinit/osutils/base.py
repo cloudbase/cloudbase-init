@@ -88,7 +88,7 @@ class BaseOSUtils(object):
                          metric):
         pass
 
-    def get_os_version(self):
+    def check_os_version(self, major, minor, build=0):
         pass
 
     def get_volume_label(self, drive):
