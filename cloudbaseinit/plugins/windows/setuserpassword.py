@@ -61,11 +61,17 @@ class SetUserPasswordPlugin(base.BasePlugin):
     def _get_password(self, service, osutils):
         meta_data = service.get_meta_data('openstack')
         meta = meta_data.get('meta')
+        password = None
 
-        if CONF.inject_user_password and meta and 'admin_pass' in meta:
+        if CONF.inject_user_password:
+            if meta and 'admin_pass' in meta:
+                password = meta['admin_pass']
+            elif 'admin_pass' in meta_data:
+                password = meta_data['admin_pass']
+
+        if password:
             LOG.warn('Using admin_pass metadata user password. Consider '
                      'changing it as soon as possible')
-            password = meta['admin_pass']
         else:
             LOG.debug('Generating a random user password')
             # Generate a random password
