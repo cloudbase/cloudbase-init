@@ -24,10 +24,10 @@ PROTOCOL_UDP = "UDP"
 
 class BaseOSUtils(object):
     def reboot(self):
-        pass
+        raise NotImplementedError()
 
     def user_exists(self, username):
-        pass
+        raise NotImplementedError()
 
     def generate_random_password(self, length):
         # On Windows os.urandom() uses CryptGenRandom, which is a
@@ -44,36 +44,36 @@ class BaseOSUtils(object):
         return (out, err, p.returncode)
 
     def sanitize_shell_input(self, value):
-        pass
+        raise NotImplementedError()
 
     def create_user(self, username, password, password_expires=False):
-        pass
+        raise NotImplementedError()
 
     def set_user_password(self, username, password, password_expires=False):
-        pass
+        raise NotImplementedError()
 
     def add_user_to_local_group(self, username, groupname):
-        pass
+        raise NotImplementedError()
 
     def set_host_name(self, new_host_name):
-        pass
+        raise NotImplementedError()
 
     def get_user_home(self, username):
-        pass
+        raise NotImplementedError()
 
     def get_network_adapters(self):
-        pass
+        raise NotImplementedError()
 
     def set_static_network_config(self, adapter_name, address, netmask,
                                   broadcast, gateway, dnsdomain,
                                   dnsnameservers):
-        pass
+        raise NotImplementedError()
 
     def set_config_value(self, name, value, section=None):
-        pass
+        raise NotImplementedError()
 
     def get_config_value(self, name, section=None):
-        pass
+        raise NotImplementedError()
 
     def wait_for_boot_completion(self):
         pass
@@ -82,20 +82,20 @@ class BaseOSUtils(object):
         pass
 
     def get_default_gateway(self):
-        pass
+        raise NotImplementedError()
 
     def check_static_route_exists(self, destination):
-        pass
+        raise NotImplementedError()
 
     def add_static_route(self, destination, mask, next_hop, interface_index,
                          metric):
-        pass
+        raise NotImplementedError()
 
     def check_os_version(self, major, minor, build=0):
-        pass
+        raise NotImplementedError()
 
     def get_volume_label(self, drive):
-        pass
+        raise NotImplementedError()
 
     def firewall_create_rule(self, name, port, protocol, allow=True):
         raise NotImplementedError()
