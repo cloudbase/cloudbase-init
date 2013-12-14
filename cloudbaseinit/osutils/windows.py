@@ -24,6 +24,7 @@ import wmi
 
 from ctypes import windll
 from ctypes import wintypes
+from win32com import client
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
@@ -161,6 +162,11 @@ class WindowsUtils(base.BaseOSUtils):
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
     _service_name = 'cloudbase-init'
+
+    _FW_IP_PROTOCOL_TCP = 6
+    _FW_IP_PROTOCOL_UDP = 17
+    _FW_SCOPE_ALL = 0
+    _FW_SCOPE_LOCAL_SUBNET = 1
 
     def _enable_shutdown_privilege(self):
         process = win32process.GetCurrentProcess()
@@ -570,3 +576,37 @@ class WindowsUtils(base.BaseOSUtils):
         drives = self._get_logical_drives()
         return [d for d in drives if kernel32.GetDriveTypeW(d) ==
                 self.DRIVE_CDROM]
+
+    def _get_fw_protocol(self, protocol):
+        if protocol == base.PROTOCOL_TCP:
+            fw_protocol = self._FW_IP_PROTOCOL_TCP
+        elif protocol == base.PROTOCOL_UDP:
+            fw_protocol = self._FW_IP_PROTOCOL_UDP
+        else:
+            raise NotImplementedError("Unsupported protocol")
+        return fw_protocol
+
+    def firewall_create_rule(self, name, port, protocol, allow=True):
+        if not allow:
+            raise NotImplementedError()
+
+        fw_port = client.Dispatch("HNetCfg.FWOpenPort")
+        fw_port.Name = name
+        fw_port.Protocol = self._get_fw_protocol(protocol)
+        fw_port.Port = port
+        fw_port.Scope = self._FW_SCOPE_ALL
+        fw_port.Enabled = True
+
+        fw_mgr = client.Dispatch("HNetCfg.FwMgr")
+        fw_profile = fw_mgr.LocalPolicy.CurrentProfile
+        fw_profile = fw_profile.GloballyOpenPorts.Add(fw_port)
+
+    def firewall_remove_rule(self, name, port, protocol, allow=True):
+        if not allow:
+            raise NotImplementedError()
+
+        fw_mgr = client.Dispatch("HNetCfg.FwMgr")
+        fw_profile = fw_mgr.LocalPolicy.CurrentProfile
+
+        fw_protocol = self._get_fw_protocol(protocol)
+        fw_profile = fw_profile.GloballyOpenPorts.Remove(port, fw_protocol)

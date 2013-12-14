@@ -18,6 +18,9 @@ import base64
 import os
 import subprocess
 
+PROTOCOL_TCP = "TCP"
+PROTOCOL_UDP = "UDP"
+
 
 class BaseOSUtils(object):
     def reboot(self):
@@ -93,3 +96,9 @@ class BaseOSUtils(object):
 
     def get_volume_label(self, drive):
         pass
+
+    def firewall_create_rule(self, name, port, protocol, allow=True):
+        raise NotImplementedError()
+
+    def firewall_remove_rule(self, name, port, protocol, allow=True):
+        raise NotImplementedError()
