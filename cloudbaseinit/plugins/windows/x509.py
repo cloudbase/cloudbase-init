@@ -30,6 +30,10 @@ free = ctypes.cdll.msvcrt.free
 free.restype = None
 free.argtypes = [ctypes.c_void_p]
 
+STORE_NAME_MY = "My"
+STORE_NAME_ROOT = "Root"
+STORE_NAME_TRUSTED_PEOPLE = "TrustedPeople"
+
 
 class CryptoAPICertManager(object):
     def _get_cert_thumprint(self, cert_context_p):
@@ -101,7 +105,7 @@ class CryptoAPICertManager(object):
                 cryptoapi.CryptReleaseContext(crypt_prov_handle, 0)
 
     def create_self_signed_cert(self, subject, validity_years=10,
-                                machine_keyset=True, store_name="MY"):
+                                machine_keyset=True, store_name=STORE_NAME_MY):
         subject_encoded = None
         cert_context_p = None
         store_handle = None
@@ -208,7 +212,7 @@ class CryptoAPICertManager(object):
         return base64_cert_data.replace("\n", "")
 
     def import_cert(self, cert_data, machine_keyset=True,
-                    store_name="TrustedPeople"):
+                    store_name=STORE_NAME_MY):
 
         base64_cert_data = self._get_cert_base64(cert_data)
 

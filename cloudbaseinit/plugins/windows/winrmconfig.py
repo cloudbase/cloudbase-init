@@ -31,7 +31,10 @@ LISTENER_PROTOCOL_HTTPS = "HTTPS"
 
 class WinRMConfig(object):
     _SERVICE_AUTH_URI = 'winrm/Config/Service/Auth'
-    _SERVICE_LISTENER_URI = 'winrm/Config/Listener?Address=*+Transport=%s'
+    _SERVICE_LISTENER_URI = ('winrm/Config/Listener?Address='
+                             '%(address)s+Transport=%(protocol)s')
+    _SERVICE_CERTMAPPING_URI = ('winrm/Config/Service/certmapping?Issuer='
+                                '%(issuer)s+Subject=%(subject)s+Uri=%(uri)s')
 
     def _get_wsman_session(self):
         wsman = client.Dispatch('WSMan.Automation')
@@ -41,6 +44,9 @@ class WinRMConfig(object):
         return re.match("^{.*}(.*)$", tag).groups(1)[0]
 
     def _parse_listener_xml(self, data_xml):
+        if not data_xml:
+            return None
+
         listening_on = []
         data = {"ListeningOn": listening_on}
 
@@ -64,50 +70,110 @@ class WinRMConfig(object):
 
         return data
 
-    def get_listener(self, protocol=LISTENER_PROTOCOL_HTTPS):
+    def _parse_cert_mapping_xml(self, data_xml):
+        if not data_xml:
+            return None
+
+        data = {}
+
+        ns = {'cfg':
+              'http://schemas.microsoft.com/wbem/wsman/1/config/service/'
+              'certmapping.xsd'}
+        tree = ElementTree.fromstring(data_xml)
+        for node in tree:
+            tag = self._get_node_tag(node.tag)
+            if tag == "Enabled":
+                if node.text == "true":
+                    value = True
+                else:
+                    value = False
+                data[tag] = value
+            else:
+                data[tag] = node.text
+
+        return data
+
+    def _get_xml_bool(self, value):
+        if value:
+            return "true"
+        else:
+            return "false"
+
+    def _get_resource(self, resource_uri):
         session = self._get_wsman_session()
-        resourceUri = self._SERVICE_LISTENER_URI % protocol
         try:
-            data_xml = session.Get(resourceUri)
+            return session.Get(resource_uri)
         except pywintypes.com_error, ex:
             if len(ex.excepinfo) > 5 and ex.excepinfo[5] == -2144108544:
                 return None
             else:
                 raise
 
-        return self._parse_listener_xml(data_xml)
-
-    def delete_listener(self, protocol=LISTENER_PROTOCOL_HTTPS):
+    def _delete_resource(self, resource_uri):
         session = self._get_wsman_session()
-        resourceUri = self._SERVICE_LISTENER_URI % protocol
-        session.Delete(resourceUri)
+        session.Delete(resource_uri)
 
-    def create_listener(self, protocol=LISTENER_PROTOCOL_HTTPS, enabled=True,
-                        cert_thumbprint=None):
+    def _create_resource(self, resource_uri, data_xml):
         session = self._get_wsman_session()
-        resource_uri = self._SERVICE_LISTENER_URI % protocol
+        session.Create(resource_uri, data_xml)
 
-        if enabled:
-            enabled_str = "true"
-        else:
-            enabled_str = "false"
+    def get_cert_mapping(self, issuer, subject, uri="*"):
+        resource_uri = self._SERVICE_CERTMAPPING_URI % {'issuer': issuer,
+                                                        'subject': subject,
+                                                        'uri': uri}
+        return self._parse_cert_mapping_xml(self._get_resource(resource_uri))
 
-        session.Create(
+    def delete_cert_mapping(self, issuer, subject, uri="*"):
+        resource_uri = self._SERVICE_CERTMAPPING_URI % {'issuer': issuer,
+                                                        'subject': subject,
+                                                        'uri': uri}
+        self._delete_resource(resource_uri)
+
+    def create_cert_mapping(self, issuer, subject, username, password,
+                            uri="*", enabled=True):
+        resource_uri = self._SERVICE_CERTMAPPING_URI % {'issuer': issuer,
+                                                        'subject': subject,
+                                                        'uri': uri}
+        self._create_resource(
+            resource_uri,
+            '<p:certmapping xmlns:p="http://schemas.microsoft.com/wbem/wsman/'
+            '1/config/service/certmapping.xsd">'
+            '<p:Enabled>%(enabled)s</p:Enabled>'
+            '<p:Password>%(password)s</p:Password>'
+            '<p:UserName>%(username)s</p:UserName>'
+            '</p:certmapping>' % {'enabled': self._get_xml_bool(enabled),
+                                  'username': username,
+                                  'password': password})
+
+    def get_listener(self, protocol=LISTENER_PROTOCOL_HTTPS, address="*"):
+        resource_uri = self._SERVICE_LISTENER_URI % {'protocol': protocol,
+                                                     'address': address}
+        return self._parse_listener_xml(self._get_resource(resource_uri))
+
+    def delete_listener(self, protocol=LISTENER_PROTOCOL_HTTPS, address="*"):
+        resource_uri = self._SERVICE_LISTENER_URI % {'protocol': protocol,
+                                                     'address': address}
+        self._delete_resource(resource_uri)
+
+    def create_listener(self, protocol=LISTENER_PROTOCOL_HTTPS,
+                        cert_thumbprint=None, address="*", enabled=True):
+        resource_uri = self._SERVICE_LISTENER_URI % {'protocol': protocol,
+                                                     'address': address}
+        self._create_resource(
             resource_uri,
             '<p:Listener xmlns:p="http://schemas.microsoft.com/'
             'wbem/wsman/1/config/listener.xsd">'
-            '<p:Enabled>%(enabled_str)s</p:Enabled>'
+            '<p:Enabled>%(enabled)s</p:Enabled>'
             '<p:CertificateThumbPrint>%(cert_thumbprint)s'
             '</p:CertificateThumbPrint>'
             '<p:URLPrefix>wsman</p:URLPrefix>'
-            '</p:Listener>' % {"enabled_str": enabled_str,
+            '</p:Listener>' % {"enabled": self._get_xml_bool(enabled),
                                "cert_thumbprint": cert_thumbprint})
 
     def get_auth_config(self):
         data = {}
 
-        session = self._get_wsman_session()
-        data_xml = session.Get(self._SERVICE_AUTH_URI)
+        data_xml = self._get_resource(self._SERVICE_AUTH_URI)
         tree = ElementTree.fromstring(data_xml)
         for node in tree:
             tag = self._get_node_tag(node.tag)
@@ -142,13 +208,9 @@ class WinRMConfig(object):
 
         for (tag, value) in tag_map.items():
             if value is not None:
-                if value:
-                    new_value = "true"
-                else:
-                    new_value = "false"
-
                 node = tree.find('.//cfg:%s' % tag, namespaces=ns)
 
+                new_value = self._get_xml_bool(value)
                 if node.text.lower() != new_value:
                     node.text = new_value
                     data_xml = ElementTree.tostring(tree)
