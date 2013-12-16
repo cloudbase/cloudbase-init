@@ -34,7 +34,7 @@ CONF.register_opts(opts)
 
 
 class NetworkConfigPlugin(base.BasePlugin):
-    def execute(self, service):
+    def execute(self, service, shared_data):
         meta_data = service.get_meta_data('openstack')
         if 'network_config' not in meta_data:
             return (base.PLUGIN_EXECUTION_DONE, False)

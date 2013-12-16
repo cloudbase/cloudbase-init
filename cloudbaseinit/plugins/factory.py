@@ -21,16 +21,19 @@ opts = [
     cfg.ListOpt(
         'plugins',
         default=[
-        'cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin',
-        'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
-        'cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin',
-        'cloudbaseinit.plugins.windows.sshpublickeys.'
-        'SetUserSSHPublicKeysPlugin',
-        'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
-        'cloudbaseinit.plugins.windows.userdata.UserDataPlugin',
-        'cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin',
-        'cloudbaseinit.plugins.windows.winrmlistener.'
-        'ConfigWinRMListenerPlugin',
+            'cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin',
+            'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
+            'cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin',
+            'cloudbaseinit.plugins.windows.sshpublickeys.'
+            'SetUserSSHPublicKeysPlugin',
+            'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
+            'cloudbaseinit.plugins.windows.userdata.UserDataPlugin',
+            'cloudbaseinit.plugins.windows.setuserpassword.'
+            'SetUserPasswordPlugin',
+            'cloudbaseinit.plugins.windows.winrmlistener.'
+            'ConfigWinRMListenerPlugin',
+            'cloudbaseinit.plugins.windows.winrmcertificateauth.'
+            'ConfigWinRMCertificateAuthPlugin',
         ],
         help='List of enabled plugin classes, '
         'to executed in the provided order'),

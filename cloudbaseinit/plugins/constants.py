@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 Cloudbase Solutions Srl
+# Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,16 +14,5 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-PLUGIN_EXECUTION_DONE = 1
-PLUGIN_EXECUTE_ON_NEXT_BOOT = 2
-
-
-class BasePlugin(object):
-    def get_name(self):
-        return self.__class__.__name__
-
-    def get_os_requirements(self):
-        return (None, None)
-
-    def execute(self, service, shared_data):
-        pass
+SHARED_DATA_USERNAME = "admin_user"
+SHARED_DATA_PASSWORD = "admin_password"

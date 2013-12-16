@@ -50,7 +50,7 @@ class UserDataPlugin(base.BasePlugin):
             os.path.dirname(os.path.realpath(__file__))),
             "windows/userdata-plugins")
 
-    def execute(self, service):
+    def execute(self, service, shared_data):
         try:
             user_data = service.get_user_data('openstack')
         except metadata_services_base.NotExistingMetadataException:

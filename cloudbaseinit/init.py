@@ -48,7 +48,7 @@ class InitManager(object):
         osutils.set_config_value(plugin_name, status,
                                  self._PLUGINS_CONFIG_SECTION)
 
-    def _exec_plugin(self, osutils, service, plugin):
+    def _exec_plugin(self, osutils, service, plugin, shared_data):
         plugin_name = plugin.get_name()
 
         status = self._get_plugin_status(osutils, plugin_name)
@@ -59,7 +59,8 @@ class InitManager(object):
             LOG.info('Executing plugin \'%(plugin_name)s\'' %
                      locals())
             try:
-                (status, reboot_required) = plugin.execute(service)
+                (status, reboot_required) = plugin.execute(service,
+                                                           shared_data)
                 self._set_plugin_status(osutils, plugin_name, status)
                 return reboot_required
             except Exception, ex:
@@ -98,11 +99,14 @@ class InitManager(object):
 
         plugins = plugins_factory.PluginFactory().load_plugins()
 
+        plugins_shared_data = {}
+
         reboot_required = False
         try:
             for plugin in plugins:
                 if self._check_plugin_os_requirements(osutils, plugin):
-                    if self._exec_plugin(osutils, service, plugin):
+                    if self._exec_plugin(osutils, service, plugin,
+                                         plugins_shared_data):
                         reboot_required = True
                         if CONF.allow_reboot:
                             break

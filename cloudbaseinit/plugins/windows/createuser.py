@@ -18,6 +18,7 @@ from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
+from cloudbaseinit.plugins import constants
 
 opts = [
     cfg.StrOpt('username', default='Admin', help='User to be added to the '
@@ -39,8 +40,9 @@ class CreateUserPlugin(base.BasePlugin):
         # by SetUserPasswordPlugin (starting from Grizzly)
         return osutils.generate_random_password(14)
 
-    def execute(self, service):
+    def execute(self, service, shared_data):
         user_name = CONF.username
+        shared_data[constants.SHARED_DATA_USERNAME] = user_name
 
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
         password = self._get_password(osutils)
@@ -57,6 +59,9 @@ class CreateUserPlugin(base.BasePlugin):
                                                       password,
                                                       True)
             osutils.close_user_logon_session(token)
+
+            # TODO(alexpilotti): encrypt with DPAPI
+            shared_data[constants.SHARED_DATA_PASSWORD] = password
 
         for group_name in CONF.groups:
             try:

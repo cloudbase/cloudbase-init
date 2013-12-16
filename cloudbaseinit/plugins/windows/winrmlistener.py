@@ -36,7 +36,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ConfigWinRMListenerPlugin(base.BasePlugin):
-    _cert_subject = "CN=Cloudbase-Init"
+    _cert_subject = "CN=Cloudbase-Init WinRM"
     _winrm_service_name = "WinRM"
 
     def _check_winrm_service(self, osutils):
@@ -59,7 +59,7 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
 
         return True
 
-    def execute(self, service):
+    def execute(self, service, shared_data):
         osutils = osutils_factory.OSUtilsFactory().get_os_utils()
 
         if not self._check_winrm_service(osutils):

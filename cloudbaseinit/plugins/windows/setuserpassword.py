@@ -21,6 +21,7 @@ from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
+from cloudbaseinit.plugins import constants
 from cloudbaseinit.utils import crypt
 
 opts = [
@@ -73,6 +74,9 @@ class SetUserPasswordPlugin(base.BasePlugin):
             LOG.warn('Using admin_pass metadata user password. Consider '
                      'changing it as soon as possible')
         else:
+            # TODO(alexpilotti): setting a random password can be skipped
+            # if it's already present in the shared_data, as it has already
+            # been set by the CreateUserPlugin
             LOG.debug('Generating a random user password')
             # Generate a random password
             # Limit to 14 chars for compatibility with NT
@@ -104,8 +108,11 @@ class SetUserPasswordPlugin(base.BasePlugin):
         osutils.set_user_password(user_name, password)
         return password
 
-    def execute(self, service):
-        user_name = CONF.username
+    def execute(self, service, shared_data):
+        # TODO(alexpilotti): The username selection logic must be set in the
+        # CreateUserPlugin instead if using CONF.username
+        user_name = shared_data.get(constants.SHARED_DATA_USERNAME,
+                                    CONF.username)
 
         if (service.can_post_password and
                 service.is_password_set(self._post_password_md_ver)):
@@ -114,6 +121,9 @@ class SetUserPasswordPlugin(base.BasePlugin):
             osutils = osutils_factory.OSUtilsFactory().get_os_utils()
             if osutils.user_exists(user_name):
                 password = self._set_password(service, osutils, user_name)
+                # TODO(alexpilotti): encrypt with DPAPI
+                shared_data[constants.SHARED_DATA_PASSWORD] = password
+
                 if not service.can_post_password:
                     LOG.info('Cannot set the password in the metadata as it '
                              'is not supported by this service')
