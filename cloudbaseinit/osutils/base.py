@@ -18,11 +18,11 @@ import base64
 import os
 import subprocess
 
-PROTOCOL_TCP = "TCP"
-PROTOCOL_UDP = "UDP"
-
 
 class BaseOSUtils(object):
+    PROTOCOL_TCP = "TCP"
+    PROTOCOL_UDP = "UDP"
+
     def reboot(self):
         raise NotImplementedError()
 

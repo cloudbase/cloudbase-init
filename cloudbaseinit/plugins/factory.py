@@ -29,6 +29,8 @@ opts = [
         'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
         'cloudbaseinit.plugins.windows.userdata.UserDataPlugin',
         'cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin',
+        'cloudbaseinit.plugins.windows.winrmlistener.'
+        'ConfigWinRMListenerPlugin',
         ],
         help='List of enabled plugin classes, '
         'to executed in the provided order'),

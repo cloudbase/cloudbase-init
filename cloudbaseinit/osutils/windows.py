@@ -158,6 +158,19 @@ class WindowsUtils(base.BaseOSUtils):
 
     DRIVE_CDROM = 5
 
+    SERVICE_STATUS_STOPPED = "Stopped"
+    SERVICE_STATUS_START_PENDING = "Start Pending"
+    SERVICE_STATUS_STOP_PENDING = "Stop Pending"
+    SERVICE_STATUS_RUNNING = "Running"
+    SERVICE_STATUS_CONTINUE_PENDING = "Continue Pending"
+    SERVICE_STATUS_PAUSE_PENDING = "Pause Pending"
+    SERVICE_STATUS_PAUSED = "Paused"
+    SERVICE_STATUS_UNKNOWN = "Unknown"
+
+    SERVICE_START_MODE_AUTOMATIC = "Automatic"
+    SERVICE_START_MODE_MANUAL = "Manual"
+    SERVICE_START_MODE_DISABLED = "Disabled"
+
     ComputerNamePhysicalDnsHostname = 5
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
@@ -417,12 +430,42 @@ class WindowsUtils(base.BaseOSUtils):
             else:
                 raise ex
 
-    def _stop_service(self, service_name):
-        LOG.debug('Stopping service %s' % service_name)
-
+    def _get_service(self, service_name):
         conn = wmi.WMI(moniker='//./root/cimv2')
-        service = conn.Win32_Service(Name=service_name)[0]
+        service_list = conn.Win32_Service(Name=service_name)
+        if len(service_list):
+            return service_list[0]
 
+    def check_service_exists(self, service_name):
+        return self._get_service(service_name) is not None
+
+    def get_service_status(self, service_name):
+        service = self._get_service(service_name)
+        return service.State
+
+    def get_service_start_mode(self, service_name):
+        service = self._get_service(service_name)
+        return service.StartMode
+
+    def set_service_start_mode(self, service_name, start_mode):
+        #TODO(alexpilotti): Handle the "Delayed Start" case
+        service = self._get_service(service_name)
+        (ret_val,) = service.ChangeStartMode(start_mode)
+        if ret_val != 0:
+            raise Exception('Setting service %(service_name)s start mode '
+                            'failed with return value: %(ret_val)d' % locals())
+
+    def start_service(self, service_name):
+        LOG.debug('Starting service %s' % service_name)
+        service = self._get_service(service_name)
+        (ret_val,) = service.StartService()
+        if ret_val != 0:
+            raise Exception('Starting service %(service_name)s failed with '
+                            'return value: %(ret_val)d' % locals())
+
+    def stop_service(self, service_name):
+        LOG.debug('Stopping service %s' % service_name)
+        service = self._get_service(service_name)
         (ret_val,) = service.StopService()
         if ret_val != 0:
             raise Exception('Stopping service %(service_name)s failed with '
@@ -432,7 +475,7 @@ class WindowsUtils(base.BaseOSUtils):
         # Wait for the service to start. Polling the service "Started" property
         # is not enough
         time.sleep(3)
-        self._stop_service(self._service_name)
+        self.stop_service(self._service_name)
 
     def get_default_gateway(self):
         default_routes = [r for r in self._get_ipv4_routing_table()
@@ -475,9 +518,10 @@ class WindowsUtils(base.BaseOSUtils):
                                     'Error: %s' % err)
 
                 forward_table = p_forward_table.contents
-                table = ctypes.cast(ctypes.addressof(forward_table.table),
-                                    ctypes.POINTER(Win32_MIB_IPFORWARDROW *
-                                    forward_table.dwNumEntries)).contents
+                table = ctypes.cast(
+                    ctypes.addressof(forward_table.table),
+                    ctypes.POINTER(Win32_MIB_IPFORWARDROW *
+                                   forward_table.dwNumEntries)).contents
 
                 i = 0
                 while i < forward_table.dwNumEntries:
@@ -578,9 +622,9 @@ class WindowsUtils(base.BaseOSUtils):
                 self.DRIVE_CDROM]
 
     def _get_fw_protocol(self, protocol):
-        if protocol == base.PROTOCOL_TCP:
+        if protocol == self.PROTOCOL_TCP:
             fw_protocol = self._FW_IP_PROTOCOL_TCP
-        elif protocol == base.PROTOCOL_UDP:
+        elif protocol == self.PROTOCOL_UDP:
             fw_protocol = self._FW_IP_PROTOCOL_UDP
         else:
             raise NotImplementedError("Unsupported protocol")
