@@ -25,21 +25,32 @@ LOG = logging.getLogger(__name__)
 
 class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
     def _get_client_auth_cert(self, service):
+        cert_data = None
+
         meta_data = service.get_meta_data('openstack')
         meta = meta_data.get('meta')
+
         if meta:
             i = 0
-            cert_data = ""
             while True:
                 # Chunking is necessary as metadata items can be
                 # max. 255 chars long
                 cert_chunk = meta.get('admin_cert%d' % i)
                 if not cert_chunk:
                     break
-                cert_data += cert_chunk
+                if not cert_data:
+                    cert_data = cert_chunk
+                else:
+                    cert_data += cert_chunk
                 i += 1
 
-            return cert_data
+        if not cert_data:
+            # Look if the user_data contains a PEM certificate
+            user_data = service.get_user_data('openstack')
+            if user_data.startswith(x509.PEM_HEADER):
+                cert_data = user_data
+
+        return cert_data
 
     def _get_credentials(self, shared_data):
         user_name = shared_data.get(constants.SHARED_DATA_USERNAME)
