@@ -34,6 +34,8 @@ STORE_NAME_MY = "My"
 STORE_NAME_ROOT = "Root"
 STORE_NAME_TRUSTED_PEOPLE = "TrustedPeople"
 
+PEM_HEADER = "-----BEGIN CERTIFICATE-----"
+PEM_FOOTER = "-----END CERTIFICATE-----"
 
 class CryptoAPICertManager(object):
     def _get_cert_thumprint(self, cert_context_p):
@@ -200,15 +202,12 @@ class CryptoAPICertManager(object):
                 free(subject_encoded)
 
     def _get_cert_base64(self, cert_data):
-        header = "-----BEGIN CERTIFICATE-----\n"
-        footer = "-----END CERTIFICATE-----\n"
-
         base64_cert_data = cert_data
-        if base64_cert_data.startswith(header):
-            base64_cert_data = base64_cert_data[len(header):]
-        if base64_cert_data.endswith(footer):
+        if base64_cert_data.startswith(PEM_HEADER):
+            base64_cert_data = base64_cert_data[len(PEM_HEADER):]
+        if base64_cert_data.endswith(PEM_FOOTER):
             base64_cert_data = base64_cert_data[:len(base64_cert_data) -
-                                                len(footer)]
+                                                len(PEM_FOOTER)]
         return base64_cert_data.replace("\n", "")
 
     def import_cert(self, cert_data, machine_keyset=True,
