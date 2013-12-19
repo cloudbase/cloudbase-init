@@ -12,7 +12,7 @@ There's no limitation in the type of supported Hypervisor. This service can be u
 Documentation, support and contacts: http://www.cloudbase.it 
 
 
-Metatada services
+Metadata services
 -----------------
 
 A metadata service has the role of pulling the metadata configuration information. 
