@@ -22,7 +22,7 @@ requires = common_setup.parse_requirements()
 dependency_links = common_setup.parse_dependency_links()
 
 setuptools.setup(name='cloudbase-init',
-                 version='0.9.4',
+                 version='0.9.5',
                  description='Portable cloud initialization service',
                  author='Cloudbase Solutions Srl',
                  author_email='apilotti@cloudbasesolutions.com',
