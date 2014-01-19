@@ -1,7 +1,5 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Mirantis Inc.
-# All Rights Reserved.
+# Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,24 +14,14 @@
 #    under the License.
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.plugins.windows import userdata
+from cloudbaseinit.plugins.windows.userdataplugins import base
 
-LOG = logging.getLogger("cloudbaseinit")
-
-
-def get_plugin(parent_set):
-    return HeatUserDataHandler(parent_set)
+LOG = logging.getLogger(__name__)
 
 
-class HeatUserDataHandler:
-
-    def __init__(self, parent_set):
-        LOG.info("Heat user data part handler is loaded.")
-        self.type = "text/x-cfninitdata"
-        self.name = "Heat userdata plugin"
+class CloudConfigPlugin(base.BaseUserDataPlugin):
+    def __init__(self):
+        super(CloudConfigPlugin, self).__init__("text/cloud-config")
 
     def process(self, part):
-        #Only user-data part of Heat multipart data is supported.
-        #All other cfinitdata part will be skipped
-        if part.get_filename() == "cfn-userdata":
-            userdata.handle(part.get_payload())
+        LOG.info("text/cloud-config content is not currently supported")

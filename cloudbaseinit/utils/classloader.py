@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import imp
+import os
+
 from cloudbaseinit.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -25,3 +28,13 @@ class ClassLoader(object):
         parts = class_path.rsplit('.', 1)
         module = __import__(parts[0], fromlist=parts[1])
         return getattr(module, parts[1])
+
+    def load_module(self, path):
+        module_name, file_ext = os.path.splitext(os.path.split(path)[-1])
+
+        if file_ext.lower() == '.py':
+            module = imp.load_source(module_name, path)
+        elif file_ext.lower() == '.pyc':
+            module = imp.load_compiled(module_name, path)
+
+        return module
