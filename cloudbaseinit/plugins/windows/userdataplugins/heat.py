@@ -30,4 +30,4 @@ class HeatPlugin(base.BaseUserDataPlugin):
         # Only user-data part of Heat multipart data is supported.
         # All other cfinitdata part will be skipped
         if part.get_filename() == self._heat_user_data_filename:
-            userdatautils.execute_user_data_script(part.get_payload())
+            return userdatautils.execute_user_data_script(part.get_payload())
