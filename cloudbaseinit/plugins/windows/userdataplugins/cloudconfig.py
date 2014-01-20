@@ -24,4 +24,5 @@ class CloudConfigPlugin(base.BaseUserDataPlugin):
         super(CloudConfigPlugin, self).__init__("text/cloud-config")
 
     def process(self, part):
-        LOG.info("text/cloud-config content is not currently supported")
+        LOG.info("%s content is currently not supported" %
+                 self.get_mime_type())

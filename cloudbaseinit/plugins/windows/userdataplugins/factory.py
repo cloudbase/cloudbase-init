@@ -21,12 +21,16 @@ opts = [
         default=[
             'cloudbaseinit.plugins.windows.userdataplugins.parthandler.'
             'PartHandlerPlugin',
-            'cloudbaseinit.plugins.windows.userdataplugins.heat.'
-            'HeatPlugin',
             'cloudbaseinit.plugins.windows.userdataplugins.cloudconfig.'
             'CloudConfigPlugin',
+            'cloudbaseinit.plugins.windows.userdataplugins.cloudboothook.'
+            'CloudBootHookPlugin',
             'cloudbaseinit.plugins.windows.userdataplugins.shellscript.'
             'ShellScriptPlugin',
+            'cloudbaseinit.plugins.windows.userdataplugins.multipartmixed.'
+            'MultipartMixedPlugin',
+            'cloudbaseinit.plugins.windows.userdataplugins.heat.'
+            'HeatPlugin',
         ],
         help='List of enabled userdata content plugins'),
 ]

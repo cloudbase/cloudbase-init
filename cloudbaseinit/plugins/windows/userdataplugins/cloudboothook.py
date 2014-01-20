@@ -1,4 +1,3 @@
-# Copyright 2013 Mirantis Inc.
 # Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,19 +14,14 @@
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.windows.userdataplugins import base
-from cloudbaseinit.plugins.windows import userdatautils
 
 LOG = logging.getLogger(__name__)
 
 
-class HeatPlugin(base.BaseUserDataPlugin):
-    _heat_user_data_filename = "cfn-userdata"
-
+class CloudBootHookPlugin(base.BaseUserDataPlugin):
     def __init__(self):
-        super(HeatPlugin, self).__init__("text/x-cfninitdata")
+        super(CloudBootHookPlugin, self).__init__("text/cloud-boothook")
 
     def process(self, part):
-        if part.get_filename() == self._heat_user_data_filename:
-            return userdatautils.execute_user_data_script(part.get_payload())
-        else:
-            LOG.info("Heat content not supported: %s" % part.get_filename())
+        LOG.info("%s content is currently not supported" %
+                 self.get_mime_type())
