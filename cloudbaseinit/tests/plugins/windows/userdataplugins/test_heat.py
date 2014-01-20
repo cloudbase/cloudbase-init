@@ -14,15 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib
 import mock
 import unittest
 
 from cloudbaseinit.openstack.common import cfg
-from cloudbaseinit.plugins.windows import userdata_plugins
-#the name of the module includes "-", importlib.import_module is needed:
-heathandler = importlib.import_module("cloudbaseinit.plugins.windows"
-                                      ".userdata-plugins.heathandler")
+from cloudbaseinit.plugins.windows.userdataplugins import heat
 
 CONF = cfg.CONF
 
@@ -30,13 +26,24 @@ CONF = cfg.CONF
 class HeatUserDataHandlerTests(unittest.TestCase):
 
     def setUp(self):
-        parent_set = userdata_plugins.PluginSet
-        self._heathandler = heathandler.HeatUserDataHandler(parent_set)
+        self._heat = heat.HeatPlugin()
 
-    @mock.patch('cloudbaseinit.plugins.windows.userdata.handle')
-    def test_process(self, mock_handle):
+    @mock.patch('cloudbaseinit.plugins.windows.userdatautils'
+                '.execute_user_data_script')
+    def _test_process(self, mock_execute_user_data_script, filename):
         mock_part = mock.MagicMock()
-        mock_part.get_filename.return_value = "cfn-userdata"
-        self._heathandler.process(mock_part)
-        mock_part.get_filename.assert_called_once_with()
-        mock_handle.assert_called_once_with(mock_part.get_payload())
+        mock_part.get_filename.return_value = filename
+        response = self._heat.process(mock_part)
+        mock_part.get_filename.assert_called_with()
+        if filename:
+            mock_execute_user_data_script.assert_called_with(
+                mock_part.get_payload())
+            self.assertEqual(response, mock_execute_user_data_script())
+        else:
+            self.assertTrue(response is None)
+
+    def test_process(self):
+        self._test_process(filename='cfn-userdata')
+
+    def test_process_content_not_supported(self):
+        self._test_process(filename=None)
