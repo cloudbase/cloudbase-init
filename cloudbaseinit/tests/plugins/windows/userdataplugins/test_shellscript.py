@@ -14,25 +14,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib
 import mock
 import os
 import unittest
 
 from cloudbaseinit.openstack.common import cfg
-from cloudbaseinit.plugins.windows import userdata_plugins
-#the name of the module includes "-", importlib.import_module is needed:
-shellscript = importlib.import_module("cloudbaseinit.plugins.windows"
-                                      ".userdata-plugins.shellscript")
+from cloudbaseinit.plugins.windows.userdataplugins import shellscript
 
 CONF = cfg.CONF
 
 
-class ShellScriptHandlerTests(unittest.TestCase):
+class ShellScriptPluginTests(unittest.TestCase):
 
     def setUp(self):
-        parent_set = userdata_plugins.PluginSet('fake_path')
-        self._shellscript = shellscript.ShellScriptHandler(parent_set)
+        self._shellscript = shellscript.ShellScriptPlugin()
 
     @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
     @mock.patch('tempfile.gettempdir')
@@ -49,7 +44,7 @@ class ShellScriptHandlerTests(unittest.TestCase):
         if exception:
             mock_osutils.execute_process.side_effect = [Exception]
 
-        with mock.patch("cloudbaseinit.plugins.windows.userdata-plugins."
+        with mock.patch("cloudbaseinit.plugins.windows.userdataplugins."
                         "shellscript.open", mock.mock_open(), create=True):
             response = self._shellscript.process(mock_part)
 
@@ -61,21 +56,27 @@ class ShellScriptHandlerTests(unittest.TestCase):
         elif filename.endswith(".sh"):
             mock_osutils.execute_process.assert_called_with(
                 ['bash.exe', os.path.join(fake_dir_path, filename)], False)
+        elif filename.endswith(".py"):
+            mock_osutils.execute_process.assert_called_with(
+                ['python.exe', os.path.join(fake_dir_path, filename)], False)
         elif filename.endswith(".ps1"):
             mock_osutils.execute_process.assert_called_with(
                 ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
                  '-NonInteractive', os.path.join(fake_dir_path, filename)],
-                 False)
+                False)
             self.assertFalse(response)
 
     def test_process_cmd(self):
         self._test_process(filename='fake.cmd')
 
     def test_process_sh(self):
-        self._test_process(filename='fake.cmd')
+        self._test_process(filename='fake.sh')
+
+    def test_process_py(self):
+        self._test_process(filename='fake.py')
 
     def test_process_ps1(self):
-        self._test_process(filename='fake.cmd')
+        self._test_process(filename='fake.ps1')
 
     def test_process_other(self):
         self._test_process(filename='fake.other')
