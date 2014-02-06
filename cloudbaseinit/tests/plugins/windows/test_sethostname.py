@@ -15,6 +15,8 @@
 #    under the License.
 
 import mock
+import random
+import string
 import unittest
 
 from cloudbaseinit.openstack.common import cfg
@@ -32,11 +34,15 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
             '2013-04-04')
 
     @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
-    def _test_execute(self, mock_get_os_utils, hostname_exists):
+    def _test_execute(self, mock_get_os_utils, hostname_exists,
+                      new_hostname_length=1):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         fake_shared_data = 'fake data'
+        new_hostname = 'x' * new_hostname_length
+        self.fake_data['hostname'] = new_hostname
         mock_service.get_meta_data.return_value = self.fake_data
+        CONF.set_override('netbios_host_name_compatibility', True)
         if hostname_exists is False:
             del self.fake_data['hostname']
         mock_get_os_utils.return_value = mock_osutils
@@ -45,13 +51,24 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
                                                     fake_shared_data)
         mock_service.get_meta_data.assert_called_once_with('openstack')
         if hostname_exists is True:
+            length = sethostname.NETBIOS_HOST_NAME_MAX_LEN
             mock_get_os_utils.assert_called_once_with()
-            mock_osutils.set_host_name.assert_called_once_with(
-                self.fake_data['hostname'].split('.', 1)[0])
+            hostname = self.fake_data['hostname'].split('.', 1)[0]
+            if len(self.fake_data['hostname']) > length:
+                hostname = hostname[:length]
+            mock_osutils.set_host_name.assert_called_once_with(hostname)
+
         self.assertEqual(response, (1, False))
 
-    def test_execute(self):
-        self._test_execute(hostname_exists=True)
+    def test_execute_hostname_to_be_truncated(self):
+        self._test_execute(
+            hostname_exists=True,
+            new_hostname_length=sethostname.NETBIOS_HOST_NAME_MAX_LEN + 1)
+
+    def test_execute_no_truncate_needed(self):
+        self._test_execute(
+            hostname_exists=True,
+            new_hostname_length=sethostname.NETBIOS_HOST_NAME_MAX_LEN)
 
     def test_execute_no_hostname(self):
         self._test_execute(hostname_exists=False)
