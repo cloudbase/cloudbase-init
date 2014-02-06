@@ -444,16 +444,32 @@ class WindowsUtilsTest(unittest.TestCase):
     def test_get_user_home_fail(self):
         self._test_get_user_home(user_sid=None)
 
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_os_version')
     @mock.patch('wmi.WMI')
-    def test_get_network_adapters(self, mock_WMI):
+    def _test_get_network_adapters(self, is_xp_2003, mock_WMI,
+                                   mock_check_os_version):
         mock_WMI.return_value = self._conn
         mock_response = mock.MagicMock()
         self._conn.query.return_value = [mock_response]
+
+        mock_check_os_version.return_value = not is_xp_2003
+
+        wql = ('SELECT * FROM Win32_NetworkAdapter WHERE '
+               'AdapterTypeId = 0 AND MACAddress IS NOT NULL')
+
+        if not is_xp_2003:
+            wql += ' AND PhysicalAdapter = True'
+
         response = self._winutils.get_network_adapters()
-        self._conn.query.assert_called_with(
-            'SELECT * FROM Win32_NetworkAdapter WHERE AdapterTypeId = 0 AND '
-            'PhysicalAdapter = True AND MACAddress IS NOT NULL')
+        self._conn.query.assert_called_with(wql)
         self.assertEqual(response, [mock_response.Name])
+
+    def test_get_network_adapters(self):
+        self._test_get_network_adapters(False)
+
+    def test_get_network_adapters_xp_2003(self):
+        self._test_get_network_adapters(True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._sanitize_wmi_input')
