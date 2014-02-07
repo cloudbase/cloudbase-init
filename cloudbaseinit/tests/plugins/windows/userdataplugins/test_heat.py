@@ -28,14 +28,29 @@ class HeatUserDataHandlerTests(unittest.TestCase):
     def setUp(self):
         self._heat = heat.HeatPlugin()
 
+    @mock.patch('os.path.exists')
+    @mock.patch('os.makedirs')
+    def test_check_heat_config_dir(self, mock_makedirs, mock_exists):
+        mock_exists.return_value = False
+        self._heat._check_heat_config_dir()
+        mock_exists.assert_called_once_with(CONF.heat_config_dir)
+        mock_makedirs.assert_called_once_with(CONF.heat_config_dir)
+
     @mock.patch('cloudbaseinit.plugins.windows.userdatautils'
                 '.execute_user_data_script')
-    def _test_process(self, mock_execute_user_data_script, filename):
+    @mock.patch('cloudbaseinit.plugins.windows.userdataplugins.heat'
+                '.HeatPlugin._check_heat_config_dir')
+    def _test_process(self, mock_check_heat_config_dir,
+                      mock_execute_user_data_script, filename):
         mock_part = mock.MagicMock()
         mock_part.get_filename.return_value = filename
-        response = self._heat.process(mock_part)
+        with mock.patch('__builtin__.open', mock.mock_open(),
+                        create=True) as handle:
+            response = self._heat.process(mock_part)
+            handle().write.assert_called_once_with(mock_part.get_payload())
+        mock_check_heat_config_dir.assert_called_once_with()
         mock_part.get_filename.assert_called_with()
-        if filename:
+        if filename == self._heat._heat_user_data_filename:
             mock_execute_user_data_script.assert_called_with(
                 mock_part.get_payload())
             self.assertEqual(response, mock_execute_user_data_script())
@@ -43,7 +58,7 @@ class HeatUserDataHandlerTests(unittest.TestCase):
             self.assertTrue(response is None)
 
     def test_process(self):
-        self._test_process(filename='cfn-userdata')
+        self._test_process(filename=self._heat._heat_user_data_filename)
 
-    def test_process_content_not_supported(self):
-        self._test_process(filename=None)
+    def test_process_content_other_data(self):
+        self._test_process(filename='other data')
