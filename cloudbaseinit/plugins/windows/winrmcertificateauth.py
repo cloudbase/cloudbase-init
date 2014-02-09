@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
@@ -46,9 +47,13 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
 
         if not cert_data:
             # Look if the user_data contains a PEM certificate
-            user_data = service.get_user_data('openstack')
-            if user_data.startswith(x509.PEM_HEADER):
-                cert_data = user_data
+            try:
+                user_data = service.get_user_data('openstack')
+                if user_data.startswith(x509.PEM_HEADER):
+                    cert_data = user_data
+            except metadata_services_base.NotExistingMetadataException:
+                LOG.debug("user_data metadata not present")
+                pass
 
         return cert_data
 
