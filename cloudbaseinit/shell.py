@@ -18,10 +18,9 @@ import sys
 
 from cloudbaseinit import init
 from cloudbaseinit.openstack.common import cfg
-from cloudbaseinit.openstack.common import log as logging
+from cloudbaseinit.utils import log as logging
 
 CONF = cfg.CONF
-LOG = logging.getLogger(__name__)
 
 
 def main():
