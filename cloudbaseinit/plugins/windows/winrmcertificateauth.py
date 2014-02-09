@@ -53,7 +53,6 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
                     cert_data = user_data
             except metadata_services_base.NotExistingMetadataException:
                 LOG.debug("user_data metadata not present")
-                pass
 
         return cert_data
 
