@@ -64,5 +64,6 @@ def setup(product_name):
         if CONF.log_format:
             serialportlog.setFormatter(logging.Formatter(fmt=CONF.log_format,
                                                          datefmt=datefmt))
-        serialportlog.setFormatter(
-            openstack_logging.LegacyFormatter(datefmt=datefmt))
+        else:
+            serialportlog.setFormatter(
+                openstack_logging.LegacyFormatter(datefmt=datefmt))
