@@ -425,8 +425,8 @@ class WindowsUtils(base.BaseOSUtils):
                     if gen_state == 7:
                         break
                     time.sleep(1)
-                    LOG.debug('Waiting for sysprep completion. '
-                              'GeneralizationState: %d' % gen_state)
+                    LOG.info('Waiting for sysprep completion. '
+                             'GeneralizationState: %d' % gen_state)
         except WindowsError, ex:
             if ex.winerror == 2:
                 LOG.debug('Sysprep data not found in the registry, '
