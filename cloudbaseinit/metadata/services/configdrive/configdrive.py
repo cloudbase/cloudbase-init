@@ -19,8 +19,9 @@ import shutil
 import tempfile
 import uuid
 
+from oslo.config import cfg
+
 from cloudbaseinit.metadata.services import base
-from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.metadata.services.configdrive import manager
 

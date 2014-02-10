@@ -16,8 +16,9 @@
 
 import base64
 
+from oslo.config import cfg
+
 from cloudbaseinit.metadata.services import base as services_base
-from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base

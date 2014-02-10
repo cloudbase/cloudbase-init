@@ -18,8 +18,9 @@ import mock
 import os
 import unittest
 
+from oslo.config import cfg
+
 from cloudbaseinit.metadata.services import ec2service
-from cloudbaseinit.openstack.common import cfg
 
 CONF = cfg.CONF
 

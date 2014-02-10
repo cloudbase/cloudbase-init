@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.utils import classloader
 
 opts = [

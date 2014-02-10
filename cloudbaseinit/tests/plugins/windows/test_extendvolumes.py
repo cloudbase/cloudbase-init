@@ -20,7 +20,7 @@ import re
 import sys
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
 
 CONF = cfg.CONF
 

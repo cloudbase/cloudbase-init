@@ -18,7 +18,8 @@ import mock
 import os
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.plugins.windows.userdataplugins import parthandler
 
 CONF = cfg.CONF

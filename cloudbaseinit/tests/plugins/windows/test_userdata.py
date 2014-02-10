@@ -17,8 +17,9 @@
 import mock
 import unittest
 
+from oslo.config import cfg
+
 from cloudbaseinit.metadata.services import base as metadata_services_base
-from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import userdata
 from cloudbaseinit.tests.metadata import fake_json_response

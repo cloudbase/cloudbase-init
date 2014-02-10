@@ -17,7 +17,8 @@
 import ctypes
 import re
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import vds

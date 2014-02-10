@@ -19,7 +19,8 @@ import json
 import posixpath
 import time
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.openstack.common import log as logging
 
 opts = [

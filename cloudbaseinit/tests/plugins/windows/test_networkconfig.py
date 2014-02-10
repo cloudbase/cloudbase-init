@@ -18,7 +18,8 @@ import mock
 import re
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.plugins.windows import networkconfig
 from cloudbaseinit.tests.metadata import fake_json_response
 

@@ -18,8 +18,9 @@ import mock
 import os
 import unittest
 
+from oslo.config import cfg
+
 from cloudbaseinit.plugins.windows import sshpublickeys
-from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.tests.metadata import fake_json_response
 
 CONF = cfg.CONF

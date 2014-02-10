@@ -17,8 +17,9 @@
 import mock
 import unittest
 
+from oslo.config import cfg
+
 from cloudbaseinit.plugins import factory
-from cloudbaseinit.openstack.common import cfg
 
 CONF = cfg.CONF
 

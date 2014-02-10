@@ -16,8 +16,9 @@
 
 import sys
 
+from oslo.config import cfg
+
 from cloudbaseinit import init
-from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.utils import log as logging
 
 CONF = cfg.CONF

@@ -19,7 +19,7 @@ import mock
 import sys
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
 
 CONF = cfg.CONF
 _mock_wintypes = mock.MagicMock()

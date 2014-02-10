@@ -20,6 +20,8 @@ import time
 import sys
 import unittest
 
+from oslo.config import cfg
+
 if sys.platform == 'win32':
     import _winreg
     import win32process
@@ -29,7 +31,6 @@ if sys.platform == 'win32':
     from ctypes import windll
     from ctypes import wintypes
     from cloudbaseinit.osutils import windows as windows_utils
-from cloudbaseinit.openstack.common import cfg
 
 CONF = cfg.CONF
 

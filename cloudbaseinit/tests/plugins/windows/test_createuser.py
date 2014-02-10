@@ -17,7 +17,8 @@
 import mock
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import createuser
 

@@ -19,8 +19,9 @@ import urllib2
 import traceback
 import os
 
+from oslo.config import cfg
+
 from cloudbaseinit.metadata.services import base
-from cloudbaseinit.openstack.common import cfg
 from cloudbaseinit.openstack.common import log as logging
 
 opts = [

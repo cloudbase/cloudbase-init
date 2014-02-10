@@ -3,3 +3,4 @@ wmi
 iso8601
 eventlet
 pyserial
+oslo.config

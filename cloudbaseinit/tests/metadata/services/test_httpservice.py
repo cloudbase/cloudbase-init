@@ -19,9 +19,10 @@ import os
 import unittest
 import urllib2
 
+from oslo.config import cfg
+
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import httpservice
-from cloudbaseinit.openstack.common import cfg
 
 CONF = cfg.CONF
 

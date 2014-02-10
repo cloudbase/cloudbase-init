@@ -17,7 +17,8 @@ import os
 import uuid
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.plugins.windows import userdatautils
 from cloudbaseinit.tests.metadata import fake_json_response
 

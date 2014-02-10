@@ -18,7 +18,8 @@ import mock
 import sys
 import unittest
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 if sys.platform == 'win32':
     from cloudbaseinit.plugins.windows import winrmconfig
 

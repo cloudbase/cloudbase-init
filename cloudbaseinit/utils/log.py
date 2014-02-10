@@ -15,7 +15,8 @@
 import logging
 import serial
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.openstack.common import log as openstack_logging
 
 opts = [
@@ -27,7 +28,6 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
-CONF.import_opt('default_log_levels', 'cloudbaseinit.openstack.common.log')
 CONF.import_opt('log_date_format', 'cloudbaseinit.openstack.common.log')
 CONF.import_opt('log_format', 'cloudbaseinit.openstack.common.log')
 
@@ -66,8 +66,3 @@ def setup(product_name):
                                                          datefmt=datefmt))
         serialportlog.setFormatter(
             openstack_logging.LegacyFormatter(datefmt=datefmt))
-
-        for pair in CONF.default_log_levels:
-            mod, _sep, level_name = pair.partition('=')
-            logger = logging.getLogger(mod)
-            logger.addHandler(serialportlog)

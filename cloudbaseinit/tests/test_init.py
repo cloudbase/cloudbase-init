@@ -18,9 +18,10 @@ import mock
 import unittest
 import sys
 
+from oslo.config import cfg
+
 from cloudbaseinit import init
 from cloudbaseinit.plugins import base
-from cloudbaseinit.openstack.common import cfg
 
 CONF = cfg.CONF
 _win32com_mock = mock.MagicMock()

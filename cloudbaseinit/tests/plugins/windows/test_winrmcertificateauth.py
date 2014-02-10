@@ -28,7 +28,8 @@ mock_dict = {'ctypes': _ctypes_mock,
              'pywintypes': _pywintypes_mock}
 
 
-from cloudbaseinit.openstack.common import cfg
+from oslo.config import cfg
+
 from cloudbaseinit.plugins import constants
 
 CONF = cfg.CONF
