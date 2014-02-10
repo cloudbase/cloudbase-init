@@ -5,3 +5,5 @@ iso8601
 eventlet
 pyserial
 oslo.config
+six>=1.4.1
+Babel>=1.3
