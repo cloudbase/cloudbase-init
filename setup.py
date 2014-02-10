@@ -16,32 +16,6 @@
 
 import setuptools
 
-from cloudbaseinit.openstack.common import setup as common_setup
-
-requires = common_setup.parse_requirements()
-dependency_links = common_setup.parse_dependency_links()
-
-setuptools.setup(name='cloudbase-init',
-                 version='0.9.5',
-                 description='Portable cloud initialization service',
-                 author='Cloudbase Solutions Srl',
-                 author_email='apilotti@cloudbasesolutions.com',
-                 url='http://www.cloudbase.it/',
-                 classifiers=['Environment :: OpenStack',
-                              'Intended Audience :: Information Technology',
-                              'Intended Audience :: System Administrators',
-                              'License :: OSI Approved :: Apache Software '
-                              'License',
-                              'Operating System :: OS Independent',
-                              'Programming Language :: Python',
-                              'Programming Language :: Python :: 2',
-                              'Programming Language :: Python :: 2.7'],
-                 cmdclass=common_setup.get_cmdclass(),
-                 packages=setuptools.find_packages(exclude=['bin']),
-                 install_requires=requires,
-                 dependency_links=dependency_links,
-                 include_package_data=True,
-                 setup_requires=['setuptools_git>=0.4'],
-                 entry_points={'console_scripts':
-                               ['cloudbase-init = cloudbaseinit.shell:main']},
-                 py_modules=[])
+setuptools.setup(
+    setup_requires=['pbr>=0.5.22,!=0.5.23'],
+    pbr=True)
