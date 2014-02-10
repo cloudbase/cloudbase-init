@@ -29,7 +29,6 @@ opts = [
 CONF = cfg.CONF
 CONF.register_opts(opts)
 CONF.import_opt('log_date_format', 'cloudbaseinit.openstack.common.log')
-CONF.import_opt('log_format', 'cloudbaseinit.openstack.common.log')
 
 
 class SerialPortHandler(logging.StreamHandler):
@@ -61,9 +60,6 @@ def setup(product_name):
         log_root.addHandler(serialportlog)
 
         datefmt = CONF.log_date_format
-        if CONF.log_format:
-            serialportlog.setFormatter(logging.Formatter(fmt=CONF.log_format,
-                                                         datefmt=datefmt))
-        else:
-            serialportlog.setFormatter(
-                openstack_logging.LegacyFormatter(datefmt=datefmt))
+        serialportlog.setFormatter(
+            openstack_logging.ContextFormatter(project=product_name,
+                                               datefmt=datefmt))

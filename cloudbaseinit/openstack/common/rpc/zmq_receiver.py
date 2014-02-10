@@ -1,5 +1,4 @@
-# Copyright 2012 Red Hat, Inc.
-# All Rights Reserved.
+#    Copyright 2011 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,17 +12,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import eventlet
+eventlet.monkey_patch()
 
-from cloudbaseinit.openstack.common.gettextutils import _
+import contextlib
+import sys
+
+from oslo.config import cfg
+
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.openstack.common.notifier import rpc_notifier
+from cloudbaseinit.openstack.common import rpc
+from cloudbaseinit.openstack.common.rpc import impl_zmq
 
-LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
+CONF.register_opts(rpc.rpc_opts)
+CONF.register_opts(impl_zmq.zmq_opts)
 
 
-def notify(context, message):
-    """Deprecated in Grizzly. Please use rpc_notifier instead."""
+def main():
+    CONF(sys.argv[1:], project='cloudbaseinit')
+    logging.setup("cloudbaseinit")
 
-    LOG.deprecated(_("The rabbit_notifier is now deprecated."
-                     " Please use rpc_notifier instead."))
-    rpc_notifier.notify(context, message)
+    with contextlib.closing(impl_zmq.ZmqProxy(CONF)) as reactor:
+        reactor.consume_in_thread()
+        reactor.wait()
