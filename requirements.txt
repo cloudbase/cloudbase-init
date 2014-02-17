@@ -7,3 +7,4 @@ pyserial
 oslo.config
 six>=1.4.1
 Babel>=1.3
+oauth
