@@ -26,7 +26,6 @@ opts = [
             'cloudbaseinit.metadata.services.httpservice.HttpService',
             'cloudbaseinit.metadata.services.configdrive.configdrive.'
             'ConfigDriveService',
-            'cloudbaseinit.metadata.services.ec2service.EC2Service'
         ],
         help='List of enabled metadata service classes, '
         'to be tested fro availability in the provided order. '
