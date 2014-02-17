@@ -22,6 +22,7 @@ import uuid
 from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.metadata.services.configdrive import manager
 
@@ -38,7 +39,7 @@ CONF.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-class ConfigDriveService(base.BaseMetadataService):
+class ConfigDriveService(baseopenstackservice.BaseOpenStackService):
     def __init__(self):
         super(ConfigDriveService, self).__init__()
         self._metadata_path = None

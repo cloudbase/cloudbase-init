@@ -21,6 +21,7 @@ import urlparse
 from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 
@@ -35,7 +36,9 @@ CONF.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-class HttpService(base.BaseMetadataService):
+class HttpService(baseopenstackservice.BaseOpenStackService):
+    _POST_PASSWORD_MD_VER = '2013-04-04'
+
     def __init__(self):
         super(HttpService, self).__init__()
         self._enable_retry = True
@@ -72,16 +75,12 @@ class HttpService(base.BaseMetadataService):
         self._check_metadata_ip_route()
 
         try:
-            self.get_meta_data('openstack')
+            self._get_meta_data()
             return True
-        except:
+        except Exception:
             LOG.debug('Metadata not found at URL \'%s\'' %
                       CONF.metadata_base_url)
             return False
-
-    @property
-    def can_post_password(self):
-        return True
 
     def _get_response(self, req):
         try:
@@ -106,10 +105,27 @@ class HttpService(base.BaseMetadataService):
         self._get_response(req)
         return True
 
-    def post_password(self, enc_password_b64, version='latest'):
+    def _get_password_path(self):
+        return 'openstack/%s/password' % self._POST_PASSWORD_MD_VER
+
+    @property
+    def can_post_password(self):
         try:
-            return super(HttpService, self).post_password(enc_password_b64,
-                                                          version)
+            self._get_meta_data(self._POST_PASSWORD_MD_VER)
+            return True
+        except base.NotExistingMetadataException:
+            return False
+
+    @property
+    def is_password_set(self):
+        path = self._get_password_path()
+        return len(self._get_data(path)) > 0
+
+    def post_password(self, enc_password_b64):
+        try:
+            path = self._get_password_path()
+            action = lambda: self._post_data(path, enc_password_b64)
+            return self._exec_with_retry(action)
         except urllib2.HTTPError as ex:
             if ex.code == 409:
                 # Password already set

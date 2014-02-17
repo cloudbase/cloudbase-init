@@ -192,7 +192,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         mock_CertOpenStore.return_value = store_handle
         mock_CertAddCertificateContextToStore.return_value = context_to_store
         if (certstr is None or certificate is None or enhanced_key is None
-            or store_handle is None or context_to_store is None):
+                or store_handle is None or context_to_store is None):
             self.assertRaises(cryptoapi.CryptoAPIException,
                               self._x509.create_self_signed_cert,
                               'fake subject', 10, True, x509.STORE_NAME_MY)
@@ -333,7 +333,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                                0, None, mock_create_unicode_buffer(), 2)]
 
         if (not crypttstr or store_handle is None or add_enc_cert is None or
-            upn_len != 2):
+                upn_len != 2):
             self.assertRaises(cryptoapi.CryptoAPIException,
                               self._x509.import_cert, fake_cert_data, True,
                               x509.STORE_NAME_MY)

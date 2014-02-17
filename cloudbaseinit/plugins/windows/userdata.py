@@ -30,7 +30,7 @@ class UserDataPlugin(base.BasePlugin):
 
     def execute(self, service, shared_data):
         try:
-            user_data = service.get_user_data('openstack')
+            user_data = service.get_user_data()
         except metadata_services_base.NotExistingMetadataException:
             return (base.PLUGIN_EXECUTION_DONE, False)
 
@@ -127,7 +127,7 @@ class UserDataPlugin(base.BasePlugin):
 
     def _end_part_process_event(self, handler_func):
         LOG.debug("Calling part handler \"__end__\" event")
-        handler_func(None, "__end__",  None, None)
+        handler_func(None, "__end__", None, None)
 
     def _get_plugin_return_value(self, ret_val):
         plugin_status = base.PLUGIN_EXECUTION_DONE

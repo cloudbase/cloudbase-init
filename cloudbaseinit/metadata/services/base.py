@@ -15,8 +15,6 @@
 #    under the License.
 
 import abc
-import json
-import posixpath
 import time
 
 from oslo.config import cfg
@@ -53,10 +51,6 @@ class BaseMetadataService(object):
     def load(self):
         self._cache = {}
 
-    @property
-    def can_post_password(self):
-        return False
-
     @abc.abstractmethod
     def _get_data(self, path):
         pass
@@ -84,41 +78,37 @@ class BaseMetadataService(object):
             self._cache[path] = data
             return data
 
-    def get_content(self, data_type, name):
-        path = posixpath.normpath(
-            posixpath.join(data_type, 'content', name))
-        return self._get_cache_data(path)
+    def get_content(self, name):
+        pass
 
-    def get_user_data(self, data_type, version='latest'):
-        path = posixpath.normpath(
-            posixpath.join(data_type, version, 'user_data'))
-        return self._get_cache_data(path)
+    def get_user_data(self):
+        pass
 
-    def get_meta_data(self, data_type, version='latest'):
-        path = posixpath.normpath(
-            posixpath.join(data_type, version, 'meta_data.json'))
-        data = self._get_cache_data(path)
-        if type(data) is str:
-            return json.loads(self._get_cache_data(path))
-        else:
-            return data
+    def get_host_name(self):
+        pass
 
-    def _post_data(self, path, data):
-        raise NotExistingMetadataException()
+    def get_public_keys(self):
+        pass
 
-    def _get_password_path(self, version='latest'):
-        return posixpath.normpath(posixpath.join('openstack',
-                                                 version,
-                                                 'password'))
+    def get_network_config(self):
+        pass
 
-    def is_password_set(self, version='latest'):
-        path = self._get_password_path(version)
-        return len(self._get_data(path)) > 0
+    def get_admin_password(self):
+        pass
 
-    def post_password(self, enc_password_b64, version='latest'):
-        path = self._get_password_path(version)
-        action = lambda: self._post_data(path, enc_password_b64)
-        return self._exec_with_retry(action)
+    @property
+    def can_post_password(self):
+        return False
+
+    @property
+    def is_password_set(self):
+        return False
+
+    def post_password(self, enc_password_b64):
+        pass
+
+    def get_client_auth_certs(self):
+        pass
 
     def cleanup(self):
         pass

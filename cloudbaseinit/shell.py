@@ -29,3 +29,7 @@ def main():
     logging.setup('cloudbaseinit')
 
     init.InitManager().configure_host()
+
+
+if __name__ == "__main__":
+    main()

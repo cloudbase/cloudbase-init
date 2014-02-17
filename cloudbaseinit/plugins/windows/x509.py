@@ -37,6 +37,7 @@ STORE_NAME_TRUSTED_PEOPLE = "TrustedPeople"
 PEM_HEADER = "-----BEGIN CERTIFICATE-----"
 PEM_FOOTER = "-----END CERTIFICATE-----"
 
+
 class CryptoAPICertManager(object):
     def _get_cert_thumprint(self, cert_context_p):
         thumbprint = None

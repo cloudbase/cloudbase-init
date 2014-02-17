@@ -36,17 +36,16 @@ CONF.register_opts(opts)
 
 class NetworkConfigPlugin(base.BasePlugin):
     def execute(self, service, shared_data):
-        meta_data = service.get_meta_data('openstack')
-        if 'network_config' not in meta_data:
+        network_config = service.get_network_config()
+        if not network_config:
             return (base.PLUGIN_EXECUTION_DONE, False)
 
-        network_config = meta_data['network_config']
         if 'content_path' not in network_config:
             return (base.PLUGIN_EXECUTION_DONE, False)
 
         content_path = network_config['content_path']
         content_name = content_path.rsplit('/', 1)[-1]
-        debian_network_conf = service.get_content('openstack', content_name)
+        debian_network_conf = service.get_content(content_name)
 
         LOG.debug('network config content:\n%s' % debian_network_conf)
 

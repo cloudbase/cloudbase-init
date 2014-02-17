@@ -28,8 +28,9 @@ LOG = logging.getLogger(__name__)
 
 class SetUserSSHPublicKeysPlugin(base.BasePlugin):
     def execute(self, service, shared_data):
-        meta_data = service.get_meta_data('openstack')
-        if not 'public_keys' in meta_data:
+        public_keys = service.get_public_keys()
+        if not public_keys:
+            LOG.debug('Public keys not found in metadata')
             return (base.PLUGIN_EXECUTION_DONE, False)
 
         username = CONF.username
@@ -47,9 +48,9 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
             os.makedirs(user_ssh_dir)
 
         authorized_keys_path = os.path.join(user_ssh_dir, "authorized_keys")
+        LOG.info("Writing SSH public keys in: %s" % authorized_keys_path)
         with open(authorized_keys_path, 'w') as f:
-            public_keys = meta_data['public_keys']
-            for k in public_keys:
-                f.write(public_keys[k])
+            for public_key in public_keys:
+                f.write(public_key)
 
         return (base.PLUGIN_EXECUTION_DONE, False)

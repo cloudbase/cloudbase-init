@@ -265,7 +265,7 @@ class IVdsDisk(comtypes.IUnknown):
         comtypes.COMMETHOD([], comtypes.HRESULT, 'QueryExtents',
                            (['out'], ctypes.POINTER(ctypes.POINTER(
                                                     VDS_DISK_EXTENT)),
-                           'ppExtentArray'),
+                            'ppExtentArray'),
                            (['out'], ctypes.POINTER(wintypes.LONG),
                             'plNumberOfExtents')),
     ]

@@ -16,7 +16,8 @@
 A temporary helper which emulates cloudbaseinit.messaging.Notifier.
 
 This helper method allows us to do the tedious porting to the new Notifier API
-as a standalone commit so that the commit which switches us to cloudbaseinit.messaging
+as a standalone commit so that the commit which switches us to
+cloudbaseinit.messaging
 is smaller and easier to review. This file will be removed as part of that
 commit.
 """

@@ -36,14 +36,14 @@ NETBIOS_HOST_NAME_MAX_LEN = 15
 
 class SetHostNamePlugin(base.BasePlugin):
     def execute(self, service, shared_data):
-        meta_data = service.get_meta_data('openstack')
-        if 'hostname' not in meta_data:
+        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+
+        metadata_host_name = service.get_host_name()
+        if not metadata_host_name:
             LOG.debug('Hostname not found in metadata')
             return (base.PLUGIN_EXECUTION_DONE, False)
 
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
-
-        metadata_host_name = meta_data['hostname'].split('.', 1)[0]
+        metadata_host_name = metadata_host_name.split('.', 1)[0]
 
         if (len(metadata_host_name) > NETBIOS_HOST_NAME_MAX_LEN and
                 CONF.netbios_host_name_compatibility):
@@ -56,6 +56,7 @@ class SetHostNamePlugin(base.BasePlugin):
         else:
             new_host_name = metadata_host_name
 
+        LOG.info("Setting hostname: %s" % new_host_name)
         reboot_required = osutils.set_host_name(new_host_name)
 
         return (base.PLUGIN_EXECUTION_DONE, reboot_required)
