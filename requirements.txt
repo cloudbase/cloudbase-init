@@ -1,5 +1,6 @@
 pbr>=0.5.22,!=0.5.23,<1.0
 pywin32
+comtypes
 wmi
 iso8601
 eventlet
