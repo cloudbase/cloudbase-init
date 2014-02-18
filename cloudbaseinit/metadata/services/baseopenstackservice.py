@@ -56,6 +56,9 @@ class BaseOpenStackService(base.BaseMetadataService):
         else:
             return data
 
+    def get_instance_id(self):
+        return self._get_meta_data().get('uuid')
+
     def get_host_name(self):
         return self._get_meta_data().get('hostname')
 

@@ -389,7 +389,7 @@ class WindowsUtils(base.BaseOSUtils):
     def _get_config_key_name(self, section):
         key_name = self._config_key
         if section:
-            key_name += section + '\\'
+            key_name += section.replace('/', '\\') + '\\'
         return key_name
 
     def set_config_value(self, name, value, section=None):

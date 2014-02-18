@@ -78,6 +78,9 @@ class BaseMetadataService(object):
             self._cache[path] = data
             return data
 
+    def get_instance_id(self):
+        pass
+
     def get_content(self, name):
         pass
 
