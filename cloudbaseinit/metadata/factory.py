@@ -24,8 +24,7 @@ opts = [
         'metadata_services',
         default=[
             'cloudbaseinit.metadata.services.httpservice.HttpService',
-            'cloudbaseinit.metadata.services.configdrive.configdrive.'
-            'ConfigDriveService',
+            'cloudbaseinit.metadata.services.configdrive.ConfigDriveService',
             'cloudbaseinit.metadata.services.maasservice.MaaSHttpService'
         ],
         help='List of enabled metadata service classes, '

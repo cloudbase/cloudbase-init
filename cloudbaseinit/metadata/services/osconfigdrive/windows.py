@@ -24,6 +24,7 @@ import wmi
 
 from ctypes import wintypes
 
+from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils.windows import physical_disk
@@ -32,7 +33,7 @@ from cloudbaseinit.utils.windows import virtual_disk
 LOG = logging.getLogger(__name__)
 
 
-class ConfigDriveManager(object):
+class WindowsConfigDriveManager(base.BaseConfigDriveManager):
     def _get_physical_disks_path(self):
         l = []
         conn = wmi.WMI(moniker='//./root/cimv2')
@@ -99,9 +100,6 @@ class ConfigDriveManager(object):
     def _write_iso_file(self, phys_disk, path, iso_file_size):
         with open(path, 'wb') as f:
             geom = phys_disk.get_geometry()
-            disk_size = geom.Cylinders * geom.TracksPerCylinder * \
-                geom.SectorsPerTrack * geom.BytesPerSector
-
             offset = 0
             # Get a multiple of the sector byte size
             bytes_to_read = 4096 / geom.BytesPerSector * geom.BytesPerSector
@@ -123,7 +121,7 @@ class ConfigDriveManager(object):
         finally:
             try:
                 virt_disk.detach()
-            except:
+            except Exception:
                 pass
             virt_disk.close()
 
@@ -139,7 +137,7 @@ class ConfigDriveManager(object):
                                          iso_file_size)
                     iso_disk_found = True
                     break
-            except:
+            except Exception:
                 # Ignore exception
                 pass
             finally:
