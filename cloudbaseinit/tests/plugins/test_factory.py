@@ -25,14 +25,12 @@ CONF = cfg.CONF
 
 
 class PluginFactoryTests(unittest.TestCase):
-    def setUp(self):
-        self._factory = factory.PluginFactory()
 
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
     def test_load_plugins(self, mock_load_class):
         expected = []
         for path in CONF.plugins:
             expected.append(mock.call(path))
-        response = self._factory.load_plugins()
+        response = factory.load_plugins()
         self.assertEqual(mock_load_class.call_args_list, expected)
         self.assertTrue(response is not None)

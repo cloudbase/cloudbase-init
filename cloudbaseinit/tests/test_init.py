@@ -47,18 +47,32 @@ class InitManagerTest(unittest.TestCase):
         reload(sys)
         reload(init)
 
-    def test_get_plugin_status(self):
+    def _test_get_plugin_section(self, instance_id):
+        response = self._init._get_plugins_section(instance_id=instance_id)
+        if not instance_id:
+            self.assertEqual(response, self._init._PLUGINS_CONFIG_SECTION)
+        else:
+            self.assertEqual(
+                response,
+                instance_id + "/" + self._init._PLUGINS_CONFIG_SECTION)
+
+    @mock.patch('cloudbaseinit.init.InitManager._get_plugins_section')
+    def test_get_plugin_status(self, mock_get_plugins_section):
         self.osutils.get_config_value.return_value = 1
-        response = self._init._get_plugin_status(self.osutils, 'fake plugin')
+        response = self._init._get_plugin_status(self.osutils, 'fake id',
+                                                 'fake plugin')
+        mock_get_plugins_section.assert_called_once_with('fake id')
         self.osutils.get_config_value.assert_called_once_with(
-            'fake plugin', self._init._PLUGINS_CONFIG_SECTION)
+            'fake plugin', mock_get_plugins_section())
         self.assertTrue(response == 1)
 
-    def test_set_plugin_status(self):
-
-        self._init._set_plugin_status(self.osutils, 'fake plugin', 'status')
+    @mock.patch('cloudbaseinit.init.InitManager._get_plugins_section')
+    def test_set_plugin_status(self, mock_get_plugins_section):
+        self._init._set_plugin_status(self.osutils, 'fake id',
+                                      'fake plugin', 'status')
+        mock_get_plugins_section.assert_called_once_with('fake id')
         self.osutils.set_config_value.assert_called_once_with(
-            'fake plugin', 'status', self._init._PLUGINS_CONFIG_SECTION)
+            'fake plugin', 'status', mock_get_plugins_section())
 
     @mock.patch('cloudbaseinit.init.InitManager._get_plugin_status')
     @mock.patch('cloudbaseinit.init.InitManager._set_plugin_status')
@@ -72,14 +86,17 @@ class InitManagerTest(unittest.TestCase):
         response = self._init._exec_plugin(osutils=self.osutils,
                                            service='fake service',
                                            plugin=self.plugin,
+                                           instance_id='fake id',
                                            shared_data='shared data')
 
         mock_get_plugin_status.assert_called_once_with(self.osutils,
+                                                       'fake id',
                                                        fake_name)
         if status is base.PLUGIN_EXECUTE_ON_NEXT_BOOT:
             self.plugin.execute.assert_called_once_with('fake service',
                                                         'shared data')
             mock_set_plugin_status.assert_called_once_with(self.osutils,
+                                                           'fake id',
                                                            fake_name, status)
             self.assertTrue(response)
 
@@ -114,10 +131,9 @@ class InitManagerTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.init.InitManager'
                 '._check_plugin_os_requirements')
     @mock.patch('cloudbaseinit.init.InitManager._exec_plugin')
-    @mock.patch('cloudbaseinit.plugins.factory.PluginFactory.load_plugins')
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
-    @mock.patch('cloudbaseinit.metadata.factory.MetadataServiceFactory.'
-                'get_metadata_service')
+    @mock.patch('cloudbaseinit.plugins.factory.load_plugins')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch('cloudbaseinit.metadata.factory.get_metadata_service')
     def test_configure_host(self, mock_get_metadata_service,
                             mock_get_os_utils, mock_load_plugins,
                             mock_exec_plugin,
@@ -128,6 +144,7 @@ class InitManagerTest(unittest.TestCase):
         mock_get_os_utils.return_value = self.osutils
         mock_get_metadata_service.return_value = fake_service
         fake_service.get_name.return_value = 'fake name'
+        fake_service.get_instance_id.return_value = 'fake id'
 
         self._init.configure_host()
 
@@ -137,6 +154,6 @@ class InitManagerTest(unittest.TestCase):
         mock_check_os_requirements.assert_called_once_with(self.osutils,
                                                            fake_plugin)
         mock_exec_plugin.assert_called_once_with(self.osutils, fake_service,
-                                                 fake_plugin, {})
+                                                 fake_plugin, 'fake id', {})
         fake_service.cleanup.assert_called_once_with()
         self.osutils.reboot.assert_called_once_with()

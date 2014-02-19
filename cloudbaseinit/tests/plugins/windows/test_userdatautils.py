@@ -37,7 +37,7 @@ class UserDataUtilsTest(unittest.TestCase):
     @mock.patch('os.path.isdir')
     @mock.patch('os.path.exists')
     @mock.patch('os.path.expandvars')
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def _test_execute_user_data_script(self, mock_get_os_utils,
                                        mock_path_expandvars,
                                        mock_path_exists, mock_path_isdir,

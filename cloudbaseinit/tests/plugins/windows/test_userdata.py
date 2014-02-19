@@ -41,7 +41,7 @@ class UserDataPluginTest(unittest.TestCase):
         mock_service.get_user_data.side_effect = [ret_val]
         response = self._userdata.execute(service=mock_service,
                                           shared_data=None)
-        mock_service.get_user_data.assert_called_once_with('openstack')
+        mock_service.get_user_data.assert_called_once_with()
         if ret_val is metadata_services_base.NotExistingMetadataException:
             self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
         elif ret_val is None:
@@ -68,7 +68,7 @@ class UserDataPluginTest(unittest.TestCase):
         self.assertEqual(response, mock_message_from_string().walk())
 
     @mock.patch('cloudbaseinit.plugins.windows.userdataplugins.factory.'
-                'UserDataPluginsFactory.load_plugins')
+                'load_plugins')
     @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
                 '._parse_mime')
     @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'

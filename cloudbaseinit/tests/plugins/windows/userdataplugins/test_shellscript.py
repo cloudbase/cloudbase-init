@@ -30,7 +30,7 @@ class ShellScriptPluginTests(unittest.TestCase):
     def setUp(self):
         self._shellscript = shellscript.ShellScriptPlugin()
 
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('tempfile.gettempdir')
     def _test_process(self, mock_gettempdir, mock_get_os_utils, filename,
                       exception=False):

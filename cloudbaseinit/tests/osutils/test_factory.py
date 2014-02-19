@@ -22,13 +22,11 @@ from cloudbaseinit.osutils import factory
 
 
 class OSUtilsFactory(unittest.TestCase):
-    def setUp(self):
-        self._factory = factory.OSUtilsFactory()
 
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
     def _test_get_os_utils(self, mock_load_class, fake_name):
         os.name = fake_name
-        self._factory.get_os_utils()
+        factory.get_os_utils()
         if fake_name == 'nt':
             mock_load_class.assert_called_with(
                 'cloudbaseinit.osutils.windows.WindowsUtils')

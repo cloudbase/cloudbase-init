@@ -33,7 +33,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('os.path')
     @mock.patch('os.makedirs')
     def _test_execute(self, mock_os_makedirs, mock_os_path,
@@ -41,7 +41,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         fake_shared_data = 'fake data'
-        mock_service.get_meta_data.return_value = self.fake_data
+        mock_service.get_public_keys.return_value = self.fake_data
         CONF.set_override('username', 'fake user')
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.get_user_home.return_value = user_home
@@ -56,7 +56,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
                             mock.mock_open(), create=True):
                 response = self._set_ssh_keys_plugin.execute(mock_service,
                                                              fake_shared_data)
-                mock_service.get_meta_data.assert_called_with('openstack')
+                mock_service.get_public_keys.assert_called_with()
                 mock_osutils.get_user_home.assert_called_with('fake user')
                 self.assertEqual(mock_os_path.join.call_count, 2)
                 mock_os_makedirs.assert_called_once_with(mock_os_path.join())

@@ -21,7 +21,7 @@ import unittest
 from oslo.config import cfg
 
 if sys.platform == 'win32':
-    from cloudbaseinit.plugins.windows import winrmconfig
+    from cloudbaseinit.utils.windows import winrmconfig
 
 CONF = cfg.CONF
 
@@ -49,7 +49,7 @@ class WinRMConfigTests(unittest.TestCase):
         self.assertEqual(response, mock_match().groups().__getitem__())
 
     @mock.patch('xml.etree.ElementTree.fromstring')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_node_tag')
     def _test_parse_listener_xml(self, mock_get_node_tag, mock_fromstring,
                                  data_xml, tag=None, text='Fake'):
@@ -104,8 +104,8 @@ class WinRMConfigTests(unittest.TestCase):
                                       text='fake text')
 
     @mock.patch('xml.etree.ElementTree.fromstring')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
-                '_get_node_tag')
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig'
+                '._get_node_tag')
     def _test_parse_cert_mapping_xml(self, mock_get_node_tag,
                                      mock_fromstring, data_xml, tag=None,
                                      text='Fake'):
@@ -157,7 +157,7 @@ class WinRMConfigTests(unittest.TestCase):
     def test_get_xml_bool_false(self):
         self._test_get_xml_bool(value=None)
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_wsman_session')
     def _test_get_resource(self, mock_get_wsman_session, resource):
         fake_session = mock.MagicMock()
@@ -179,7 +179,7 @@ class WinRMConfigTests(unittest.TestCase):
     def test_get_resource_exception(self):
         self._test_get_resource(resource=Exception)
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_wsman_session')
     def test_delete_resource(self, mock_get_wsman_session):
         fake_session = mock.MagicMock()
@@ -188,7 +188,7 @@ class WinRMConfigTests(unittest.TestCase):
         self._winrmconfig._delete_resource(fake_uri)
         fake_session.Delete.assert_called_once_with(fake_uri)
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_wsman_session')
     def test_create_resource(self, mock_get_wsman_session):
         fake_session = mock.MagicMock()
@@ -197,9 +197,9 @@ class WinRMConfigTests(unittest.TestCase):
         self._winrmconfig._create_resource(fake_uri, 'fake data')
         fake_session.Create.assert_called_once_with(fake_uri, 'fake data')
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_parse_cert_mapping_xml')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_resource')
     def test_get_cert_mapping(self, mock_get_resource,
                               mock_parse_cert_mapping_xml):
@@ -215,7 +215,7 @@ class WinRMConfigTests(unittest.TestCase):
             self._winrmconfig._SERVICE_CERTMAPPING_URI % fake_dict)
         self.assertEqual(response, 'fake response')
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_delete_resource')
     def test_delete_cert_mapping(self, mock_delete_resource):
         fake_dict = {'issuer': 'issuer',
@@ -226,9 +226,9 @@ class WinRMConfigTests(unittest.TestCase):
         mock_delete_resource.assert_called_with(
             self._winrmconfig._SERVICE_CERTMAPPING_URI % fake_dict)
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_xml_bool')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_create_resource')
     def test_create_cert_mapping(self, mock_create_resource,
                                  mock_get_xml_bool):
@@ -251,9 +251,9 @@ class WinRMConfigTests(unittest.TestCase):
                                   'username': 'fake user',
                                   'password': 'fake password'})
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_resource')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_parse_listener_xml')
     def test_get_listener(self, mock_parse_listener_xml, mock_get_resource):
         dict = {'protocol': 'HTTPS',
@@ -267,7 +267,7 @@ class WinRMConfigTests(unittest.TestCase):
         mock_parse_listener_xml.assert_called_once_with('fake resource')
         self.assertEqual(response, 'fake response')
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_delete_resource')
     def test_delete_listener(self, mock_delete_resource):
         dict = {'protocol': 'HTTPS',
@@ -277,9 +277,9 @@ class WinRMConfigTests(unittest.TestCase):
         mock_delete_resource.assert_called_with(
             self._winrmconfig._SERVICE_LISTENER_URI % dict)
 
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_create_resource')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_xml_bool')
     def test_create_listener(self, mock_get_xml_bool, mock_create_resource):
         dict = {'protocol': 'HTTPS',
@@ -301,9 +301,9 @@ class WinRMConfigTests(unittest.TestCase):
                                "cert_thumbprint": None})
 
     @mock.patch('xml.etree.ElementTree.fromstring')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_node_tag')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_resource')
     def test_get_auth_config(self, mock_get_resource, mock_get_node_tag,
                              mock_fromstring):
@@ -325,9 +325,9 @@ class WinRMConfigTests(unittest.TestCase):
 
     @mock.patch('xml.etree.ElementTree.fromstring')
     @mock.patch('xml.etree.ElementTree.tostring')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_wsman_session')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig.'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_xml_bool')
     def test_set_auth_config(self, mock_get_xml_bool, mock_get_wsman_session,
                              mock_tostring, mock_fromstring):
