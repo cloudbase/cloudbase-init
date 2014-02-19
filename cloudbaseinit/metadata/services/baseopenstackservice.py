@@ -19,7 +19,7 @@ from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.utils.windows import x509
+from cloudbaseinit.utils import x509constants
 
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
@@ -104,7 +104,7 @@ class BaseOpenStackService(base.BaseMetadataService):
             # Look if the user_data contains a PEM certificate
             try:
                 user_data = self.get_user_data()
-                if user_data.startswith(x509.PEM_HEADER):
+                if user_data.startswith(x509constants.PEM_HEADER):
                     cert_data = user_data
             except base.NotExistingMetadataException:
                 LOG.debug("user_data metadata not present")

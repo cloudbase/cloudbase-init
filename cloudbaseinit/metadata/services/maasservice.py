@@ -21,7 +21,7 @@ from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.utils.windows import x509
+from cloudbaseinit.utils import x509constants
 
 opts = [
     cfg.StrOpt('maas_metadata_url', default=None,
@@ -121,4 +121,4 @@ class MaaSHttpService(base.BaseMetadataService):
     def get_client_auth_certs(self):
         return self._get_list_from_text(
             self._get_cache_data('%s/meta-data/x509' % self._metadata_version),
-            "%s\n" % x509.PEM_FOOTER)
+            "%s\n" % x509constants.PEM_FOOTER)
