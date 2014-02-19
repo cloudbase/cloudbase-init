@@ -65,8 +65,7 @@ class BaseOSUtils(object):
         raise NotImplementedError()
 
     def set_static_network_config(self, adapter_name, address, netmask,
-                                  broadcast, gateway, dnsdomain,
-                                  dnsnameservers):
+                                  broadcast, gateway, dnsnameservers):
         raise NotImplementedError()
 
     def set_config_value(self, name, value, section=None):
