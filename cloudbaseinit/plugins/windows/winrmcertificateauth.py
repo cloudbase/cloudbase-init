@@ -17,8 +17,8 @@
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
-from cloudbaseinit.plugins.windows import x509
 from cloudbaseinit.plugins.windows import winrmconfig
+from cloudbaseinit.utils.windows import x509
 
 LOG = logging.getLogger(__name__)
 

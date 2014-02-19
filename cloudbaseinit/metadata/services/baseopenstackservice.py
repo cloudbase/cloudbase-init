@@ -22,7 +22,7 @@ from oslo.config import cfg
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
-from cloudbaseinit.plugins.windows import x509
+from cloudbaseinit.utils.windows import x509
 
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',

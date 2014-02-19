@@ -25,12 +25,9 @@ import wmi
 from ctypes import wintypes
 
 from cloudbaseinit.openstack.common import log as logging
-
-from cloudbaseinit.metadata.services.configdrive.windows.disk \
-    import physical_disk
-from cloudbaseinit.metadata.services.configdrive.windows.disk \
-    import virtual_disk
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils.windows import physical_disk
+from cloudbaseinit.utils.windows import virtual_disk
 
 LOG = logging.getLogger(__name__)
 

@@ -21,7 +21,7 @@ from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.plugins.windows import x509
+from cloudbaseinit.utils.windows import x509
 
 opts = [
     cfg.StrOpt('maas_metadata_url', default=None,

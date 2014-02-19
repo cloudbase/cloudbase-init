@@ -20,7 +20,7 @@ import uuid
 
 from ctypes import wintypes
 
-from cloudbaseinit.plugins.windows import cryptoapi
+from cloudbaseinit.utils.windows import cryptoapi
 
 malloc = ctypes.cdll.msvcrt.malloc
 malloc.restype = ctypes.c_void_p
