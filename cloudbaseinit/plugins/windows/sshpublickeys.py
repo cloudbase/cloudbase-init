@@ -23,6 +23,7 @@ from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
 
 CONF = cfg.CONF
+CONF.import_opt('username', 'cloudbaseinit.plugins.windows.createuser')
 LOG = logging.getLogger(__name__)
 
 
