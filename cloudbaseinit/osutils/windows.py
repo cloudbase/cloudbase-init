@@ -204,7 +204,7 @@ class WindowsUtils(base.BaseOSUtils):
         conn = wmi.WMI(moniker='//./root/cimv2')
         username_san = self._sanitize_wmi_input(username)
         q = conn.query('SELECT * FROM Win32_Account where name = '
-                       '\'%(username_san)s\'' % locals())
+                       '\'%s\'' % username_san)
         if len(q) > 0:
             return q[0]
         return None
@@ -226,10 +226,10 @@ class WindowsUtils(base.BaseOSUtils):
             self._set_user_password_expiration(username, password_expires)
         else:
             if create:
-                msg = "Create user failed: %(err)s"
+                msg = "Create user failed: %s"
             else:
-                msg = "Set user password failed: %(err)s"
-            raise Exception(msg % locals())
+                msg = "Set user password failed: %s"
+            raise Exception(msg % err)
 
     def _sanitize_wmi_input(self, value):
         return value.replace('\'', '\'\'')
@@ -359,7 +359,7 @@ class WindowsUtils(base.BaseOSUtils):
         adapter_name_san = self._sanitize_wmi_input(adapter_name)
         q = conn.query('SELECT * FROM Win32_NetworkAdapter WHERE '
                        'MACAddress IS NOT NULL AND '
-                       'Name = \'%(adapter_name_san)s\'' % locals())
+                       'Name = \'%s\'' % adapter_name_san)
         if not len(q):
             raise Exception("Network adapter not found")
 
@@ -457,7 +457,8 @@ class WindowsUtils(base.BaseOSUtils):
         (ret_val,) = service.ChangeStartMode(start_mode)
         if ret_val != 0:
             raise Exception('Setting service %(service_name)s start mode '
-                            'failed with return value: %(ret_val)d' % locals())
+                            'failed with return value: %(ret_val)d' %
+                            {'service_name': service_name, 'ret_val': ret_val})
 
     def start_service(self, service_name):
         LOG.debug('Starting service %s' % service_name)
@@ -465,7 +466,8 @@ class WindowsUtils(base.BaseOSUtils):
         (ret_val,) = service.StartService()
         if ret_val != 0:
             raise Exception('Starting service %(service_name)s failed with '
-                            'return value: %(ret_val)d' % locals())
+                            'return value: %(ret_val)d' %
+                            {'service_name': service_name, 'ret_val': ret_val})
 
     def stop_service(self, service_name):
         LOG.debug('Stopping service %s' % service_name)
@@ -473,7 +475,8 @@ class WindowsUtils(base.BaseOSUtils):
         (ret_val,) = service.StopService()
         if ret_val != 0:
             raise Exception('Stopping service %(service_name)s failed with '
-                            'return value: %(ret_val)d' % locals())
+                            'return value: %(ret_val)d' %
+                            {'service_name': service_name, 'ret_val': ret_val})
 
     def terminate(self):
         # Wait for the service to start. Polling the service "Started" property
@@ -552,7 +555,7 @@ class WindowsUtils(base.BaseOSUtils):
         (out, err, ret_val) = self.execute_process(args)
         # Cannot use the return value to determine the outcome
         if err:
-            raise Exception('Unable to add route: %(err)s' % locals())
+            raise Exception('Unable to add route: %s' % err)
 
     def check_os_version(self, major, minor, build=0):
         vi = Win32_OSVERSIONINFOEX_W()

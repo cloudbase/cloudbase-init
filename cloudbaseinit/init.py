@@ -60,11 +60,10 @@ class InitManager(object):
 
         status = self._get_plugin_status(osutils, instance_id, plugin_name)
         if status == plugins_base.PLUGIN_EXECUTION_DONE:
-            LOG.debug('Plugin \'%(plugin_name)s\' execution already done, '
-                      'skipping' % locals())
+            LOG.debug('Plugin \'%s\' execution already done, skipping',
+                      plugin_name)
         else:
-            LOG.info('Executing plugin \'%(plugin_name)s\'' %
-                     locals())
+            LOG.info('Executing plugin \'%s\'', plugin_name)
             try:
                 (status, reboot_required) = plugin.execute(service,
                                                            shared_data)
@@ -72,8 +71,8 @@ class InitManager(object):
                                         status)
                 return reboot_required
             except Exception, ex:
-                LOG.error('plugin \'%(plugin_name)s\' failed '
-                          'with error \'%(ex)s\'' % locals())
+                LOG.error('plugin \'%(plugin_name)s\' failed with error '
+                          '\'%(ex)s\'', {'plugin_name': plugin_name, 'ex': ex})
                 LOG.exception(ex)
 
     def _check_plugin_os_requirements(self, osutils, plugin):

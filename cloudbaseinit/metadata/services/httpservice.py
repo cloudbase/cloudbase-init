@@ -93,14 +93,14 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
 
     def _get_data(self, path):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
-        LOG.debug('Getting metadata from: %(norm_path)s' % locals())
+        LOG.debug('Getting metadata from: %s', norm_path)
         req = urllib2.Request(norm_path)
         response = self._get_response(req)
         return response.read()
 
     def _post_data(self, path, data):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
-        LOG.debug('Posting metadata to: %(norm_path)s' % locals())
+        LOG.debug('Posting metadata to: %s', norm_path)
         req = urllib2.Request(norm_path, data=data)
         self._get_response(req)
         return True
