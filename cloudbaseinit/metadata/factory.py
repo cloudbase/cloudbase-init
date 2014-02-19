@@ -38,16 +38,15 @@ CONF.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-class MetadataServiceFactory(object):
-    def get_metadata_service(self):
-        # Return the first service that loads correctly
-        cl = classloader.ClassLoader()
-        for class_path in CONF.metadata_services:
-            service = cl.load_class(class_path)()
-            try:
-                if service.load():
-                    return service
-            except Exception, ex:
-                LOG.error('Failed to load metadata service \'%(class_path)s\'')
-                LOG.exception(ex)
-        raise Exception("No available service found")
+def get_metadata_service():
+    # Return the first service that loads correctly
+    cl = classloader.ClassLoader()
+    for class_path in CONF.metadata_services:
+        service = cl.load_class(class_path)()
+        try:
+            if service.load():
+                return service
+        except Exception, ex:
+            LOG.error("Failed to load metadata service '%s'" % class_path)
+            LOG.exception(ex)
+    raise Exception("No available service found")

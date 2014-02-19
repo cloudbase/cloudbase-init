@@ -43,7 +43,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         return l
 
     def _get_config_drive_cdrom_mount_point(self):
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
 
         for drive in osutils.get_cdrom_drives():
             label = osutils.get_volume_label(drive)

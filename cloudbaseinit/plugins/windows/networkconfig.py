@@ -66,7 +66,7 @@ class NetworkConfigPlugin(base.BasePlugin):
         gateway = m.group('gateway')
         dnsnameservers = m.group('dnsnameservers').strip().split(' ')
 
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
 
         network_adapter_name = CONF.network_adapter
         if not network_adapter_name:

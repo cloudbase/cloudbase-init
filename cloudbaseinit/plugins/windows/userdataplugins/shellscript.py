@@ -28,7 +28,7 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
         super(ShellScriptPlugin, self).__init__("text/x-shellscript")
 
     def process(self, part):
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
 
         file_name = part.get_filename()
         target_path = os.path.join(tempfile.gettempdir(), file_name)

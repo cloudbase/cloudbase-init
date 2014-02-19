@@ -35,7 +35,7 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
 
         username = CONF.username
 
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
         user_home = osutils.get_user_home(username)
 
         if not user_home:

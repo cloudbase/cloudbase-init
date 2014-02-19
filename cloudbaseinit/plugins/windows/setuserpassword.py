@@ -93,7 +93,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
         if service.can_post_password and service.is_password_set:
             LOG.debug('User\'s password already set in the instance metadata')
         else:
-            osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+            osutils = osutils_factory.get_os_utils()
             if osutils.user_exists(user_name):
                 password = self._set_password(service, osutils, user_name)
                 # TODO(alexpilotti): encrypt with DPAPI

@@ -61,7 +61,7 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
         return True
 
     def execute(self, service, shared_data):
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
 
         if not self._check_winrm_service(osutils):
             return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)

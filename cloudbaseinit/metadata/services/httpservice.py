@@ -47,7 +47,7 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
         '''
         Workaround for: https://bugs.launchpad.net/quantum/+bug/1174657
         '''
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
 
         if osutils.check_os_version(6, 0):
             # 169.254.x.x addresses are not getting routed starting from

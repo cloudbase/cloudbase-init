@@ -44,10 +44,9 @@ CONF = cfg.CONF
 CONF.register_opts(opts)
 
 
-class PluginFactory(object):
-    def load_plugins(self):
-        plugins = []
-        cl = classloader.ClassLoader()
-        for class_path in CONF.plugins:
-            plugins.append(cl.load_class(class_path)())
-        return plugins
+def load_plugins():
+    plugins = []
+    cl = classloader.ClassLoader()
+    for class_path in CONF.plugins:
+        plugins.append(cl.load_class(class_path)())
+    return plugins

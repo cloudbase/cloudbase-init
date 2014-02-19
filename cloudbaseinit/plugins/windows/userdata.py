@@ -48,8 +48,7 @@ class UserDataPlugin(base.BasePlugin):
 
         LOG.debug('User data content:\n%s' % user_data)
         if user_data.startswith('Content-Type: multipart'):
-            user_data_plugins_factory = factory.UserDataPluginsFactory()
-            user_data_plugins = user_data_plugins_factory.load_plugins()
+            user_data_plugins = factory.load_plugins()
             user_handlers = {}
 
             for part in self._parse_mime(user_data):

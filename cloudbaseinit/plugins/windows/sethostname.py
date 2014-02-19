@@ -36,7 +36,7 @@ NETBIOS_HOST_NAME_MAX_LEN = 15
 
 class SetHostNamePlugin(base.BasePlugin):
     def execute(self, service, shared_data):
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
 
         metadata_host_name = service.get_host_name()
         if not metadata_host_name:

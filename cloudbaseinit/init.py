@@ -97,19 +97,17 @@ class InitManager(object):
         return supported
 
     def configure_host(self):
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
         osutils.wait_for_boot_completion()
 
-        mdsf = metadata_factory.MetadataServiceFactory()
-        service = mdsf.get_metadata_service()
+        service = metadata_factory.get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
                  service.get_name())
 
         instance_id = service.get_instance_id()
         LOG.debug('Instance id: %s', instance_id)
 
-        plugins = plugins_factory.PluginFactory().load_plugins()
-
+        plugins = plugins_factory.load_plugins()
         plugins_shared_data = {}
 
         reboot_required = False

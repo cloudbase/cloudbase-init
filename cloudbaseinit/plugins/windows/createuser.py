@@ -45,7 +45,7 @@ class CreateUserPlugin(base.BasePlugin):
         user_name = CONF.username
         shared_data[constants.SHARED_DATA_USERNAME] = user_name
 
-        osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+        osutils = osutils_factory.get_os_utils()
         password = self._get_password(osutils)
 
         if osutils.user_exists(user_name):

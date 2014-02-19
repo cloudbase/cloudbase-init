@@ -24,7 +24,7 @@ LOG = logging.getLogger(__name__)
 
 
 def execute_user_data_script(user_data):
-    osutils = osutils_factory.OSUtilsFactory().get_os_utils()
+    osutils = osutils_factory.get_os_utils()
 
     target_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
     if re.search(r'^rem cmd\s', user_data, re.I):

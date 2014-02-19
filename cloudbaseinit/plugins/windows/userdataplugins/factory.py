@@ -40,11 +40,10 @@ CONF = cfg.CONF
 CONF.register_opts(opts)
 
 
-class UserDataPluginsFactory(object):
-    def load_plugins(self):
-        plugins = {}
-        cl = classloader.ClassLoader()
-        for class_path in CONF.user_data_plugins:
-            plugin = cl.load_class(class_path)()
-            plugins[plugin.get_mime_type()] = plugin
-        return plugins
+def load_plugins():
+    plugins = {}
+    cl = classloader.ClassLoader()
+    for class_path in CONF.user_data_plugins:
+        plugin = cl.load_class(class_path)()
+        plugins[plugin.get_mime_type()] = plugin
+    return plugins
