@@ -23,7 +23,12 @@ from oslo.config import cfg
 
 CONF = cfg.CONF
 _mock_wintypes = mock.MagicMock()
-mock_dict = {'ctypes.wintypes': _mock_wintypes}
+_mock_pywintypes = mock.MagicMock()
+_mock_win32 = mock.MagicMock()
+mock_dict = {'ctypes': _mock_wintypes,
+             'ctypes.wintypes': _mock_wintypes,
+             'pywintypes': _mock_pywintypes,
+             'win32com': _mock_win32}
 
 
 class ConfigWinRMListenerPluginTests(unittest.TestCase):
@@ -66,11 +71,11 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
     def test_check_winrm_service_no_service(self):
         self._test_check_winrm_service(service_exists=False)
 
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.plugins.windows.winrmlistener.'
                 'ConfigWinRMListenerPlugin._check_winrm_service')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.CryptoAPICertManager'
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig')
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '.create_self_signed_cert')
     def _test_execute(self, mock_create_cert, mock_WinRMConfig,
                       mock_check_winrm_service, mock_get_os_utils,

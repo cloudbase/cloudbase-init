@@ -55,18 +55,11 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
     def _test_get_ssh_public_key(self, data_exists):
         mock_service = mock.MagicMock()
-        mock_service.get_meta_data.return_value = self.fake_data
-        if data_exists is False:
-            del self.fake_data['public_keys']
-            response = self._setpassword_plugin._get_ssh_public_key(
-                mock_service)
-            self.assertEqual(response, False)
-        else:
-            response = self._setpassword_plugin._get_ssh_public_key(
-                mock_service)
-            mock_service.get_meta_data.assert_called_with(
-                'openstack', self._setpassword_plugin._post_password_md_ver)
-            self.assertEqual(response, self.fake_data['public_keys']['name'])
+        public_keys = self.fake_data['public_keys']
+        mock_service.get_public_keys.return_value = public_keys
+        response = self._setpassword_plugin._get_ssh_public_key(mock_service)
+        mock_service.get_public_keys.assert_called_with()
+        self.assertEqual(response, public_keys[0])
 
     def test_get_ssh_plublic_key(self):
         self._test_get_ssh_public_key(data_exists=True)
@@ -74,17 +67,25 @@ class SetUserPasswordPluginTests(unittest.TestCase):
     def test_get_ssh_plublic_key_no_pub_keys(self):
         self._test_get_ssh_public_key(data_exists=False)
 
-    def test_get_password(self):
+    def _test_get_password(self, inject_password):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
-        mock_service.get_meta_data.return_value = self.fake_data
-        CONF.set_override('inject_user_password', False)
+        mock_service.get_admin_password.return_value = 'Passw0rd'
+        CONF.set_override('inject_user_password', inject_password)
         mock_osutils.generate_random_password.return_value = 'Passw0rd'
         response = self._setpassword_plugin._get_password(mock_service,
                                                           mock_osutils)
-        mock_service.get_meta_data.assert_called_with('openstack')
-        mock_osutils.generate_random_password.assert_called_once_with(14)
+        if inject_password:
+            mock_service.get_admin_password.assert_called_with()
+        else:
+            mock_osutils.generate_random_password.assert_called_once_with(14)
         self.assertEqual(response, 'Passw0rd')
+
+    def test_get_password_inject_true(self):
+        self._test_get_password(inject_password=True)
+
+    def test_get_password_inject_false(self):
+        self._test_get_password(inject_password=False)
 
     @mock.patch('cloudbaseinit.plugins.windows.setuserpassword.'
                 'SetUserPasswordPlugin._get_ssh_public_key')
@@ -97,10 +98,8 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_get_key.return_value = ssh_pub_key
         mock_encrypt_password.return_value = 'encrypted password'
         mock_service.post_password.return_value = 'value'
-
         response = self._setpassword_plugin._set_metadata_password(
             fake_passw0rd, mock_service)
-
         if ssh_pub_key is None:
             self.assertEqual(response, True)
         else:
@@ -108,8 +107,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             mock_encrypt_password.assert_called_once_with(ssh_pub_key,
                                                           fake_passw0rd)
             mock_service.post_password.assert_called_with(
-                'encrypted password',
-                self._setpassword_plugin._post_password_md_ver)
+                'encrypted password')
             self.assertEqual(response, 'value')
 
     def test_set_metadata_password_with_ssh_key(self):
@@ -125,11 +123,9 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         mock_get_password.return_value = 'fake password'
-
         response = self._setpassword_plugin._set_password(mock_service,
                                                           mock_osutils,
                                                           'fake user')
-
         mock_get_password.assert_called_once_with(mock_service, mock_osutils)
         mock_osutils.set_user_password.assert_called_once_with('fake user',
                                                                'fake password')
@@ -139,26 +135,24 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                 'SetUserPasswordPlugin._set_password')
     @mock.patch('cloudbaseinit.plugins.windows.setuserpassword.'
                 'SetUserPasswordPlugin._set_metadata_password')
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def test_execute(self, mock_get_os_utils, mock_set_metadata_password,
                      mock_set_password):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         fake_shared_data = mock.MagicMock()
         fake_shared_data.get.return_value = 'fake username'
-        mock_service.is_password_set.return_value = False
+        mock_service.is_password_set = False
+        mock_service.can_post_password = True
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.user_exists.return_value = True
         mock_set_password.return_value = 'fake password'
-
         response = self._setpassword_plugin.execute(mock_service,
                                                     fake_shared_data)
-
+        print mock_service.mock_calls
+        mock_get_os_utils.assert_called_once_with()
         fake_shared_data.get.assert_called_with(
             constants.SHARED_DATA_USERNAME, CONF.username)
-        mock_service.is_password_set.assert_called_once_with(
-            self._setpassword_plugin._post_password_md_ver)
-        mock_get_os_utils.assert_called_once_with()
         mock_osutils.user_exists.assert_called_once_with('fake username')
         mock_set_password.assert_called_once_with(mock_service, mock_osutils,
                                                   'fake username')

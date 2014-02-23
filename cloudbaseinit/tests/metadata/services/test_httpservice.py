@@ -14,25 +14,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import importlib
 import mock
 import os
+import sys
 import unittest
 import urllib2
 
 from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
-from cloudbaseinit.metadata.services import httpservice
 
 CONF = cfg.CONF
+_ctypes_mock = mock.MagicMock()
+mock_dict = {'ctypes': _ctypes_mock}
 
 
 class HttpServiceTest(unittest.TestCase):
+    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
+        httpservice = importlib.import_module("cloudbaseinit.metadata.services"
+                                              ".httpservice")
         CONF.set_override('retry_count_interval', 0)
         self._httpservice = httpservice.HttpService()
 
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('urlparse.urlparse')
     def _test_check_metadata_ip_route(self, mock_urlparse, mock_get_os_utils,
                                       side_effect):
@@ -64,13 +70,13 @@ class HttpServiceTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._check_metadata_ip_route')
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
-                '.get_meta_data')
+                '._get_meta_data')
     def _test_load(self, mock_get_meta_data, mock_check_metadata_ip_route,
                    side_effect):
         mock_get_meta_data.side_effect = [side_effect]
         response = self._httpservice.load()
         mock_check_metadata_ip_route.assert_called_once_with()
-        mock_get_meta_data.assert_called_once_with('openstack')
+        mock_get_meta_data.assert_called_once_with()
         if side_effect:
             self.assertEqual(response, False)
         else:
@@ -101,7 +107,7 @@ class HttpServiceTest(unittest.TestCase):
 
     def test_get_response_fail_HTTPError(self):
         error = urllib2.HTTPError("http://169.254.169.254/", 404,
-                                  'test error 404', {},  None)
+                                  'test error 404', {}, None)
         self._test_get_response(side_effect=error)
 
     def test_get_response_fail_other_exception(self):
@@ -155,3 +161,44 @@ class HttpServiceTest(unittest.TestCase):
         mock_Request.assert_called_once_with(mock_norm_path, data=fake_data)
         mock_get_response.assert_called_once_with(mock_req)
         self.assertEqual(response, True)
+
+    def test_get_password_path(self):
+        response = self._httpservice._get_password_path()
+        self.assertEqual(
+            response, 'openstack/%s/password' %
+                      self._httpservice._POST_PASSWORD_MD_VER)
+
+    @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
+                '._get_password_path')
+    @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
+                '._post_data')
+    @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
+                '._exec_with_retry')
+    def _test_post_password(self, mock_exec_with_retry, mock_post_data,
+                            mock_get_password_path, ret_val):
+        mock_exec_with_retry.side_effect = [ret_val]
+        if isinstance(ret_val, urllib2.HTTPError) and ret_val.code == 409:
+            response = self._httpservice.post_password(
+                enc_password_b64='fake')
+            self.assertEqual(response, False)
+        elif isinstance(ret_val, urllib2.HTTPError) and ret_val.code != 409:
+            self.assertRaises(urllib2.HTTPError,
+                              self._httpservice.post_password, 'fake')
+        else:
+            response = self._httpservice.post_password(
+                enc_password_b64='fake')
+            mock_get_password_path.assert_called_once_with()
+            self.assertEqual(response, ret_val)
+
+    def test_post_password(self):
+        self._test_post_password(ret_val='fake return')
+
+    def test_post_password_HTTPError_409(self):
+        err = urllib2.HTTPError("http://169.254.169.254/", 409,
+                                'test error 409', {}, None)
+        self._test_post_password(ret_val=err)
+
+    def test_post_password_other_HTTPError(self):
+        err = urllib2.HTTPError("http://169.254.169.254/", 404,
+                                'test error 404', {}, None)
+        self._test_post_password(ret_val=err)

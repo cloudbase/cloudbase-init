@@ -21,8 +21,8 @@ import unittest
 from oslo.config import cfg
 
 if sys.platform == 'win32':
-    from cloudbaseinit.plugins.windows import cryptoapi
-    from cloudbaseinit.plugins.windows import x509
+    from cloudbaseinit.utils.windows import cryptoapi
+    from cloudbaseinit.utils.windows import x509
 
 CONF = cfg.CONF
 
@@ -33,17 +33,16 @@ class CryptoAPICertManagerTests(unittest.TestCase):
     def setUp(self):
         self._x509 = x509.CryptoAPICertManager()
 
-    @mock.patch('cloudbaseinit.plugins.windows.x509.free')
+    @mock.patch('cloudbaseinit.utils.windows.x509.free')
     @mock.patch('ctypes.c_ubyte')
     @mock.patch('ctypes.POINTER')
     @mock.patch('ctypes.cast')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.malloc')
+    @mock.patch('cloudbaseinit.utils.windows.x509.malloc')
     @mock.patch('ctypes.byref')
     @mock.patch('ctypes.wintypes.DWORD')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertGetCertificateContextProperty')
-    def _test_get_cert_thumprint(self,
-                                 mock_CertGetCertificateContextProperty,
+    def _test_get_cert_thumprint(self, mock_CertGetCertificateContextProperty,
                                  mock_DWORD, mock_byref, mock_malloc,
                                  mock_cast, mock_POINTER, mock_c_ubyte,
                                  mock_free, ret_val):
@@ -80,14 +79,10 @@ class CryptoAPICertManagerTests(unittest.TestCase):
     def test_get_cert_thumprint_GetCertificateContextProperty_exception(self):
         self._test_get_cert_thumprint(ret_val=False)
 
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
-                'CryptDestroyKey')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
-                'CryptReleaseContext')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
-                'CryptGenKey')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
-                'CryptAcquireContext')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CryptDestroyKey')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CryptReleaseContext')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CryptGenKey')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CryptAcquireContext')
     @mock.patch('ctypes.byref')
     @mock.patch('ctypes.wintypes.HANDLE')
     def _test_generate_key(self, mock_HANDLE, mock_byref,
@@ -131,41 +126,41 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         self._test_generate_key(acquired_context=True,
                                 generate_key_ret_val=None)
 
-    @mock.patch('cloudbaseinit.plugins.windows.x509.free')
+    @mock.patch('cloudbaseinit.utils.windows.x509.free')
     @mock.patch('copy.copy')
     @mock.patch('ctypes.byref')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.malloc')
+    @mock.patch('cloudbaseinit.utils.windows.x509.malloc')
     @mock.patch('ctypes.POINTER')
     @mock.patch('ctypes.cast')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.CryptoAPICertManager'
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '._generate_key')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.CryptoAPICertManager'
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '._get_cert_thumprint')
     @mock.patch('uuid.uuid4')
     @mock.patch('ctypes.wintypes.DWORD')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertStrToName')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CRYPTOAPI_BLOB')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CRYPT_KEY_PROV_INFO')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CRYPT_ALGORITHM_IDENTIFIER')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'SYSTEMTIME')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'GetSystemTime')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertCreateSelfSignCertificate')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertAddEnhancedKeyUsageIdentifier')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertOpenStore')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertAddCertificateContextToStore')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertCloseStore')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertFreeCertificateContext')
     def _test_create_self_signed_cert(self, mock_CertFreeCertificateContext,
                                       mock_CertCloseStore,
@@ -278,25 +273,25 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         response = self._x509._get_cert_base64(fake_cert_data)
         self.assertEqual(response, 'fake cert')
 
-    @mock.patch('cloudbaseinit.plugins.windows.x509.free')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.CryptoAPICertManager'
+    @mock.patch('cloudbaseinit.utils.windows.x509.free')
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '._get_cert_thumprint')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertCloseStore')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertFreeCertificateContext')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertGetNameString')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertAddEncodedCertificateToStore')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertOpenStore')
-    @mock.patch('cloudbaseinit.plugins.windows.cryptoapi.'
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CryptStringToBinaryA')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.CryptoAPICertManager'
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '._get_cert_base64')
     @mock.patch('ctypes.POINTER')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.malloc')
+    @mock.patch('cloudbaseinit.utils.windows.x509.malloc')
     @mock.patch('ctypes.cast')
     @mock.patch('ctypes.byref')
     @mock.patch('ctypes.wintypes.DWORD')

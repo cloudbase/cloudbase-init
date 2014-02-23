@@ -19,61 +19,27 @@ import mock
 import sys
 import unittest
 
+from oslo.config import cfg
+from cloudbaseinit.plugins import constants
+
+CONF = cfg.CONF
 _ctypes_mock = mock.MagicMock()
 _win32com_mock = mock.MagicMock()
 _pywintypes_mock = mock.MagicMock()
-
 mock_dict = {'ctypes': _ctypes_mock,
              'win32com': _win32com_mock,
              'pywintypes': _pywintypes_mock}
 
 
-from oslo.config import cfg
-
-from cloudbaseinit.plugins import constants
-
-CONF = cfg.CONF
-
-
 class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
     @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
-        winrmcert = importlib.import_module('cloudbaseinit.plugins.windows.'
-                                            'winrmcertificateauth')
-        self.x509 = importlib.import_module('cloudbaseinit.plugins.windows'
-                                            '.x509')
-        self._certif_auth = winrmcert.ConfigWinRMCertificateAuthPlugin()
+        self.winrmcert = importlib.import_module(
+            'cloudbaseinit.plugins.windows.winrmcertificateauth')
+        self._certif_auth = self.winrmcert.ConfigWinRMCertificateAuthPlugin()
 
     def tearDown(self):
         reload(sys)
-
-    def _test_get_client_auth_cert(self, chunk):
-        mock_service = mock.MagicMock()
-        mock_meta_data = mock.MagicMock()
-        mock_meta = mock.MagicMock()
-        mock_service.get_meta_data.return_value = mock_meta_data
-        mock_meta_data.get.return_value = mock_meta
-        mock_meta.get.side_effect = chunk
-        mock_service.get_user_data.return_value = self.x509.PEM_HEADER
-
-        response = self._certif_auth._get_client_auth_cert(mock_service)
-        mock_service.get_meta_data.assert_called_once_with('openstack')
-        mock_meta_data.get.assert_called_once_with('meta')
-        if chunk == [None]:
-            mock_service.get_user_data.assert_called_once_with('openstack')
-            mock_meta.get.assert_called_once_with('admin_cert0')
-            self.assertEqual(response, self.x509.PEM_HEADER)
-        else:
-            expected = [mock.call('admin_cert0'), mock.call('admin_cert1')]
-            self.assertEqual(mock_meta.get.call_args_list, expected)
-            self.assertEqual(response, 'fake data')
-
-    def test_get_client_auth_cert(self):
-        chunk = ['fake data', None]
-        self._test_get_client_auth_cert(chunk=chunk)
-
-    def test_get_client_auth_cert_no_cert_data(self):
-        self._test_get_client_auth_cert(chunk=[None])
 
     def _test_get_credentials(self, fake_user, fake_password):
         mock_shared_data = mock.MagicMock()
@@ -105,32 +71,28 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.windows.winrmcertificateauth'
                 '.ConfigWinRMCertificateAuthPlugin._get_credentials')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmcertificateauth'
-                '.ConfigWinRMCertificateAuthPlugin._get_client_auth_cert')
-    @mock.patch('cloudbaseinit.plugins.windows.x509.CryptoAPICertManager'
-                '.import_cert')
-    @mock.patch('cloudbaseinit.plugins.windows.winrmconfig.WinRMConfig')
-    def _test_execute(self, mock_WinRMConfig, mock_import_cert,
-                      mock_get_client_auth_cert, mock_get_credentials,
-                      cert_data, cert_upn):
+    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig')
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager.'
+                'import_cert')
+    def _test_execute(self, mock_import_cert, mock_WinRMConfig,
+                      mock_get_credentials, cert_data, cert_upn):
         mock_service = mock.MagicMock()
         mock_cert_thumprint = mock.MagicMock()
         fake_credentials = ('fake user', 'fake password')
-        mock_shared_data = mock.MagicMock()
-        mock_get_client_auth_cert.return_value = cert_data
         mock_get_credentials.return_value = fake_credentials
         mock_import_cert.return_value = (mock_cert_thumprint, cert_upn)
         mock_WinRMConfig.get_cert_mapping.return_value = True
+        mock_service.get_client_auth_certs.return_value = [cert_data]
 
         response = self._certif_auth.execute(mock_service,
-                                             mock_shared_data)
-        if not cert_data or not cert_upn:
+                                             shared_data='fake data')
+        mock_service.get_client_auth_certs.assert_called_once_with()
+        if not cert_data:
             self.assertEqual(response, (1, False))
         else:
-            mock_get_client_auth_cert.assert_called_once_with(mock_service)
-            mock_get_credentials.assert_called_once_with(mock_shared_data)
+            mock_get_credentials.assert_called_once_with('fake data')
             mock_import_cert.assert_called_once_with(
-                cert_data, store_name=self.x509.STORE_NAME_ROOT)
+                cert_data, store_name=self.winrmcert.x509.STORE_NAME_ROOT)
 
             mock_WinRMConfig().set_auth_config.assert_called_once_with(
                 certificate=True)
@@ -151,7 +113,3 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
     def test_execute_no_cert_data(self):
         cert_upn = mock.MagicMock()
         self._test_execute(cert_data=None, cert_upn=cert_upn)
-
-    def test_execute_no_cert_upn(self):
-        cert_data = 'fake cert data'
-        self._test_execute(cert_data=cert_data, cert_upn=None)

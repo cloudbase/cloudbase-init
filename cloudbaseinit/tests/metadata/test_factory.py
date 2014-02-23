@@ -21,16 +21,14 @@ from cloudbaseinit.metadata import factory
 
 
 class MetadataServiceFactoryTests(unittest.TestCase):
-    def setUp(self):
-        self._factory = factory.MetadataServiceFactory()
 
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
     def _test_get_metadata_service(self, mock_load_class, ret_value):
         mock_load_class.side_effect = ret_value
         if ret_value is Exception:
-            self.assertRaises(Exception, self._factory.get_metadata_service)
+            self.assertRaises(Exception, factory.get_metadata_service)
         else:
-            response = self._factory.get_metadata_service()
+            response = factory.get_metadata_service()
             self.assertEqual(response, mock_load_class()())
 
     def test_get_metadata_service(self):

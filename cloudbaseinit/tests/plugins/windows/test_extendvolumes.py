@@ -43,7 +43,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
                 '.ExtendVolumesPlugin._get_volume_index')
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes'
                 '.ExtendVolumesPlugin._extend_volume')
-    @mock.patch('cloudbaseinit.plugins.windows.vds.IVdsVolume')
+    @mock.patch('cloudbaseinit.utils.windows.vds.IVdsVolume')
     def test_extend_volumes(self, _vds_mock, mock_extend_volume,
                             mock_get_volume_index):
         mock_pack = mock.MagicMock()
@@ -81,7 +81,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes'
                 '.ExtendVolumesPlugin._get_volume_extents_to_resize')
-    @mock.patch('cloudbaseinit.plugins.windows.vds.VDS_INPUT_DISK')
+    @mock.patch('cloudbaseinit.utils.windows.vds.VDS_INPUT_DISK')
     def test_extend_volume(self, mock_VDS_INPUT_DISK,
                            mock_get_volume_extents_to_resize):
         mock_disk = mock.MagicMock()
@@ -105,8 +105,8 @@ class ExtendVolumesPluginTests(unittest.TestCase):
             mock_VDS_INPUT_DISK.__mul__()(), 1)
         mock_async.Wait.assert_called_once_with()
 
-    @mock.patch('cloudbaseinit.plugins.windows.vds.IVdsDisk')
-    @mock.patch('cloudbaseinit.plugins.windows.vds.VDS_DISK_EXTENT')
+    @mock.patch('cloudbaseinit.utils.windows.vds.IVdsDisk')
+    @mock.patch('cloudbaseinit.utils.windows.vds.VDS_DISK_EXTENT')
     def test_get_volume_extents_to_resize(self, mock_VDS_DISK_EXTENT,
                                           mock_IVdsDisk):
         mock_pack = mock.MagicMock()
@@ -142,9 +142,9 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         _ctypes_mock.windll.ole32.CoTaskMemFree.assert_called_with(
             mock_extents_p)
 
-    @mock.patch('cloudbaseinit.plugins.windows.vds.'
+    @mock.patch('cloudbaseinit.utils.windows.vds.'
                 'VDS_QUERY_SOFTWARE_PROVIDERS')
-    @mock.patch('cloudbaseinit.plugins.windows.vds.IVdsSwProvider')
+    @mock.patch('cloudbaseinit.utils.windows.vds.IVdsSwProvider')
     def test_query_providers(self, mock_IVdsSwProvider,
                              mock_VDS_QUERY_SOFTWARE_PROVIDERS):
         mock_svc = mock.MagicMock()
@@ -162,7 +162,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         mock_unk.QueryInterface.assert_called_once_with(mock_IVdsSwProvider)
         self.assertEqual(response, ['fake providers'])
 
-    @mock.patch('cloudbaseinit.plugins.windows.vds.IVdsPack')
+    @mock.patch('cloudbaseinit.utils.windows.vds.IVdsPack')
     def test_query_packs(self, mock_IVdsPack):
         mock_provider = mock.MagicMock()
         mock_enum = mock.MagicMock()
@@ -184,7 +184,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         response = self._extend_volumes._get_volumes_to_extend()
         self.assertEqual(response, [1])
 
-    @mock.patch('cloudbaseinit.plugins.windows.vds.load_vds_service')
+    @mock.patch('cloudbaseinit.utils.windows.vds.load_vds_service')
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes.'
                 'ExtendVolumesPlugin._query_providers')
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes.'

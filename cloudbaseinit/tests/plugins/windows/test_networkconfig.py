@@ -33,14 +33,15 @@ class NetworkConfigPluginPluginTests(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
-    @mock.patch('cloudbaseinit.osutils.factory.OSUtilsFactory.get_os_utils')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def _test_execute(self, mock_get_os_utils, search_result, no_adapters):
         CONF.set_override('network_adapter', 'fake adapter')
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         re.search = mock.MagicMock(return_value=search_result)
         fake_shared_data = 'fake shared data'
-        mock_service.get_meta_data.return_value = self.fake_data
+        network_config = self.fake_data['network_config']
+        mock_service.get_network_config.return_value = network_config
         mock_service.get_content.return_value = search_result
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.set_static_network_config.return_value = False
@@ -57,9 +58,9 @@ class NetworkConfigPluginPluginTests(unittest.TestCase):
             response = self._network_plugin.execute(mock_service,
                                                     fake_shared_data)
 
-            mock_service.get_meta_data.assert_called_once_with('openstack')
+            mock_service.get_network_config.assert_called_once_with()
             mock_service.get_content.assert_called_once_with(
-                'openstack', self.fake_data['network_config']['content_path'])
+                network_config['content_path'])
             mock_osutils.set_static_network_config.assert_called_once_with(
                 'fake adapter', search_result.group('address'),
                 search_result.group('netmask'),
