@@ -42,7 +42,7 @@ def execute_user_data_script(user_data):
     elif re.search(r'^#ps1\s', user_data, re.I):
         target_path += '.ps1'
         args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                '-NonInteractive', target_path]
+                '-NonInteractive', '-File', target_path]
         shell = False
     elif re.search(r'^#ps1_sysnative\s', user_data, re.I):
         if os.path.isdir(os.path.expandvars('%windir%\\sysnative')):
@@ -51,7 +51,7 @@ def execute_user_data_script(user_data):
                                        'WindowsPowerShell\\v1.0\\'
                                        'powershell.exe'),
                     '-ExecutionPolicy',
-                    'RemoteSigned', '-NonInteractive', target_path]
+                    'RemoteSigned', '-NonInteractive', '-File', target_path]
             shell = False
         else:
             # Unable to validate sysnative presence

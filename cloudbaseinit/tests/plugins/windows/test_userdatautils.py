@@ -74,7 +74,7 @@ class UserDataUtilsTest(unittest.TestCase):
             number_of_calls = 4
             extension = '.ps1'
             args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                    '-NonInteractive', path+extension]
+                    '-NonInteractive', '-File',  path+extension]
             shell = False
         else:
             side_effect = [None, None, None, None, match_instance]
@@ -86,7 +86,8 @@ class UserDataUtilsTest(unittest.TestCase):
                                              'WindowsPowerShell\\v1.0\\'
                                              'powershell.exe'),
                         '-ExecutionPolicy',
-                        'RemoteSigned', '-NonInteractive', path+extension]
+                        'RemoteSigned', '-NonInteractive', '-File',
+                        path+extension]
                 mock_path_isdir.return_value = True
             else:
                 mock_path_isdir.return_value = False

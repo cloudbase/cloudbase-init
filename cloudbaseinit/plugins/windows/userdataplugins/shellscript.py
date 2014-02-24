@@ -44,7 +44,7 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
             shell = False
         elif file_name.endswith(".ps1"):
             args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                    '-NonInteractive', target_path]
+                    '-NonInteractive', '-File', target_path]
             shell = False
         else:
             # Unsupported

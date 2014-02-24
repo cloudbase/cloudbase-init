@@ -63,7 +63,8 @@ class ShellScriptPluginTests(unittest.TestCase):
         elif filename.endswith(".ps1"):
             mock_osutils.execute_process.assert_called_with(
                 ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                 '-NonInteractive', os.path.join(fake_dir_path, filename)],
+                 '-NonInteractive', '-File',
+                 os.path.join(fake_dir_path, filename)],
                 False)
             self.assertFalse(response)
 
