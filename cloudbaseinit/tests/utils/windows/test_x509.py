@@ -20,6 +20,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit.utils import x509constants
 if sys.platform == 'win32':
     from cloudbaseinit.utils.windows import cryptoapi
     from cloudbaseinit.utils.windows import x509
@@ -267,9 +268,9 @@ class CryptoAPICertManagerTests(unittest.TestCase):
 
     def test_get_cert_base64(self):
         fake_cert_data = ''
-        fake_cert_data += x509.PEM_HEADER + '\n'
+        fake_cert_data += x509constants.PEM_HEADER + '\n'
         fake_cert_data += 'fake cert' + '\n'
-        fake_cert_data += x509.PEM_FOOTER
+        fake_cert_data += x509constants.PEM_FOOTER
         response = self._x509._get_cert_base64(fake_cert_data)
         self.assertEqual(response, 'fake cert')
 
@@ -307,9 +308,9 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                           mock_free, crypttstr, store_handle, add_enc_cert,
                           upn_len):
         fake_cert_data = ''
-        fake_cert_data += x509.PEM_HEADER + '\n'
+        fake_cert_data += x509constants.PEM_HEADER + '\n'
         fake_cert_data += 'fake cert' + '\n'
-        fake_cert_data += x509.PEM_FOOTER
+        fake_cert_data += x509constants.PEM_FOOTER
         mock_get_cert_base64.return_value = 'fake cert'
         mock_CryptStringToBinaryA.return_value = crypttstr
         mock_CertOpenStore.return_value = store_handle

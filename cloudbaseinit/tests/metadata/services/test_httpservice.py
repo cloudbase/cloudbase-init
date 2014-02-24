@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2013 Cloudbase Solutions Srl
+# Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,68 +14,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib
 import mock
 import os
-import sys
 import unittest
 import urllib2
 
 from oslo.config import cfg
 
+from cloudbaseinit.metadata.services import httpservice
 from cloudbaseinit.metadata.services import base
 
 CONF = cfg.CONF
-_ctypes_mock = mock.MagicMock()
-mock_dict = {'ctypes': _ctypes_mock}
 
 
 class HttpServiceTest(unittest.TestCase):
-    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
-        httpservice = importlib.import_module("cloudbaseinit.metadata.services"
-                                              ".httpservice")
         CONF.set_override('retry_count_interval', 0)
         self._httpservice = httpservice.HttpService()
 
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    @mock.patch('urlparse.urlparse')
-    def _test_check_metadata_ip_route(self, mock_urlparse, mock_get_os_utils,
-                                      side_effect):
-        mock_utils = mock.MagicMock()
-        mock_split = mock.MagicMock()
-        mock_get_os_utils.return_value = mock_utils
-        mock_utils.check_os_version.return_value = True
-        mock_urlparse().netloc.split.return_value = mock_split
-        mock_split[0].startswith.return_value = True
-        mock_utils.check_static_route_exists.return_value = False
-        mock_utils.get_default_gateway.return_value = (1, '0.0.0.0')
-        mock_utils.add_static_route.side_effect = [side_effect]
-        self._httpservice._check_metadata_ip_route()
-        mock_utils.check_os_version.assert_called_once_with(6, 0)
-        mock_urlparse.assert_called_with(CONF.metadata_base_url)
-        mock_split[0].startswith.assert_called_once_with("169.254.")
-        mock_utils.check_static_route_exists.assert_called_once_with(
-            mock_split[0])
-        mock_utils.get_default_gateway.assert_called_once_with()
-        mock_utils.add_static_route.assert_called_once_with(
-            mock_split[0], "255.255.255.255", '0.0.0.0', 1, 10)
-
-    def test_test_check_metadata_ip_route(self):
-        self._test_check_metadata_ip_route(side_effect=None)
-
-    def test_test_check_metadata_ip_route_fail(self):
-        self._test_check_metadata_ip_route(side_effect=Exception)
-
-    @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
-                '._check_metadata_ip_route')
+    @mock.patch('cloudbaseinit.utils.network.check_metadata_ip_route')
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._get_meta_data')
     def _test_load(self, mock_get_meta_data, mock_check_metadata_ip_route,
                    side_effect):
         mock_get_meta_data.side_effect = [side_effect]
         response = self._httpservice.load()
-        mock_check_metadata_ip_route.assert_called_once_with()
+        mock_check_metadata_ip_route.assert_called_once_with(
+            CONF.metadata_base_url)
         mock_get_meta_data.assert_called_once_with()
         if side_effect:
             self.assertEqual(response, False)

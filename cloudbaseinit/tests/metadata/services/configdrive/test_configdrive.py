@@ -19,7 +19,6 @@ import mock
 import os
 import sys
 import unittest
-import uuid
 
 from oslo.config import cfg
 
@@ -40,30 +39,11 @@ class ConfigDriveServiceTest(unittest.TestCase):
     @mock.patch.dict(sys.modules, _mock_dict)
     def setUp(self):
         configdrive = importlib.import_module('cloudbaseinit.metadata.services'
-                                              '.configdrive.configdrive')
+                                              '.configdrive')
         self._config_drive = configdrive.ConfigDriveService()
 
     def tearDown(self):
         reload(sys)
-
-    @mock.patch('cloudbaseinit.metadata.services.configdrive.manager.'
-                'ConfigDriveManager.get_config_drive_files')
-    @mock.patch('tempfile.gettempdir')
-    @mock.patch('os.path.join')
-    def test_load(self, mock_join, mock_gettempdir,
-                  mock_get_config_drive_files):
-        uuid.uuid4 = mock.MagicMock()
-        fake_path = os.path.join('fake', 'path')
-        fake_path_found = os.path.join(fake_path, 'found')
-        uuid.uuid4.return_value = 'random'
-        mock_get_config_drive_files.return_value = fake_path_found
-        mock_join.return_value = fake_path
-        response = self._config_drive.load()
-        mock_join.assert_called_with(mock_gettempdir(), 'random')
-        mock_get_config_drive_files.assert_called_once_with(
-            fake_path, CONF.config_drive_raw_hhd, CONF.config_drive_cdrom)
-        self.assertEqual(self._config_drive._metadata_path, fake_path)
-        self.assertEqual(response, fake_path_found)
 
     @mock.patch('os.path.normpath')
     @mock.patch('os.path.join')

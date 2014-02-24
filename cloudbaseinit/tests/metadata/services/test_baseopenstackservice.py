@@ -14,27 +14,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib
 import mock
 import posixpath
-import sys
 import unittest
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import baseopenstackservice
+from cloudbaseinit.utils import x509constants
 from oslo.config import cfg
 
 CONF = cfg.CONF
-_ctypes_mock = mock.MagicMock()
-mock_dict = {'ctypes': _ctypes_mock}
 
 
 class BaseOpenStackServiceTest(unittest.TestCase):
-    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
-        self.baseopenstackservice = importlib.import_module(
-            "cloudbaseinit.metadata.services.baseopenstackservice")
         CONF.set_override('retry_count_interval', 0)
-        self._service = self.baseopenstackservice.BaseOpenStackService()
+        self._service = baseopenstackservice.BaseOpenStackService()
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_cache_data")
@@ -142,7 +137,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         if 'meta' in meta_data:
             self.assertEqual(response, ['fake cert'])
         elif type(ret_value) is str and ret_value.startswith(
-            self.baseopenstackservice.x509.PEM_HEADER):
+            x509constants.PEM_HEADER):
             mock_get_user_data.assert_called_once_with()
             self.assertEqual(response, [ret_value])
         elif ret_value is base.NotExistingMetadataException:
@@ -154,7 +149,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
 
     def test_get_client_auth_certs_no_cert_data(self):
         self._test_get_client_auth_certs(
-            meta_data={}, ret_value=self.baseopenstackservice.x509.PEM_HEADER)
+            meta_data={}, ret_value=x509constants.PEM_HEADER)
 
     def test_get_client_auth_certs_no_cert_data_exception(self):
         self._test_get_client_auth_certs(

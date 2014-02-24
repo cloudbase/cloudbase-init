@@ -14,31 +14,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib
 import mock
 import os
 import posixpath
-import sys
 import unittest
 import urllib2
 
 from oslo.config import cfg
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import maasservice
+from cloudbaseinit.utils import x509constants
 
 CONF = cfg.CONF
-_ctypes_mock = mock.MagicMock()
-mock_dict = {'ctypes': _ctypes_mock}
 
 
 class MaaSHttpServiceTest(unittest.TestCase):
-    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
-        maasservice = importlib.import_module("cloudbaseinit.metadata.services"
-                                              ".maasservice")
         self.mock_oauth = mock.MagicMock()
-        self.mock_x509 = mock.MagicMock()
         maasservice.oauth = self.mock_oauth
-        maasservice.x509 = self.mock_x509
         self._maasservice = maasservice.MaaSHttpService()
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
@@ -175,5 +168,5 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_get_cache_data.assert_called_with(
             '%s/meta-data/x509' % self._maasservice._metadata_version)
         mock_get_list_from_text.assert_called_once_with(
-            mock_get_cache_data(), "%s\n" % self.mock_x509.PEM_FOOTER)
+            mock_get_cache_data(), "%s\n" % x509constants.PEM_FOOTER)
         self.assertEqual(response, mock_get_list_from_text())
