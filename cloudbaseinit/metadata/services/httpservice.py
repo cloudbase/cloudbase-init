@@ -16,14 +16,13 @@
 
 import posixpath
 import urllib2
-import urlparse
 
 from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils import network
 
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
@@ -43,36 +42,9 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
         super(HttpService, self).__init__()
         self._enable_retry = True
 
-    def _check_metadata_ip_route(self):
-        '''
-        Workaround for: https://bugs.launchpad.net/quantum/+bug/1174657
-        '''
-        osutils = osutils_factory.get_os_utils()
-
-        if osutils.check_os_version(6, 0):
-            # 169.254.x.x addresses are not getting routed starting from
-            # Windows Vista / 2008
-            metadata_netloc = urlparse.urlparse(CONF.metadata_base_url).netloc
-            metadata_host = metadata_netloc.split(':')[0]
-
-            if metadata_host.startswith("169.254."):
-                if not osutils.check_static_route_exists(metadata_host):
-                    (interface_index, gateway) = osutils.get_default_gateway()
-                    if gateway:
-                        try:
-                            osutils.add_static_route(metadata_host,
-                                                     "255.255.255.255",
-                                                     gateway,
-                                                     interface_index,
-                                                     10)
-                        except Exception, ex:
-                            # Ignore it
-                            LOG.exception(ex)
-
     def load(self):
         super(HttpService, self).load()
-
-        self._check_metadata_ip_route()
+        network.check_metadata_ip_route(CONF.metadata_base_url)
 
         try:
             self._get_meta_data()
