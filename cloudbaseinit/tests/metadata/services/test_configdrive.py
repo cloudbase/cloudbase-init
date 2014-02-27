@@ -19,6 +19,7 @@ import mock
 import os
 import sys
 import unittest
+import uuid
 
 from oslo.config import cfg
 
@@ -43,7 +44,28 @@ class ConfigDriveServiceTest(unittest.TestCase):
         self._config_drive = configdrive.ConfigDriveService()
 
     def tearDown(self):
-        reload(sys)
+        reload(uuid)
+
+    @mock.patch('tempfile.gettempdir')
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.factory.'
+                'get_config_drive_manager')
+    def test_load(self, mock_get_config_drive_manager,
+                  mock_gettempdir):
+        mock_manager = mock.MagicMock()
+        mock_manager.get_config_drive_files.return_value = True
+        mock_get_config_drive_manager.return_value = mock_manager
+        mock_gettempdir.return_value = 'fake'
+        uuid.uuid4 = mock.MagicMock(return_value='fake_id')
+        fake_path = os.path.join('fake', str('fake_id'))
+
+        response = self._config_drive.load()
+
+        mock_gettempdir.assert_called_once_with()
+        mock_get_config_drive_manager.assert_called_once_with()
+        mock_manager.get_config_drive_files.assert_called_once_with(
+            fake_path, CONF.config_drive_raw_hhd, CONF.config_drive_cdrom)
+        self.assertEqual(response, True)
+        self.assertEqual(self._config_drive._metadata_path, fake_path)
 
     @mock.patch('os.path.normpath')
     @mock.patch('os.path.join')

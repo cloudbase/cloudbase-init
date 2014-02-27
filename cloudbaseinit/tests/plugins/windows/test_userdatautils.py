@@ -31,6 +31,9 @@ class UserDataUtilsTest(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
+    def tearDown(self):
+        reload(uuid)
+
     @mock.patch('re.search')
     @mock.patch('tempfile.gettempdir')
     @mock.patch('os.remove')
@@ -55,26 +58,26 @@ class UserDataUtilsTest(unittest.TestCase):
             side_effect = [match_instance]
             number_of_calls = 1
             extension = '.cmd'
-            args = [path+extension]
+            args = [path + extension]
             shell = True
         elif fake_user_data == '^#!/usr/bin/env\spython\s':
             side_effect = [None, match_instance]
             number_of_calls = 2
             extension = '.py'
-            args = ['python.exe', path+extension]
+            args = ['python.exe', path + extension]
             shell = False
         elif fake_user_data == '#!':
             side_effect = [None, None, match_instance]
             number_of_calls = 3
             extension = '.sh'
-            args = ['bash.exe', path+extension]
+            args = ['bash.exe', path + extension]
             shell = False
         elif fake_user_data == '#ps1\s':
             side_effect = [None, None, None, match_instance]
             number_of_calls = 4
             extension = '.ps1'
             args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                    '-NonInteractive', '-File',  path+extension]
+                    '-NonInteractive', '-File',  path + extension]
             shell = False
         else:
             side_effect = [None, None, None, None, match_instance]
@@ -87,7 +90,7 @@ class UserDataUtilsTest(unittest.TestCase):
                                              'powershell.exe'),
                         '-ExecutionPolicy',
                         'RemoteSigned', '-NonInteractive', '-File',
-                        path+extension]
+                        path + extension]
                 mock_path_isdir.return_value = True
             else:
                 mock_path_isdir.return_value = False
