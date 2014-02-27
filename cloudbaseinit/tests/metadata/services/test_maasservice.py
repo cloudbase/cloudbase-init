@@ -40,7 +40,8 @@ class MaaSHttpServiceTest(unittest.TestCase):
         CONF.set_override('maas_metadata_url', ip)
         response = self._maasservice.load()
         if ip is not None:
-            mock_get_data.assert_called_once_with('latest/meta-data/')
+            mock_get_data.assert_called_once_with(
+                '%s/meta-data/' % self._maasservice._metadata_version)
             self.assertTrue(response)
         else:
             self.assertFalse(response)
@@ -170,3 +171,12 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_get_list_from_text.assert_called_once_with(
             mock_get_cache_data(), "%s\n" % x509constants.PEM_FOOTER)
         self.assertEqual(response, mock_get_list_from_text())
+
+    @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
+                "._get_cache_data")
+    def test_get_user_data(self, mock_get_cache_data):
+        response = self._maasservice.get_user_data()
+        mock_get_cache_data.assert_called_once_with(
+            '%s/user-data' %
+            self._maasservice._metadata_version)
+        self.assertEqual(response, mock_get_cache_data())

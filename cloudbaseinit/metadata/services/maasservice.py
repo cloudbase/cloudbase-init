@@ -43,12 +43,12 @@ LOG = logging.getLogger(__name__)
 
 
 class MaaSHttpService(base.BaseMetadataService):
-    _METADATA_LATEST = 'latest'
+    _METADATA_2012_03_01 = '2012-03-01'
 
     def __init__(self):
         super(MaaSHttpService, self).__init__()
         self._enable_retry = True
-        self._metadata_version = self._METADATA_LATEST
+        self._metadata_version = self._METADATA_2012_03_01
 
     def load(self):
         super(MaaSHttpService, self).load()
@@ -57,7 +57,7 @@ class MaaSHttpService(base.BaseMetadataService):
             LOG.debug('MaaS metadata url not set')
         else:
             try:
-                self._get_data('latest/meta-data/')
+                self._get_data('%s/meta-data/' % self._metadata_version)
                 return True
             except Exception, ex:
                 LOG.exception(ex)
@@ -122,3 +122,6 @@ class MaaSHttpService(base.BaseMetadataService):
         return self._get_list_from_text(
             self._get_cache_data('%s/meta-data/x509' % self._metadata_version),
             "%s\n" % x509constants.PEM_FOOTER)
+
+    def get_user_data(self):
+        return self._get_cache_data('%s/user-data' % self._metadata_version)
