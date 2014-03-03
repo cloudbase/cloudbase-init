@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 
 
 class UserDataPlugin(base.BasePlugin):
-    _part_handler_content_type = "text/part-handler"
+    _PART_HANDLER_CONTENT_TYPE = "text/part-handler"
     _GZIP_MAGIC_NUMBER = '\x1f\x8b'
 
     def execute(self, service, shared_data):
@@ -99,7 +99,7 @@ class UserDataPlugin(base.BasePlugin):
                     LOG.debug("Executing userdata plugin: %s" %
                               user_data_plugin.__class__.__name__)
 
-                    if content_type == self._part_handler_content_type:
+                    if content_type == self._PART_HANDLER_CONTENT_TYPE:
                         new_user_handlers = user_data_plugin.process(part)
                         self._add_part_handlers(user_data_plugins,
                                                 user_handlers,

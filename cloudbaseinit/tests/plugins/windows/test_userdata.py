@@ -135,7 +135,7 @@ class UserDataPluginTest(unittest.TestCase):
         mock_user_handlers.get.side_effect = [handler_func]
         mock_user_data_plugins.get.side_effect = [user_data_plugin]
         if content_type:
-            _content_type = self._userdata._part_handler_content_type
+            _content_type = self._userdata._PART_HANDLER_CONTENT_TYPE
             mock_part.get_content_type.return_value = _content_type
         else:
             _content_type = 'other content type'
