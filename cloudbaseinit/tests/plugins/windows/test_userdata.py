@@ -36,29 +36,43 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
                 '._process_user_data')
-    def _test_execute(self, mock_process_user_data, ret_val):
+    def _test_execute(self, mock_process_user_data, user_data_in,
+                      user_data_out=None):
         mock_service = mock.MagicMock()
-        mock_service.get_user_data.side_effect = [ret_val]
+        mock_service.get_user_data.side_effect = [user_data_in]
         response = self._userdata.execute(service=mock_service,
                                           shared_data=None)
         mock_service.get_user_data.assert_called_once_with()
-        if ret_val is metadata_services_base.NotExistingMetadataException:
+        if user_data_in is metadata_services_base.NotExistingMetadataException:
             self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
-        elif ret_val is None:
+        elif user_data_in is None:
             self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
         else:
-            mock_process_user_data.assert_called_once_with(ret_val)
+            if user_data_out:
+                user_data = user_data_out
+            else:
+                user_data = user_data_in
+
+            mock_process_user_data.assert_called_once_with(user_data)
             self.assertEqual(response, mock_process_user_data())
 
     def test_execute(self):
-        self._test_execute(ret_val='fake data')
+        self._test_execute(user_data_in='fake data')
+
+    def test_execute_gzipped_user_data(self):
+        fake_user_data_in = ('\x1f\x8b\x08\x00\x8c\xdc\x14S\x02\xffKK'
+                             '\xccNUHI,I\x04\x00(\xc9\xcfI\t\x00\x00\x00')
+        fake_user_data_out = 'fake data'
+
+        self._test_execute(user_data_in=fake_user_data_in,
+                           user_data_out=fake_user_data_out)
 
     def test_execute_NotExistingMetadataException(self):
         self._test_execute(
-            ret_val=metadata_services_base.NotExistingMetadataException)
+            user_data_in=metadata_services_base.NotExistingMetadataException)
 
     def test_execute_not_user_data(self):
-        self._test_execute(ret_val=None)
+        self._test_execute(user_data_in=None)
 
     @mock.patch('email.message_from_string')
     def test_parse_mime(self, mock_message_from_string):

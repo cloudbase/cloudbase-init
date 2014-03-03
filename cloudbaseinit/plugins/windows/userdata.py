@@ -15,6 +15,8 @@
 #    under the License.
 
 import email
+import gzip
+import StringIO
 
 from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.openstack.common import log as logging
@@ -27,6 +29,7 @@ LOG = logging.getLogger(__name__)
 
 class UserDataPlugin(base.BasePlugin):
     _part_handler_content_type = "text/part-handler"
+    _GZIP_MAGIC_NUMBER = '\x1f\x8b'
 
     def execute(self, service, shared_data):
         try:
@@ -37,7 +40,17 @@ class UserDataPlugin(base.BasePlugin):
         if not user_data:
             return (base.PLUGIN_EXECUTION_DONE, False)
 
+        user_data = self._check_gzip_compression(user_data)
+
         return self._process_user_data(user_data)
+
+    def _check_gzip_compression(self, user_data):
+        if user_data[:2] == self._GZIP_MAGIC_NUMBER:
+            sio = StringIO.StringIO(user_data)
+            with gzip.GzipFile(fileobj=sio, mode='rb') as f:
+                user_data = f.read()
+
+        return user_data
 
     def _parse_mime(self, user_data):
         return email.message_from_string(user_data).walk()
