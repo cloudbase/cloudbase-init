@@ -16,6 +16,7 @@
 
 import _winreg
 import ctypes
+import os
 import re
 import time
 import win32process
@@ -661,3 +662,39 @@ class WindowsUtils(base.BaseOSUtils):
 
         fw_protocol = self._get_fw_protocol(protocol)
         fw_profile = fw_profile.GloballyOpenPorts.Remove(port, fw_protocol)
+
+    def is_wow64(self):
+        ret_val = wintypes.BOOL()
+        if not kernel32.IsWow64Process(kernel32.GetCurrentProcess(),
+                                       ctypes.byref(ret_val)):
+            raise Exception("IsWow64Process failed")
+        return bool(ret_val.value)
+
+    def get_system32_dir(self):
+        return os.path.expandvars('%windir%\\system32')
+
+    def get_sysnative_dir(self):
+        return os.path.expandvars('%windir%\\sysnative')
+
+    def check_sysnative_dir_exists(self):
+        sysnative_dir_exists = os.path.isdir(self.get_sysnative_dir())
+        if not sysnative_dir_exists and self.is_wow64():
+            LOG.warning('Unable to validate sysnative folder presence. '
+                        'If Target OS is Server 2003 x64, please ensure '
+                        'you have KB942589 installed')
+        return sysnative_dir_exists
+
+    def execute_powershell_script(self, script_path, sysnative=True):
+        if sysnative and self.check_sysnative_dir_exists():
+            base_dir = self.get_sysnative_dir()
+        else:
+            base_dir = self.get_system32_dir()
+
+        powershell_path = os.path.join(base_dir,
+                                       'WindowsPowerShell\\v1.0\\'
+                                       'powershell.exe')
+
+        args = [powershell_path, '-ExecutionPolicy', 'RemoteSigned',
+                '-NonInteractive', '-File', script_path]
+
+        return self.execute_process(args, False)

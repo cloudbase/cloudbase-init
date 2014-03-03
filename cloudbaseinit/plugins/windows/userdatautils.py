@@ -26,6 +26,10 @@ LOG = logging.getLogger(__name__)
 def execute_user_data_script(user_data):
     osutils = osutils_factory.get_os_utils()
 
+    shell = False
+    powershell = False
+    sysnative = True
+
     target_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
     if re.search(r'^rem cmd\s', user_data, re.I):
         target_path += '.cmd'
@@ -34,31 +38,16 @@ def execute_user_data_script(user_data):
     elif re.search(r'^#!/usr/bin/env\spython\s', user_data, re.I):
         target_path += '.py'
         args = ['python.exe', target_path]
-        shell = False
     elif re.search(r'^#!', user_data, re.I):
         target_path += '.sh'
         args = ['bash.exe', target_path]
-        shell = False
-    elif re.search(r'^#ps1\s', user_data, re.I):
+    elif re.search(r'^#(ps1|ps1_sysnative)\s', user_data, re.I):
         target_path += '.ps1'
-        args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                '-NonInteractive', '-File', target_path]
-        shell = False
-    elif re.search(r'^#ps1_sysnative\s', user_data, re.I):
-        if os.path.isdir(os.path.expandvars('%windir%\\sysnative')):
-            target_path += '.ps1'
-            args = [os.path.expandvars('%windir%\\sysnative\\'
-                                       'WindowsPowerShell\\v1.0\\'
-                                       'powershell.exe'),
-                    '-ExecutionPolicy',
-                    'RemoteSigned', '-NonInteractive', '-File', target_path]
-            shell = False
-        else:
-            # Unable to validate sysnative presence
-            LOG.warning('Unable to validate sysnative folder presence. '
-                        'If Target OS is Server 2003, please ensure you '
-                        'have KB942589 installed')
-            return 0
+        powershell = True
+    elif re.search(r'^#ps1_x86\s', user_data, re.I):
+        target_path += '.ps1'
+        powershell = True
+        sysnative = False
     else:
         # Unsupported
         LOG.warning('Unsupported user_data format')
@@ -67,7 +56,13 @@ def execute_user_data_script(user_data):
     try:
         with open(target_path, 'wb') as f:
             f.write(user_data)
-        (out, err, ret_val) = osutils.execute_process(args, shell)
+
+        if powershell:
+            (out, err,
+             ret_val) = osutils.execute_powershell_script(target_path,
+                                                          sysnative)
+        else:
+            (out, err, ret_val) = osutils.execute_process(args, shell)
 
         LOG.info('User_data script ended with return code: %d' % ret_val)
         LOG.debug('User_data stdout:\n%s' % out)

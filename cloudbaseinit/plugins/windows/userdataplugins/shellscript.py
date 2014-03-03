@@ -33,19 +33,18 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
         file_name = part.get_filename()
         target_path = os.path.join(tempfile.gettempdir(), file_name)
 
+        shell = False
+        powershell = False
+
         if file_name.endswith(".cmd"):
             args = [target_path]
             shell = True
         elif file_name.endswith(".sh"):
             args = ['bash.exe', target_path]
-            shell = False
         elif file_name.endswith(".py"):
             args = ['python.exe', target_path]
-            shell = False
         elif file_name.endswith(".ps1"):
-            args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                    '-NonInteractive', '-File', target_path]
-            shell = False
+            powershell = True
         else:
             # Unsupported
             LOG.warning('Unsupported script type')
@@ -54,7 +53,12 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
         try:
             with open(target_path, 'wb') as f:
                 f.write(part.get_payload())
-            (out, err, ret_val) = osutils.execute_process(args, shell)
+
+            if powershell:
+                (out, err,
+                 ret_val) = osutils.execute_powershell_script(target_path)
+            else:
+                (out, err, ret_val) = osutils.execute_process(args, shell)
 
             LOG.info('User_data script ended with return code: %d' % ret_val)
             LOG.debug('User_data stdout:\n%s' % out)
