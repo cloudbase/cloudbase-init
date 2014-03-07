@@ -137,7 +137,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         if 'meta' in meta_data:
             self.assertEqual(response, ['fake cert'])
         elif type(ret_value) is str and ret_value.startswith(
-            x509constants.PEM_HEADER):
+                x509constants.PEM_HEADER):
             mock_get_user_data.assert_called_once_with()
             self.assertEqual(response, [ret_value])
         elif ret_value is base.NotExistingMetadataException:
