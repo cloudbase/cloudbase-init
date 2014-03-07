@@ -16,6 +16,7 @@
 
 import ctypes
 import mock
+import os
 import time
 import sys
 import unittest
@@ -990,3 +991,83 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_Dispatch.assert_called_once_with("HNetCfg.FwMgr")
         mock_get_fw_protocol.assert_called_once_with(
             self._winutils.PROTOCOL_TCP)
+
+    @mock.patch('ctypes.wintypes.BOOL')
+    @mock.patch('cloudbaseinit.osutils.windows.kernel32.IsWow64Process')
+    @mock.patch('cloudbaseinit.osutils.windows.kernel32.GetCurrentProcess')
+    @mock.patch('ctypes.byref')
+    def _test_is_wow64(self, mock_byref, mock_GetCurrentProcess,
+                       mock_IsWow64Process, mock_BOOL, ret_val):
+        mock_IsWow64Process.return_value = ret_val
+        mock_BOOL().value = ret_val
+        if ret_val is False:
+            self.assertRaises(Exception, self._winutils.is_wow64)
+        else:
+            response = self._winutils.is_wow64()
+            mock_byref.assert_called_once_with(mock_BOOL())
+            mock_IsWow64Process.assert_called_once_with(
+                mock_GetCurrentProcess(), mock_byref())
+            self.assertEqual(response, True)
+
+    def test_is_wow64(self):
+        self._test_is_wow64(ret_val=True)
+
+    def test_is_wow64_exception(self):
+        self._test_is_wow64(ret_val=False)
+
+    @mock.patch('os.path.expandvars')
+    def test_get_system32_dir(self, mock_expandvars):
+        mock_expandvars.return_value = 'fake_system32'
+        response = self._winutils.get_system32_dir()
+        self.assertEqual(response, 'fake_system32')
+
+    @mock.patch('os.path.expandvars')
+    def test_get_sysnative_dir(self, mock_expandvars):
+        mock_expandvars.return_value = 'fake_sysnative'
+        response = self._winutils.get_sysnative_dir()
+        self.assertEqual(response, 'fake_sysnative')
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_sysnative_dir')
+    @mock.patch('os.path.isdir')
+    def test_check_sysnative_dir_exists(self, mock_isdir,
+                                        mock_get_sysnative_dir):
+        mock_get_sysnative_dir.return_value = 'fake_sysnative'
+        mock_isdir.return_value = True
+        response = self._winutils.check_sysnative_dir_exists()
+        self.assertEqual(response, True)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_sysnative_dir_exists')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_sysnative_dir')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_system32_dir')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.execute_process')
+    def _test_execute_powershell_script(self, mock_execute_process,
+                                        mock_get_system32_dir,
+                                        mock_get_sysnative_dir,
+                                        mock_check_sysnative_dir_exists,
+                                        ret_val):
+        mock_check_sysnative_dir_exists.return_value = ret_val
+        mock_get_sysnative_dir.return_value = 'fake'
+        mock_get_system32_dir.return_value = 'fake'
+        fake_path = os.path.join('fake', 'WindowsPowerShell\\v1.0\\'
+                                         'powershell.exe')
+        args = [fake_path, '-ExecutionPolicy', 'RemoteSigned',
+                '-NonInteractive', '-File', 'fake_script_path']
+        response = self._winutils.execute_powershell_script(
+            script_path='fake_script_path')
+        if ret_val is True:
+            mock_get_sysnative_dir.assert_called_once_with()
+        else:
+            mock_get_system32_dir.assert_called_once_with()
+        mock_execute_process.assert_called_with(args, False)
+        self.assertEqual(response, mock_execute_process())
+
+    def test_execute_powershell_script_sysnative(self):
+        self._test_execute_powershell_script(ret_val=True)
+
+    def test_execute_powershell_script_system32(self):
+        self._test_execute_powershell_script(ret_val=False)

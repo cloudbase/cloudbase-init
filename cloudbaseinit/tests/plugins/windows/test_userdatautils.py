@@ -37,23 +37,23 @@ class UserDataUtilsTest(unittest.TestCase):
     @mock.patch('re.search')
     @mock.patch('tempfile.gettempdir')
     @mock.patch('os.remove')
-    @mock.patch('os.path.isdir')
     @mock.patch('os.path.exists')
     @mock.patch('os.path.expandvars')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def _test_execute_user_data_script(self, mock_get_os_utils,
                                        mock_path_expandvars,
-                                       mock_path_exists, mock_path_isdir,
-                                       mock_os_remove, mock_gettempdir,
-                                       mock_re_search, fake_user_data,
-                                       directory_exists):
+                                       mock_path_exists, mock_os_remove,
+                                       mock_gettempdir, mock_re_search,
+                                       fake_user_data):
         mock_osutils = mock.MagicMock()
         mock_gettempdir.return_value = 'fake_temp'
         uuid.uuid4 = mock.MagicMock(return_value='randomID')
         match_instance = mock.MagicMock()
         path = os.path.join('fake_temp', 'randomID')
         args = None
+        powershell = False
         mock_get_os_utils.return_value = mock_osutils
+        mock_path_exists.return_value = True
         if fake_user_data == '^rem cmd\s':
             side_effect = [match_instance]
             number_of_calls = 1
@@ -72,28 +72,22 @@ class UserDataUtilsTest(unittest.TestCase):
             extension = '.sh'
             args = ['bash.exe', path + extension]
             shell = False
-        elif fake_user_data == '#ps1\s':
+        elif fake_user_data == '#ps1_sysnative\s':
             side_effect = [None, None, None, match_instance]
             number_of_calls = 4
             extension = '.ps1'
-            args = ['powershell.exe', '-ExecutionPolicy', 'RemoteSigned',
-                    '-NonInteractive', '-File',  path + extension]
-            shell = False
-        else:
+            sysnative = True
+            powershell = True
+        elif fake_user_data == '#ps1_x86\s':
             side_effect = [None, None, None, None, match_instance]
             number_of_calls = 5
             extension = '.ps1'
             shell = False
-            if directory_exists:
-                args = [mock_path_expandvars('%windir%\\sysnative\\'
-                                             'WindowsPowerShell\\v1.0\\'
-                                             'powershell.exe'),
-                        '-ExecutionPolicy',
-                        'RemoteSigned', '-NonInteractive', '-File',
-                        path + extension]
-                mock_path_isdir.return_value = True
-            else:
-                mock_path_isdir.return_value = False
+            sysnative = False
+            powershell = True
+        else:
+            side_effect = [None, None, None, None, None]
+            number_of_calls = 5
 
         mock_re_search.side_effect = side_effect
 
@@ -104,37 +98,35 @@ class UserDataUtilsTest(unittest.TestCase):
         self.assertEqual(mock_re_search.call_count, number_of_calls)
         if args:
             mock_osutils.execute_process.assert_called_with(args, shell)
-        if not directory_exists:
-            self.assertEqual(response, 0)
-        else:
+            mock_os_remove.assert_called_once_with(path + extension)
             self.assertEqual(response, None)
+        elif powershell:
+            mock_osutils.execute_powershell_script.assert_called_with(
+                path + extension, sysnative)
+            mock_os_remove.assert_called_once_with(path + extension)
+            self.assertEqual(response, None)
+        else:
+            self.assertEqual(response, 0)
 
     def test_handle_batch(self):
         fake_user_data = '^rem cmd\s'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data,
-                                            directory_exists=True)
+        self._test_execute_user_data_script(fake_user_data=fake_user_data)
 
     def test_handle_python(self):
-        fake_user_data = '^#!/usr/bin/env\spython\s'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data,
-                                            directory_exists=True)
+        self._test_execute_user_data_script(fake_user_data='^#!/usr/bin/env'
+                                                           '\spython\s')
 
     def test_handle_shell(self):
-        fake_user_data = '^#!'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data,
-                                            directory_exists=True)
+        self._test_execute_user_data_script(fake_user_data='^#!')
 
     def test_handle_powershell(self):
-        fake_user_data = '^#ps1\s'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data,
-                                            directory_exists=True)
+        self._test_execute_user_data_script(fake_user_data='^#ps1\s')
 
     def test_handle_powershell_sysnative(self):
-        fake_user_data = '#ps1_sysnative\s'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data,
-                                            directory_exists=True)
+        self._test_execute_user_data_script(fake_user_data='#ps1_sysnative\s')
 
     def test_handle_powershell_sysnative_no_sysnative(self):
-        fake_user_data = '#ps1_sysnative\s'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data,
-                                            directory_exists=False)
+        self._test_execute_user_data_script(fake_user_data='#ps1_x86\s')
+
+    def test_handle_unsupported_format(self):
+        self._test_execute_user_data_script(fake_user_data='unsupported')
