@@ -13,12 +13,21 @@
 #    under the License.
 
 import sys
+import urllib2
 import urlparse
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 
 LOG = logging.getLogger(__name__)
+
+
+def check_url(url):
+    try:
+        urllib2.urlopen(url)
+        return True
+    except Exception:
+        return False
 
 
 def check_metadata_ip_route(metadata_url):
@@ -34,7 +43,8 @@ def check_metadata_ip_route(metadata_url):
         metadata_host = metadata_netloc.split(':')[0]
 
         if metadata_host.startswith("169.254."):
-            if not osutils.check_static_route_exists(metadata_host):
+            if (not osutils.check_static_route_exists(metadata_host) and
+                    not check_url(metadata_url)):
                 (interface_index, gateway) = osutils.get_default_gateway()
                 if gateway:
                     try:
