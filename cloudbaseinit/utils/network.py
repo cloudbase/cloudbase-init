@@ -21,13 +21,17 @@ from cloudbaseinit.osutils import factory as osutils_factory
 
 LOG = logging.getLogger(__name__)
 
+MAX_URL_CHECK_RETRIES = 3
 
-def check_url(url):
-    try:
-        urllib2.urlopen(url)
-        return True
-    except Exception:
-        return False
+
+def check_url(url, retries_count=MAX_URL_CHECK_RETRIES):
+    for i in range(0, MAX_URL_CHECK_RETRIES):
+        try:
+            urllib2.urlopen(url)
+            return True
+        except Exception:
+            pass
+    return False
 
 
 def check_metadata_ip_route(metadata_url):
