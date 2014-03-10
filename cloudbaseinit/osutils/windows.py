@@ -555,7 +555,7 @@ class WindowsUtils(base.BaseOSUtils):
         args = ['ROUTE', 'ADD', destination, 'MASK', mask, next_hop]
         (out, err, ret_val) = self.execute_process(args)
         # Cannot use the return value to determine the outcome
-        if err:
+        if ret_val or err:
             raise Exception('Unable to add route: %s' % err)
 
     def check_os_version(self, major, minor, build=0):
