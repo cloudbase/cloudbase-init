@@ -27,6 +27,7 @@ MAX_URL_CHECK_RETRIES = 3
 def check_url(url, retries_count=MAX_URL_CHECK_RETRIES):
     for i in range(0, MAX_URL_CHECK_RETRIES):
         try:
+            LOG.debug("Testing url: %s" % url)
             urllib2.urlopen(url)
             return True
         except Exception:
