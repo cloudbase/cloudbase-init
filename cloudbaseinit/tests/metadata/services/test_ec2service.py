@@ -33,14 +33,14 @@ class EC2ServiceTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.network.check_metadata_ip_route')
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
-                '._get_data')
-    def _test_load(self, mock_get_data, mock_check_metadata_ip_route,
+                '.get_host_name')
+    def _test_load(self, mock_get_host_name, mock_check_metadata_ip_route,
                    side_effect):
-        mock_get_data.side_effect = [side_effect]
+        mock_get_host_name.side_effect = [side_effect]
         response = self._service.load()
         mock_check_metadata_ip_route.assert_called_once_with(
             CONF.ec2_metadata_base_url)
-        mock_get_data.assert_called_once_with('latest/meta-data/')
+        mock_get_host_name.assert_called_once()
         if side_effect is Exception:
             self.assertFalse(response)
         else:

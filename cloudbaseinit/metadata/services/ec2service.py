@@ -46,7 +46,7 @@ class EC2Service(base.BaseMetadataService):
         network.check_metadata_ip_route(CONF.ec2_metadata_base_url)
 
         try:
-            self._get_data('latest/meta-data/')
+            self.get_host_name()
             return True
         except Exception, ex:
             LOG.exception(ex)
