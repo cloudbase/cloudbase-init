@@ -19,6 +19,7 @@ import mock
 import sys
 import unittest
 
+from cloudbaseinit.plugins import base
 from oslo.config import cfg
 
 CONF = cfg.CONF
@@ -97,7 +98,8 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
         mock_check_winrm_service.assert_called_once_with(mock_osutils)
 
         if not service_status:
-            self.assertEqual(response, (2, False))
+            self.assertEqual(response, (base.PLUGIN_EXECUTE_ON_NEXT_BOOT,
+                                        service_status))
         else:
             mock_WinRMConfig().set_auth_config.assert_called_once_with(
                 basic=CONF.winrm_enable_basic_auth)
@@ -113,7 +115,7 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
             mock_listener_config.get.assert_called_once_with("Port")
             mock_osutils.firewall_create_rule.assert_called_once_with(
                 "WinRM HTTPS", 9999, mock_osutils.PROTOCOL_TCP)
-            self.assertEqual(response, (1, False))
+            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
 
     def test_execute(self):
         self._test_execute(service_status=True)

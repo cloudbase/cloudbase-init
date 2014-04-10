@@ -20,6 +20,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import networkconfig
 from cloudbaseinit.tests.metadata import fake_json_response
 
@@ -67,7 +68,7 @@ class NetworkConfigPluginPluginTests(unittest.TestCase):
                 search_result.group('broadcast'),
                 search_result.group('gateway'),
                 search_result.group('dnsnameservers').strip().split(' '))
-            self.assertEqual(response, (1, False))
+            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
 
     def test_execute(self):
         m = mock.MagicMock()

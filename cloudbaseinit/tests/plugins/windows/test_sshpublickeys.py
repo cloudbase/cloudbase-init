@@ -20,6 +20,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import sshpublickeys
 from cloudbaseinit.tests.metadata import fake_json_response
 
@@ -61,7 +62,8 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
                 self.assertEqual(mock_os_path.join.call_count, 2)
                 mock_os_makedirs.assert_called_once_with(mock_os_path.join())
 
-                self.assertEqual(response, (1, False))
+                self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE,
+                                            False))
 
     def test_execute_with_user_home(self):
         fake_user_home = os.path.join('fake', 'home')
