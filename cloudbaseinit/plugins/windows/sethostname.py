@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import platform
+
 from oslo.config import cfg
 
 from cloudbaseinit.openstack.common import log as logging
@@ -56,7 +58,12 @@ class SetHostNamePlugin(base.BasePlugin):
         else:
             new_host_name = metadata_host_name
 
-        LOG.info("Setting hostname: %s" % new_host_name)
-        reboot_required = osutils.set_host_name(new_host_name)
+        if platform.node().lower() == new_host_name.lower():
+            LOG.debug("Hostname already set to: %s" % new_host_name)
+            reboot_required = False
+        else:
+            LOG.info("Setting hostname: %s" % new_host_name)
+            osutils.set_host_name(new_host_name)
+            reboot_required = True
 
         return (base.PLUGIN_EXECUTION_DONE, reboot_required)
