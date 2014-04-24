@@ -402,7 +402,6 @@ class WindowsUtilsTest(unittest.TestCase):
 
     @mock.patch('ctypes.windll.kernel32.SetComputerNameExW')
     def _test_set_host_name(self, mock_SetComputerNameExW, ret_value):
-        wmi.WMI = mock.MagicMock(return_value=self._conn)
         mock_SetComputerNameExW.return_value = ret_value
         if not ret_value:
             self.assertRaises(Exception, self._winutils.set_host_name,

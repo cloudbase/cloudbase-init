@@ -19,8 +19,10 @@ import mock
 import sys
 import unittest
 
-from oslo.config import cfg
+from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
+
+from oslo.config import cfg
 
 CONF = cfg.CONF
 _ctypes_mock = mock.MagicMock()
@@ -88,7 +90,7 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
                                              shared_data='fake data')
         mock_service.get_client_auth_certs.assert_called_once_with()
         if not cert_data:
-            self.assertEqual(response, (1, False))
+            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
         else:
             mock_get_credentials.assert_called_once_with('fake data')
             mock_import_cert.assert_called_once_with(
@@ -103,7 +105,7 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
             mock_WinRMConfig().create_cert_mapping.assert_called_once_with(
                 mock_cert_thumprint, cert_upn, 'fake user',
                 'fake password')
-            self.assertEqual(response, (1, False))
+            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
 
     def test_execute(self):
         cert_data = 'fake cert data'
