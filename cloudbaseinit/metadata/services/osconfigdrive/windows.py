@@ -23,12 +23,21 @@ import uuid
 import wmi
 
 from ctypes import wintypes
+from oslo.config import cfg
 
 from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils.windows import physical_disk
-from cloudbaseinit.utils.windows import virtual_disk
+
+opts = [
+    cfg.StrOpt('bsdtar_path', default='bsdtar.exe',
+               help='Path to "bsdtar", used to extract ISO ConfigDrive '
+                    'files'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
@@ -111,19 +120,21 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 f.write(buf)
                 offset += bytes_read
 
-    def _copy_iso_files(self, iso_file_path, target_path):
-        virt_disk = virtual_disk.VirtualDisk(iso_file_path)
-        virt_disk.open()
-        try:
-            virt_disk.attach()
-            cdrom_mount_point = virt_disk.get_cdrom_drive_mount_point()
-            shutil.copytree(cdrom_mount_point, target_path)
-        finally:
-            try:
-                virt_disk.detach()
-            except Exception:
-                pass
-            virt_disk.close()
+    def _extract_iso_files(self, iso_file_path, target_path):
+        osutils = osutils_factory.get_os_utils()
+
+        os.makedirs(target_path)
+
+        args = [CONF.bsdtar_path, '-xf', iso_file_path, '-C', target_path]
+        (out, err, exit_code) = osutils.execute_process(args, False)
+
+        if exit_code:
+            raise Exception('Failed to execute "bsdtar" from path '
+                            '"%(bsdtar_path)s" with exit code: %(exit_code)s\n'
+                            '%(out)s\n%(err)s' %
+                            {'bsdtar_path': CONF.bsdtar_path,
+                             'exit_code': exit_code,
+                             'out': out, 'err': err})
 
     def _extract_iso_disk_file(self, iso_file_path):
         iso_disk_found = False
@@ -144,19 +155,10 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 phys_disk.close()
         return iso_disk_found
 
-    def _os_supports_iso_virtual_disks(self):
-        # Feature supported starting from Windows 8 / 2012
-        ver = sys.getwindowsversion()
-        supported = (ver[0] >= 6 and ver[1] >= 2)
-        if not supported:
-            LOG.debug('ISO virtual disks are not supported on '
-                      'this version of Windows')
-        return supported
-
     def get_config_drive_files(self, target_path, check_raw_hhd=True,
                                check_cdrom=True):
         config_drive_found = False
-        if check_raw_hhd and self._os_supports_iso_virtual_disks():
+        if check_raw_hhd:
             LOG.debug('Looking for Config Drive in raw HDDs')
             config_drive_found = self._get_conf_drive_from_raw_hdd(
                 target_path)
@@ -180,7 +182,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                                      str(uuid.uuid4()) + '.iso')
         try:
             if self._extract_iso_disk_file(iso_file_path):
-                self._copy_iso_files(iso_file_path, target_path)
+                self._extract_iso_files(iso_file_path, target_path)
                 config_drive_found = True
         finally:
             if os.path.exists(iso_file_path):
