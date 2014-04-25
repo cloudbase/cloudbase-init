@@ -971,6 +971,129 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_get_logical_drives.assert_called_with()
         self.assertEqual(response, ['drive'])
 
+    @mock.patch('cloudbaseinit.osutils.windows.msvcrt')
+    @mock.patch('cloudbaseinit.osutils.windows.kernel32')
+    @mock.patch('cloudbaseinit.osutils.windows.setupapi')
+    @mock.patch('cloudbaseinit.osutils.windows.Win32_STORAGE_DEVICE_NUMBER')
+    @mock.patch('ctypes.byref')
+    @mock.patch('ctypes.sizeof')
+    @mock.patch('ctypes.wintypes.DWORD')
+    @mock.patch('ctypes.cast')
+    @mock.patch('ctypes.POINTER')
+    def _test_get_physical_disks(self, mock_POINTER, mock_cast,
+                                 mock_DWORD, mock_sizeof, mock_byref,
+                                 mock_sdn, mock_setupapi, mock_kernel32,
+                                 mock_msvcrt, handle_disks, last_error,
+                                 interface_detail, disk_handle, io_control):
+
+        sizeof_calls = [mock.call(
+            windows_utils.Win32_SP_DEVICE_INTERFACE_DATA),
+                        mock.call(mock_sdn())]
+        device_interfaces_calls = [mock.call(handle_disks, None, mock_byref(),
+                                             0, mock_byref()),
+                                   mock.call(handle_disks, None, mock_byref(),
+                                             1, mock_byref())]
+        cast_calls = [mock.call(),
+                      mock.call(mock_msvcrt.malloc(), mock_POINTER()),
+                      mock.call(mock_cast().contents.DevicePath,
+                                wintypes.LPWSTR)]
+
+        mock_setup_interface = mock_setupapi.SetupDiGetDeviceInterfaceDetailW
+
+        mock_setupapi.SetupDiGetClassDevsW.return_value = handle_disks
+        mock_kernel32.GetLastError.return_value = last_error
+        mock_setup_interface.return_value = interface_detail
+        mock_kernel32.CreateFileW.return_value = disk_handle
+        mock_kernel32.DeviceIoControl.return_value = io_control
+
+        mock_setupapi.SetupDiEnumDeviceInterfaces.side_effect = [True, False]
+
+        if handle_disks == self._winutils.INVALID_HANDLE_VALUE \
+            or last_error != self._winutils.ERROR_INSUFFICIENT_BUFFER \
+            and not interface_detail \
+            or disk_handle == self._winutils.INVALID_HANDLE_VALUE \
+            or not io_control:
+
+            self.assertRaises(Exception, self._winutils.get_physical_disks)
+
+        else:
+            response = self._winutils.get_physical_disks()
+            self.assertEqual(mock_sizeof.call_args_list, sizeof_calls)
+            self.assertEqual(
+                mock_setupapi.SetupDiEnumDeviceInterfaces.call_args_list,
+                device_interfaces_calls)
+            if not interface_detail:
+                mock_kernel32.GetLastError.assert_called_once_with()
+
+            mock_POINTER.assert_called_with(
+                windows_utils.Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W)
+            mock_msvcrt.malloc.assert_called_with(mock_DWORD())
+
+            self.assertEqual(mock_cast.call_args_list, cast_calls)
+
+            mock_setup_interface.assert_called_with(handle_disks, mock_byref(),
+                                                    mock_cast(),mock_DWORD(),
+                                                    None, None)
+            mock_kernel32.CreateFileW.assert_called_with(
+                mock_cast().value, 0, self._winutils.FILE_SHARE_READ, None,
+                self._winutils.OPEN_EXISTING, 0, 0)
+            mock_sdn.assert_called_with()
+
+            mock_kernel32.DeviceIoControl.assert_called_with(
+                disk_handle, self._winutils.IOCTL_STORAGE_GET_DEVICE_NUMBER,
+                None, 0, mock_byref(), mock_sizeof(), mock_byref(), None)
+            self.assertEqual(response, ["\\\\.\PHYSICALDRIVE1"])
+            mock_setupapi.SetupDiDestroyDeviceInfoList.assert_called_once_with(
+                handle_disks)
+
+        mock_setupapi.SetupDiGetClassDevsW.assert_called_once_with(
+            mock_byref(), None, None, self._winutils.DIGCF_PRESENT |
+            self._winutils.DIGCF_DEVICEINTERFACE)
+
+
+
+    def test_get_physical_disks(self):
+        mock_handle_disks = mock.MagicMock()
+        mock_disk_handle = mock.MagicMock()
+        self._test_get_physical_disks(
+            handle_disks=mock_handle_disks,
+            last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
+            interface_detail='fake interface detail',
+            disk_handle=mock_disk_handle, io_control=True)
+
+    def test_get_physical_disks_other_error_and_no_interface_detail(self):
+        mock_handle_disks = mock.MagicMock()
+        mock_disk_handle = mock.MagicMock()
+        self._test_get_physical_disks(
+            handle_disks=mock_handle_disks,
+            last_error='other', interface_detail=None,
+            disk_handle=mock_disk_handle, io_control=True)
+
+    def test_get_physical_disks_invalid_disk_handle(self):
+        mock_handle_disks = mock.MagicMock()
+        self._test_get_physical_disks(
+            handle_disks=mock_handle_disks,
+            last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
+            interface_detail='fake interface detail',
+            disk_handle=self._winutils.INVALID_HANDLE_VALUE, io_control=True)
+
+    def test_get_physical_disks_io_control(self):
+        mock_handle_disks = mock.MagicMock()
+        mock_disk_handle = mock.MagicMock()
+        self._test_get_physical_disks(
+            handle_disks=mock_handle_disks,
+            last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
+            interface_detail='fake interface detail',
+            disk_handle=mock_disk_handle, io_control=False)
+
+    def test_get_physical_disks_handle_disks_invalid(self):
+        mock_disk_handle = mock.MagicMock()
+        self._test_get_physical_disks(
+            handle_disks=self._winutils.INVALID_HANDLE_VALUE ,
+            last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
+            interface_detail='fake interface detail',
+            disk_handle=mock_disk_handle, io_control=True)
+
     @mock.patch('win32com.client.Dispatch')
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils._get_fw_protocol')
     def _test_firewall_create_rule(self, mock_get_fw_protocol, mock_Dispatch):
