@@ -17,10 +17,8 @@
 import ctypes
 import os
 import shutil
-import sys
 import tempfile
 import uuid
-import wmi
 
 from ctypes import wintypes
 from oslo.config import cfg
@@ -43,13 +41,6 @@ LOG = logging.getLogger(__name__)
 
 
 class WindowsConfigDriveManager(base.BaseConfigDriveManager):
-    def _get_physical_disks_path(self):
-        l = []
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        q = conn.query('SELECT DeviceID FROM Win32_DiskDrive')
-        for r in q:
-            l.append(r.DeviceID)
-        return l
 
     def _get_config_drive_cdrom_mount_point(self):
         osutils = osutils_factory.get_os_utils()
@@ -120,9 +111,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 f.write(buf)
                 offset += bytes_read
 
-    def _extract_iso_files(self, iso_file_path, target_path):
-        osutils = osutils_factory.get_os_utils()
-
+    def _extract_iso_files(self, osutils, iso_file_path, target_path):
         os.makedirs(target_path)
 
         args = [CONF.bsdtar_path, '-xf', iso_file_path, '-C', target_path]
@@ -136,14 +125,15 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                              'exit_code': exit_code,
                              'out': out, 'err': err})
 
-    def _extract_iso_disk_file(self, iso_file_path):
+    def _extract_iso_disk_file(self, osutils, iso_file_path):
         iso_disk_found = False
-        for path in self._get_physical_disks_path():
+        for path in osutils.get_physical_disks():
             phys_disk = physical_disk.PhysicalDisk(path)
             try:
                 phys_disk.open()
                 iso_file_size = self._get_iso_disk_size(phys_disk)
                 if iso_file_size:
+                    LOG.debug('ISO9660 disk found on raw HDD: %s' % path)
                     self._write_iso_file(phys_disk, iso_file_path,
                                          iso_file_size)
                     iso_disk_found = True
@@ -181,8 +171,10 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         iso_file_path = os.path.join(tempfile.gettempdir(),
                                      str(uuid.uuid4()) + '.iso')
         try:
-            if self._extract_iso_disk_file(iso_file_path):
-                self._extract_iso_files(iso_file_path, target_path)
+            osutils = osutils_factory.get_os_utils()
+
+            if self._extract_iso_disk_file(osutils, iso_file_path):
+                self._extract_iso_files(osutils, iso_file_path, target_path)
                 config_drive_found = True
         finally:
             if os.path.exists(iso_file_path):

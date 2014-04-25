@@ -38,6 +38,8 @@ netapi32 = windll.netapi32
 userenv = windll.userenv
 iphlpapi = windll.iphlpapi
 Ws2_32 = windll.Ws2_32
+setupapi = windll.setupapi
+msvcrt = ctypes.cdll.msvcrt
 
 
 class Win32_PROFILEINFO(ctypes.Structure):
@@ -101,6 +103,57 @@ class Win32_OSVERSIONINFOEX_W(ctypes.Structure):
     ]
 
 
+class GUID(ctypes.Structure):
+    _fields_ = [
+        ("data1", ctypes.wintypes.DWORD),
+        ("data2", ctypes.wintypes.WORD),
+        ("data3", ctypes.wintypes.WORD),
+        ("data4", ctypes.c_byte * 8)]
+
+    def __init__(self, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8):
+        self.data1 = l
+        self.data2 = w1
+        self.data3 = w2
+        self.data4[0] = b1
+        self.data4[1] = b2
+        self.data4[2] = b3
+        self.data4[3] = b4
+        self.data4[4] = b5
+        self.data4[5] = b6
+        self.data4[6] = b7
+        self.data4[7] = b8
+
+
+class Win32_SP_DEVICE_INTERFACE_DATA(ctypes.Structure):
+    _fields_ = [
+        ('cbSize', wintypes.DWORD),
+        ('InterfaceClassGuid', GUID),
+        ('Flags', wintypes.DWORD),
+        ('Reserved', ctypes.POINTER(wintypes.ULONG))
+    ]
+
+
+class Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W(ctypes.Structure):
+    _fields_ = [
+        ('cbSize', wintypes.DWORD),
+        ('DevicePath', ctypes.c_byte * 2)
+    ]
+
+
+class Win32_STORAGE_DEVICE_NUMBER(ctypes.Structure):
+    _fields_ = [
+        ('DeviceType', wintypes.DWORD),
+        ('DeviceNumber', wintypes.DWORD),
+        ('PartitionNumber', wintypes.DWORD)
+    ]
+
+
+msvcrt.malloc.argtypes = [ctypes.c_size_t]
+msvcrt.malloc.restype = ctypes.c_void_p
+
+msvcrt.free.argtypes = [ctypes.c_void_p]
+msvcrt.free.restype = None
+
 kernel32.VerifyVersionInfoW.argtypes = [
     ctypes.POINTER(Win32_OSVERSIONINFOEX_W),
     wintypes.DWORD, wintypes.ULARGE_INTEGER]
@@ -119,6 +172,19 @@ kernel32.GetLogicalDriveStringsW.restype = wintypes.DWORD
 
 kernel32.GetDriveTypeW.argtypes = [wintypes.LPCWSTR]
 kernel32.GetDriveTypeW.restype = wintypes.UINT
+
+kernel32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD,
+                                 wintypes.DWORD, wintypes.LPVOID,
+                                 wintypes.DWORD, wintypes.DWORD,
+                                 wintypes.HANDLE]
+kernel32.CreateFileW.restype = wintypes.HANDLE
+
+kernel32.DeviceIoControl.argtypes = [wintypes.HANDLE, wintypes.DWORD,
+                                     wintypes.LPVOID, wintypes.DWORD,
+                                     wintypes.LPVOID, wintypes.DWORD,
+                                     ctypes.POINTER(wintypes.DWORD),
+                                     wintypes.LPVOID]
+kernel32.DeviceIoControl.restype = wintypes.BOOL
 
 kernel32.GetProcessHeap.argtypes = []
 kernel32.GetProcessHeap.restype = wintypes.HANDLE
@@ -140,11 +206,40 @@ iphlpapi.GetIpForwardTable.restype = wintypes.DWORD
 
 Ws2_32.inet_ntoa.restype = ctypes.c_char_p
 
+setupapi.SetupDiGetClassDevsW.argtypes = [ctypes.POINTER(GUID),
+                                          wintypes.LPCWSTR,
+                                          wintypes.HANDLE,
+                                          wintypes.DWORD]
+setupapi.SetupDiGetClassDevsW.restype = wintypes.HANDLE
+
+setupapi.SetupDiEnumDeviceInterfaces.argtypes = [
+    wintypes.HANDLE,
+    wintypes.LPVOID,
+    ctypes.POINTER(GUID),
+    wintypes.DWORD,
+    ctypes.POINTER(Win32_SP_DEVICE_INTERFACE_DATA)]
+setupapi.SetupDiEnumDeviceInterfaces.restype = wintypes.BOOL
+
+setupapi.SetupDiGetDeviceInterfaceDetailW.argtypes = [
+    wintypes.HANDLE,
+    ctypes.POINTER(Win32_SP_DEVICE_INTERFACE_DATA),
+    ctypes.POINTER(Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W),
+    wintypes.DWORD,
+    ctypes.POINTER(wintypes.DWORD),
+    wintypes.LPVOID]
+setupapi.SetupDiGetDeviceInterfaceDetailW.restype = wintypes.BOOL
+
+setupapi.SetupDiDestroyDeviceInfoList.argtypes = [wintypes.HANDLE]
+setupapi.SetupDiDestroyDeviceInfoList.restype = wintypes.BOOL
+
 VER_MAJORVERSION = 1
 VER_MINORVERSION = 2
 VER_BUILDNUMBER = 4
 
 VER_GREATER_EQUAL = 3
+
+GUID_DEVINTERFACE_DISK = GUID(0x53f56307L, 0xb6bf, 0x11d0, 0x94, 0xf2,
+                              0x00, 0xa0, 0xc9, 0x1e, 0xfb, 0x8b)
 
 
 class WindowsUtils(base.BaseOSUtils):
@@ -156,6 +251,21 @@ class WindowsUtils(base.BaseOSUtils):
     ERROR_MEMBER_IN_ALIAS = 1378
     ERROR_INVALID_MEMBER = 1388
     ERROR_OLD_WIN_VERSION = 1150
+    ERROR_NO_MORE_FILES = 18
+
+    INVALID_HANDLE_VALUE = 0xFFFFFFFF
+
+    FILE_SHARE_READ = 1
+    FILE_SHARE_WRITE = 2
+
+    OPEN_EXISTING = 3
+
+    IOCTL_STORAGE_GET_DEVICE_NUMBER = 0x002D1080
+
+    MAX_PATH = 260
+
+    DIGCF_PRESENT = 2
+    DIGCF_DEVICEINTERFACE = 0x10
 
     DRIVE_CDROM = 5
 
@@ -604,30 +714,110 @@ class WindowsUtils(base.BaseOSUtils):
             if valid:
                 return pwd
 
+    def _split_str_buf_list(self, buf, buf_len):
+        i = 0
+        value = ''
+        values = []
+        while i < buf_len:
+            c = buf[i]
+            if c != '\x00':
+                value += c
+            else:
+                values.append(value)
+                value = ''
+            i += 1
+
+        return values
+
     def _get_logical_drives(self):
-        buf_size = 260
+        buf_size = self.MAX_PATH
         buf = ctypes.create_unicode_buffer(buf_size + 1)
         buf_len = kernel32.GetLogicalDriveStringsW(buf_size, buf)
         if not buf_len:
             raise Exception("GetLogicalDriveStringsW failed")
 
-        drives = []
-        i = 0
-        drive = ''
-        while i < buf_len:
-            c = buf[i]
-            if c != '\x00':
-                drive += c
-            else:
-                drives.append(drive)
-                drive = ''
-            i += 1
-        return drives
+        return self._split_str_buf_list(buf, buf_len)
 
     def get_cdrom_drives(self):
         drives = self._get_logical_drives()
         return [d for d in drives if kernel32.GetDriveTypeW(d) ==
                 self.DRIVE_CDROM]
+
+    def get_physical_disks(self):
+        physical_disks = []
+
+        disk_guid = GUID_DEVINTERFACE_DISK
+        handle_disks = setupapi.SetupDiGetClassDevsW(
+            ctypes.byref(disk_guid), None, None,
+            self.DIGCF_PRESENT | self.DIGCF_DEVICEINTERFACE)
+        if handle_disks == self.INVALID_HANDLE_VALUE:
+            raise Exception("SetupDiGetClassDevs failed")
+
+        try:
+            did = Win32_SP_DEVICE_INTERFACE_DATA()
+            did.cbSize = ctypes.sizeof(Win32_SP_DEVICE_INTERFACE_DATA)
+
+            index = 0
+            while setupapi.SetupDiEnumDeviceInterfaces(
+                    handle_disks, None, ctypes.byref(disk_guid), index,
+                    ctypes.byref(did)):
+                index += 1
+                handle_disk = self.INVALID_HANDLE_VALUE
+
+                required_size = wintypes.DWORD()
+                if not setupapi.SetupDiGetDeviceInterfaceDetailW(
+                        handle_disks, ctypes.byref(did), None, 0,
+                        ctypes.byref(required_size), None):
+                    if (kernel32.GetLastError() !=
+                            self.ERROR_INSUFFICIENT_BUFFER):
+                        raise Exception("SetupDiGetDeviceInterfaceDetailW "
+                                        "failed")
+
+                pdidd = ctypes.cast(
+                    msvcrt.malloc(required_size),
+                    ctypes.POINTER(Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W))
+
+                try:
+                    # NOTE(alexpilotti): the size provided by ctypes.sizeof
+                    # is not the expected one
+                    #pdidd.contents.cbSize = ctypes.sizeof(
+                    #    Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W)
+                    pdidd.contents.cbSize = 6
+
+                    if not setupapi.SetupDiGetDeviceInterfaceDetailW(
+                            handle_disks, ctypes.byref(did), pdidd,
+                            required_size, None, None):
+                        raise Exception("SetupDiGetDeviceInterfaceDetailW "
+                                        "failed")
+
+                    device_path = ctypes.cast(
+                        pdidd.contents.DevicePath, wintypes.LPWSTR).value
+
+                    handle_disk = kernel32.CreateFileW(
+                        device_path, 0, self.FILE_SHARE_READ,
+                        None, self.OPEN_EXISTING, 0, 0)
+                    if handle_disk == self.INVALID_HANDLE_VALUE:
+                        raise Exception('CreateFileW failed')
+
+                    sdn = Win32_STORAGE_DEVICE_NUMBER()
+
+                    b = wintypes.DWORD()
+                    if not kernel32.DeviceIoControl(
+                            handle_disk, self.IOCTL_STORAGE_GET_DEVICE_NUMBER,
+                            None, 0, ctypes.byref(sdn), ctypes.sizeof(sdn),
+                            ctypes.byref(b), None):
+                        raise Exception('DeviceIoControl failed')
+
+                    physical_disks.append(
+                        r"\\.\PHYSICALDRIVE%d" % sdn.DeviceNumber)
+                finally:
+                    msvcrt.free(pdidd)
+                    if handle_disk != self.INVALID_HANDLE_VALUE:
+                        kernel32.CloseHandle(handle_disk)
+        finally:
+            setupapi.SetupDiDestroyDeviceInfoList(handle_disks)
+
+        return physical_disks
 
     def _get_fw_protocol(self, protocol):
         if protocol == self.PROTOCOL_TCP:
