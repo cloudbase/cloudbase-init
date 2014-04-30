@@ -25,6 +25,7 @@ opts = [
             'cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin',
             'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
             'cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin',
+            'cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin',
             'cloudbaseinit.plugins.windows.sshpublickeys.'
             'SetUserSSHPublicKeysPlugin',
             'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
