@@ -54,14 +54,14 @@ class WindowsLicensingPlugin(base.BasePlugin):
         return out
 
     def execute(self, service, shared_data):
+        osutils = osutils_factory.get_os_utils()
+
+        license_info = self._run_slmgr(osutils, ['/dlv'])
+        LOG.info('Microsoft Windows license info:\n%s' % license_info)
+
         if CONF.activate_windows:
-            osutils = osutils_factory.get_os_utils()
-
-            license_info = self._run_slmgr(osutils, ['/dlv'])
-            LOG.info('Microsoft Windows license info:\n%s' % license_info)
-
             LOG.info("Activating Windows")
             activation_result = self._run_slmgr(osutils, ['/ato'])
             LOG.debug("Activation result:\n%s" % activation_result)
 
-            return (base.PLUGIN_EXECUTION_DONE, False)
+        return (base.PLUGIN_EXECUTION_DONE, False)
