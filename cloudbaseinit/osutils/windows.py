@@ -463,6 +463,32 @@ class WindowsUtils(base.BaseOSUtils):
             l.append(r.Name)
         return l
 
+    def get_dhcp_hosts_in_use(self):
+        dhcp_hosts = []
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        for net_cfg in conn.Win32_NetworkAdapterConfiguration(
+                DHCPEnabled=True):
+            if net_cfg.DHCPServer:
+                dhcp_hosts.append(str(net_cfg.DHCPServer))
+        return dhcp_hosts
+
+    def set_ntp_client_config(self, ntp_host):
+        if self.check_sysnative_dir_exists():
+            base_dir = self.get_sysnative_dir()
+        else:
+            base_dir = self.get_system32_dir()
+
+        w32tm_path = os.path.join(base_dir, "w32tm.exe")
+
+        args = [w32tm_path, '/config', '/manualpeerlist:%s' % ntp_host,
+                '/syncfromflags:manual', '/update']
+
+        (out, err, ret_val) = self.execute_process(args, False)
+        if ret_val:
+            raise Exception('w32tm failed to configure NTP.\n'
+                            'Output: %(out)s\nError: %(err)s' %
+                            {'out': out, 'err': err})
+
     def set_static_network_config(self, adapter_name, address, netmask,
                                   broadcast, gateway, dnsnameservers):
         conn = wmi.WMI(moniker='//./root/cimv2')
