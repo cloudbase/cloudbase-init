@@ -26,6 +26,8 @@ opts = [
     cfg.StrOpt('ec2_metadata_base_url',
                default='http://169.254.169.254/',
                help='The base URL where the service looks for metadata'),
+    cfg.BoolOpt('routed_metadata', default=True,
+               help='Add a route to the metadata IP?'),
 ]
 
 CONF = cfg.CONF
@@ -43,7 +45,8 @@ class EC2Service(base.BaseMetadataService):
 
     def load(self):
         super(EC2Service, self).load()
-        network.check_metadata_ip_route(CONF.ec2_metadata_base_url)
+        if CONF.routed_metadata:
+            network.check_metadata_ip_route(CONF.ec2_metadata_base_url)
 
         try:
             self.get_host_name()
