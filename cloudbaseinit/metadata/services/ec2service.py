@@ -26,8 +26,8 @@ opts = [
     cfg.StrOpt('ec2_metadata_base_url',
                default='http://169.254.169.254/',
                help='The base URL where the service looks for metadata'),
-    cfg.BoolOpt('routed_metadata', default=True,
-               help='Add a route to the metadata IP?'),
+    cfg.BoolOpt('ec2_add_metadata_private_ip_route', default=True,
+               help='Add a route for the metadata ip address to the gateway'),
 ]
 
 CONF = cfg.CONF
@@ -45,7 +45,7 @@ class EC2Service(base.BaseMetadataService):
 
     def load(self):
         super(EC2Service, self).load()
-        if CONF.routed_metadata:
+        if CONF.ec2_add_metadata_private_ip_route:
             network.check_metadata_ip_route(CONF.ec2_metadata_base_url)
 
         try:
@@ -81,6 +81,10 @@ class EC2Service(base.BaseMetadataService):
 
     def get_instance_id(self):
         return self._get_cache_data('%s/meta-data/instance-id' %
+                                    self._metadata_version)
+   
+    def get_availability_zone(self):
+        return self._get_cache_data('%s/meta-data/placement/availability-zone' %
                                     self._metadata_version)
 
     def get_public_keys(self):
