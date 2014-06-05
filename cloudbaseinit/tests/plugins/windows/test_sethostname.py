@@ -36,11 +36,15 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
     @mock.patch('platform.node')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def _test_execute(self, mock_get_os_utils, mock_node, hostname_exists=True,
-                      hostname_already_set=False, new_hostname_length=1):
+                      hostname_already_set=False, new_hostname_length=1,
+                      hostname_truncate_to_zero=False):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         fake_shared_data = 'fake data'
         new_hostname = 'x' * new_hostname_length
+
+        if hostname_truncate_to_zero:
+            new_hostname = ('%s-') % new_hostname[:-1]
 
         if hostname_exists:
             mock_service.get_host_name.return_value = new_hostname
@@ -55,7 +59,8 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
             hostname = new_hostname.split('.', 1)[0]
             if len(new_hostname) > length:
                 hostname = hostname[:length]
-
+            if hostname_truncate_to_zero:
+                hostname = ('%s0') % hostname[:-1]
             if hostname_already_set:
                 mock_node.return_value = hostname
             else:
@@ -87,6 +92,11 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
     def test_execute_no_truncate_needed(self):
         self._test_execute(
             new_hostname_length=sethostname.NETBIOS_HOST_NAME_MAX_LEN)
+
+    def test_execute_truncate_to_zero(self):
+        self._test_execute(
+            new_hostname_length=sethostname.NETBIOS_HOST_NAME_MAX_LEN,
+            hostname_truncate_to_zero=True)
 
     def test_execute_no_hostname(self):
         self._test_execute(hostname_exists=False)
