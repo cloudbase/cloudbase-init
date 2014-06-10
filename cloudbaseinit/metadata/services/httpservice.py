@@ -27,6 +27,8 @@ from cloudbaseinit.utils import network
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
                help='The base URL where the service looks for metadata'),
+    cfg.BoolOpt('add_metadata_private_ip_route', default=True,
+                help='Add a route for the metadata ip address to the gateway'),
 ]
 
 CONF = cfg.CONF
@@ -44,7 +46,8 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
 
     def load(self):
         super(HttpService, self).load()
-        network.check_metadata_ip_route(CONF.metadata_base_url)
+        if CONF.add_metadata_private_ip_route:
+            network.check_metadata_ip_route(CONF.metadata_base_url)
 
         try:
             self._get_meta_data()
