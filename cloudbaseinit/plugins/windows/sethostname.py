@@ -15,6 +15,7 @@
 #    under the License.
 
 import platform
+import re
 
 from oslo.config import cfg
 
@@ -58,6 +59,7 @@ class SetHostNamePlugin(base.BasePlugin):
         else:
             new_host_name = metadata_host_name
 
+        new_host_name = re.sub(r'-$', '0', new_host_name)
         if platform.node().lower() == new_host_name.lower():
             LOG.debug("Hostname already set to: %s" % new_host_name)
             reboot_required = False
