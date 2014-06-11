@@ -22,6 +22,7 @@ opts = [
     cfg.ListOpt(
         'plugins',
         default=[
+            'cloudbaseinit.plugins.windows.mtu.MTUPlugin',
             'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin',
             'cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin',
             'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',

@@ -474,11 +474,7 @@ class WindowsUtils(base.BaseOSUtils):
         return dhcp_hosts
 
     def set_ntp_client_config(self, ntp_host):
-        if self.check_sysnative_dir_exists():
-            base_dir = self.get_sysnative_dir()
-        else:
-            base_dir = self.get_system32_dir()
-
+        base_dir = self._get_system_dir()
         w32tm_path = os.path.join(base_dir, "w32tm.exe")
 
         args = [w32tm_path, '/config', '/manualpeerlist:%s' % ntp_host,
@@ -489,6 +485,38 @@ class WindowsUtils(base.BaseOSUtils):
             raise Exception('w32tm failed to configure NTP.\n'
                             'Output: %(out)s\nError: %(err)s' %
                             {'out': out, 'err': err})
+
+    def set_network_adapter_mtu(self, mac_address, mtu):
+        if not self.check_os_version(6, 0):
+            raise Exception('Setting the MTU is currently not supported on '
+                            'Windows XP and Windows Server 2003')
+
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        net_cfg_list = conn.Win32_NetworkAdapterConfiguration(
+            MACAddress=mac_address)
+
+        if not net_cfg_list:
+            raise Exception('Network interface with MAC address "%s" '
+                            'not found' % mac_address)
+        else:
+            net_cfg = net_cfg_list[0]
+
+            LOG.debug('Setting MTU for interface "%(mac_address)s" with '
+                      'value "%(mtu)s"' %
+                      {'mac_address': mac_address, 'mtu': mtu})
+
+            base_dir = self._get_system_dir()
+            netsh_path = os.path.join(base_dir, 'netsh.exe')
+
+            args = [netsh_path, "interface", "ipv4", "set", "subinterface",
+                    str(net_cfg.InterfaceIndex), "mtu=%s" % mtu,
+                    "store=persistent"]
+            (out, err, ret_val) = self.execute_process(args, False)
+            if ret_val:
+                raise Exception('Setting MTU for interface '
+                                '"%(mac_address)s" with '
+                                'value "%(mtu)s" failed' %
+                                {'mac_address': mac_address, 'mtu': mtu})
 
     def set_static_network_config(self, adapter_name, address, netmask,
                                   broadcast, gateway, dnsnameservers):
@@ -901,12 +929,14 @@ class WindowsUtils(base.BaseOSUtils):
                         'you have KB942589 installed')
         return sysnative_dir_exists
 
-    def execute_powershell_script(self, script_path, sysnative=True):
+    def _get_system_dir(self, sysnative=True):
         if sysnative and self.check_sysnative_dir_exists():
-            base_dir = self.get_sysnative_dir()
+            return self.get_sysnative_dir()
         else:
-            base_dir = self.get_system32_dir()
+            return self.get_system32_dir()
 
+    def execute_powershell_script(self, script_path, sysnative=True):
+        base_dir = self._get_system_dir(sysnative)
         powershell_path = os.path.join(base_dir,
                                        'WindowsPowerShell\\v1.0\\'
                                        'powershell.exe')

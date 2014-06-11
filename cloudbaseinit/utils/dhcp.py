@@ -21,6 +21,7 @@ import struct
 _DHCP_COOKIE = b'\x63\x82\x53\x63'
 _OPTION_END = b'\xff'
 
+OPTION_MTU = 26
 OPTION_NTP_SERVERS = 42
 
 
