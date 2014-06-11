@@ -27,6 +27,11 @@ CONF = cfg.CONF
 class DHCPUtilsTests(unittest.TestCase):
 
     def test_get_dhcp_request_data(self):
+
+        fake_mac_address = '01:02:03:04:05:06'
+        fake_mac_address_b = bytearray(
+            fake_mac_address.replace(':', '').decode('hex'))
+
         data = b'\x01'
         data += b'\x01'
         data += b'\x06'
@@ -38,7 +43,7 @@ class DHCPUtilsTests(unittest.TestCase):
         data += b'\x00\x00\x00\x00'
         data += b'\x00\x00\x00\x00'
         data += b'\x00\x00\x00\x00'
-        data += 'fake mac address'
+        data += fake_mac_address_b
         data += b'\x00' * 10
         data += b'\x00' * 64
         data += b'\x00' * 128
@@ -47,13 +52,14 @@ class DHCPUtilsTests(unittest.TestCase):
         data += b'\x3c' + struct.pack('b',
                                       len('fake id')) + 'fake id'.encode(
                                           'ascii')
-        data += b'\x3d\x07\x01' + 'fake mac address'
+        data += b'\x3d\x07\x01'
+        data += fake_mac_address_b
         data += b'\x37' + struct.pack('b', len([100]))
         data += struct.pack('b', 100)
         data += dhcp._OPTION_END
 
         response = dhcp._get_dhcp_request_data(
-            id_req=9999, mac_address_b='fake mac address',
+            id_req=9999, mac_address=fake_mac_address,
             requested_options=[100], vendor_id='fake id')
         self.assertEqual(response, data)
 
