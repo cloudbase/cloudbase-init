@@ -1195,6 +1195,7 @@ class WindowsUtilsTest(unittest.TestCase):
     @mock.patch('wmi.WMI')
     def test_get_dhcp_hosts_in_use(self, mock_WMI):
         mock_net_cfg = mock.MagicMock()
+        mock_net_cfg.MACAddress = 'fake mac address'
         mock_net_cfg.DHCPServer = 'fake dhcp server'
         mock_WMI().Win32_NetworkAdapterConfiguration.return_value = [
             mock_net_cfg]
@@ -1202,7 +1203,7 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_WMI.assert_called_with(moniker='//./root/cimv2')
         mock_WMI().Win32_NetworkAdapterConfiguration.assert_called_with(
             DHCPEnabled=True)
-        self.assertEqual(response, ['fake dhcp server'])
+        self.assertEqual(response, [('fake mac address', 'fake dhcp server')])
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')

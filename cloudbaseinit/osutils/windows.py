@@ -469,7 +469,8 @@ class WindowsUtils(base.BaseOSUtils):
         for net_cfg in conn.Win32_NetworkAdapterConfiguration(
                 DHCPEnabled=True):
             if net_cfg.DHCPServer:
-                dhcp_hosts.append(str(net_cfg.DHCPServer))
+                dhcp_hosts.append((str(net_cfg.MACAddress),
+                                   str(net_cfg.DHCPServer)))
         return dhcp_hosts
 
     def set_ntp_client_config(self, ntp_host):
