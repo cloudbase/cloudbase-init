@@ -988,7 +988,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         sizeof_calls = [mock.call(
             windows_utils.Win32_SP_DEVICE_INTERFACE_DATA),
-                        mock.call(mock_sdn())]
+            mock.call(mock_sdn())]
         device_interfaces_calls = [mock.call(handle_disks, None, mock_byref(),
                                              0, mock_byref()),
                                    mock.call(handle_disks, None, mock_byref(),
@@ -1008,11 +1008,11 @@ class WindowsUtilsTest(unittest.TestCase):
 
         mock_setupapi.SetupDiEnumDeviceInterfaces.side_effect = [True, False]
 
-        if handle_disks == self._winutils.INVALID_HANDLE_VALUE \
-            or last_error != self._winutils.ERROR_INSUFFICIENT_BUFFER \
-            and not interface_detail \
-            or disk_handle == self._winutils.INVALID_HANDLE_VALUE \
-            or not io_control:
+        if handle_disks == self._winutils.INVALID_HANDLE_VALUE or (
+            last_error != self._winutils.ERROR_INSUFFICIENT_BUFFER) and not (
+                interface_detail) or (
+                    disk_handle == self._winutils.INVALID_HANDLE_VALUE) or (
+                        not io_control):
 
             self.assertRaises(Exception, self._winutils.get_physical_disks)
 
@@ -1032,7 +1032,7 @@ class WindowsUtilsTest(unittest.TestCase):
             self.assertEqual(mock_cast.call_args_list, cast_calls)
 
             mock_setup_interface.assert_called_with(handle_disks, mock_byref(),
-                                                    mock_cast(),mock_DWORD(),
+                                                    mock_cast(), mock_DWORD(),
                                                     None, None)
             mock_kernel32.CreateFileW.assert_called_with(
                 mock_cast().value, 0, self._winutils.FILE_SHARE_READ, None,
@@ -1049,8 +1049,6 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_setupapi.SetupDiGetClassDevsW.assert_called_once_with(
             mock_byref(), None, None, self._winutils.DIGCF_PRESENT |
             self._winutils.DIGCF_DEVICEINTERFACE)
-
-
 
     def test_get_physical_disks(self):
         mock_handle_disks = mock.MagicMock()
@@ -1089,7 +1087,7 @@ class WindowsUtilsTest(unittest.TestCase):
     def test_get_physical_disks_handle_disks_invalid(self):
         mock_disk_handle = mock.MagicMock()
         self._test_get_physical_disks(
-            handle_disks=self._winutils.INVALID_HANDLE_VALUE ,
+            handle_disks=self._winutils.INVALID_HANDLE_VALUE,
             last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
             interface_detail='fake interface detail',
             disk_handle=mock_disk_handle, io_control=True)
@@ -1193,3 +1191,59 @@ class WindowsUtilsTest(unittest.TestCase):
 
     def test_execute_powershell_script_system32(self):
         self._test_execute_powershell_script(ret_val=False)
+
+    @mock.patch('wmi.WMI')
+    def test_get_dhcp_hosts_in_use(self, mock_WMI):
+        mock_net_cfg = mock.MagicMock()
+        mock_net_cfg.DHCPServer = 'fake dhcp server'
+        mock_WMI().Win32_NetworkAdapterConfiguration.return_value = [
+            mock_net_cfg]
+        response = self._winutils.get_dhcp_hosts_in_use()
+        mock_WMI.assert_called_with(moniker='//./root/cimv2')
+        mock_WMI().Win32_NetworkAdapterConfiguration.assert_called_with(
+            DHCPEnabled=True)
+        self.assertEqual(response, ['fake dhcp server'])
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_sysnative_dir_exists')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_sysnative_dir')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_system32_dir')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.execute_process')
+    def _test_set_ntp_client_config(self, mock_execute_process,
+                                    mock_get_system32_dir,
+                                    mock_get_sysnative_dir,
+                                    mock_check_sysnative_dir_exists,
+                                    sysnative, ret_val):
+        mock_check_sysnative_dir_exists.return_value = sysnative
+        fake_base_dir = 'fake_dir'
+        mock_execute_process.return_value = (None, None, ret_val)
+        w32tm_path = os.path.join(fake_base_dir, "w32tm.exe")
+        mock_get_sysnative_dir.return_value = fake_base_dir
+        mock_get_system32_dir.return_value = fake_base_dir
+        args = [w32tm_path, '/config', '/manualpeerlist:%s' % 'fake ntp host',
+                '/syncfromflags:manual', '/update']
+
+        if ret_val:
+            self.assertRaises(Exception, self._winutils.set_ntp_client_config,
+                              args, False)
+        else:
+            self._winutils.set_ntp_client_config(ntp_host='fake ntp host')
+
+            if sysnative:
+                mock_get_sysnative_dir.assert_called_once_with()
+            else:
+                mock_get_system32_dir.assert_called_once_with()
+            mock_execute_process.assert_called_once_with(args, False)
+
+    def test_set_ntp_client_config_sysnative_true(self):
+        self._test_set_ntp_client_config(sysnative=True, ret_val=None)
+
+    def test_set_ntp_client_config_sysnative_false(self):
+        self._test_set_ntp_client_config(sysnative=False, ret_val=None)
+
+    def test_set_ntp_client_config_sysnative_exception(self):
+        self._test_set_ntp_client_config(sysnative=False,
+                                         ret_val='fake return value')
