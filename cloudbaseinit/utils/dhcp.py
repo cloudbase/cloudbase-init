@@ -24,8 +24,11 @@ _OPTION_END = b'\xff'
 OPTION_NTP_SERVERS = 42
 
 
-def _get_dhcp_request_data(id_req, mac_address_b, requested_options,
+def _get_dhcp_request_data(id_req, mac_address, requested_options,
                            vendor_id):
+
+    mac_address_b = bytearray(mac_address.replace(':', '').decode('hex'))
+
     # See: http://www.ietf.org/rfc/rfc2131.txt
     data = b'\x01'
     data += b'\x01'
