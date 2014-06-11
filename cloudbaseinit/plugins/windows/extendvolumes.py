@@ -57,7 +57,7 @@ class ExtendVolumesPlugin(base.BasePlugin):
                 if volume_idxs is not None:
                     volume_name = ctypes.wstring_at(volume_prop.pwszName)
                     volume_idx = self._get_volume_index(volume_name)
-                    if not volume_idx in volume_idxs:
+                    if volume_idx not in volume_idxs:
                         extend_volume = False
 
                 if extend_volume:
