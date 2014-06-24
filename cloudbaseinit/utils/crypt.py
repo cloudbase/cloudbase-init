@@ -161,7 +161,7 @@ class CryptManager(object):
         key_type = pub_key[offset:offset + key_type_len]
         offset += key_type_len
 
-        if not key_type in ['ssh-rsa', 'rsa', 'rsa1']:
+        if key_type not in ['ssh-rsa', 'rsa', 'rsa1']:
             raise CryptException('Unsupported SSH key type "%s". '
                                  'Only RSA keys are currently supported'
                                  % key_type)

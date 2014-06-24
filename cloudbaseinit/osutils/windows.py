@@ -618,7 +618,7 @@ class WindowsUtils(base.BaseOSUtils):
         return service.StartMode
 
     def set_service_start_mode(self, service_name, start_mode):
-        #TODO(alexpilotti): Handle the "Delayed Start" case
+        # TODO(alexpilotti): Handle the "Delayed Start" case
         service = self._get_service(service_name)
         (ret_val,) = service.ChangeStartMode(start_mode)
         if ret_val != 0:
@@ -835,7 +835,7 @@ class WindowsUtils(base.BaseOSUtils):
                 try:
                     # NOTE(alexpilotti): the size provided by ctypes.sizeof
                     # is not the expected one
-                    #pdidd.contents.cbSize = ctypes.sizeof(
+                    # pdidd.contents.cbSize = ctypes.sizeof(
                     #    Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W)
                     pdidd.contents.cbSize = 6
 
