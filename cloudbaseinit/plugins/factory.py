@@ -38,6 +38,7 @@ opts = [
             'ConfigWinRMListenerPlugin',
             'cloudbaseinit.plugins.windows.winrmcertificateauth.'
             'ConfigWinRMCertificateAuthPlugin',
+            'cloudbaseinit.plugins.windows.localscripts.LocalScriptsPlugin',
         ],
         help='List of enabled plugin classes, '
         'to executed in the provided order'),
