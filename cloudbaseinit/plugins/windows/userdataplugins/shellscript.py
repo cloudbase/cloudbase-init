@@ -17,7 +17,7 @@ import tempfile
 import os
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins.windows import fileexecutils
 from cloudbaseinit.plugins.windows.userdataplugins import base
 
 LOG = logging.getLogger(__name__)
@@ -28,43 +28,14 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
         super(ShellScriptPlugin, self).__init__("text/x-shellscript")
 
     def process(self, part):
-        osutils = osutils_factory.get_os_utils()
-
         file_name = part.get_filename()
         target_path = os.path.join(tempfile.gettempdir(), file_name)
-
-        shell = False
-        powershell = False
-
-        if file_name.endswith(".cmd"):
-            args = [target_path]
-            shell = True
-        elif file_name.endswith(".sh"):
-            args = ['bash.exe', target_path]
-        elif file_name.endswith(".py"):
-            args = ['python.exe', target_path]
-        elif file_name.endswith(".ps1"):
-            powershell = True
-        else:
-            # Unsupported
-            LOG.warning('Unsupported script type')
-            return 0
 
         try:
             with open(target_path, 'wb') as f:
                 f.write(part.get_payload())
 
-            if powershell:
-                (out, err,
-                 ret_val) = osutils.execute_powershell_script(target_path)
-            else:
-                (out, err, ret_val) = osutils.execute_process(args, shell)
-
-            LOG.info('User_data script ended with return code: %d' % ret_val)
-            LOG.debug('User_data stdout:\n%s' % out)
-            LOG.debug('User_data stderr:\n%s' % err)
-
-            return ret_val
+            return fileexecutils.exec_file(target_path)
         except Exception, ex:
             LOG.warning('An error occurred during user_data execution: \'%s\''
                         % ex)
