@@ -17,12 +17,17 @@ import netifaces
 import random
 import socket
 import struct
+import time
+
+from cloudbaseinit.openstack.common import log as logging
 
 _DHCP_COOKIE = b'\x63\x82\x53\x63'
 _OPTION_END = b'\xff'
 
 OPTION_MTU = 26
 OPTION_NTP_SERVERS = 42
+
+LOG = logging.getLogger(__name__)
 
 
 def _get_dhcp_request_data(id_req, mac_address, requested_options,
@@ -97,14 +102,33 @@ def _get_mac_address_by_local_ip(ip_addr):
                 return addrs[netifaces.AF_LINK][0]['addr']
 
 
+def _bind_dhcp_client_socket(s, max_bind_attempts, bind_retry_interval):
+    bind_attempts = 1
+    while True:
+        try:
+            s.bind(('', 68))
+            break
+        except socket.error, ex:
+            if (bind_attempts >= max_bind_attempts or
+                    ex.errno not in [48, 10048]):
+                raise
+            bind_attempts += 1
+            LOG.exception(ex)
+            LOG.info("Retrying to bind DHCP client port in %s seconds" %
+                     bind_retry_interval)
+            time.sleep(bind_retry_interval)
+
+
 def get_dhcp_options(dhcp_host, requested_options=[], timeout=5.0,
-                     vendor_id='cloudbase-init'):
+                     vendor_id='cloudbase-init', max_bind_attempts=10,
+                     bind_retry_interval=3):
     id_req = random.randint(0, 2 ** 32 - 1)
     options = None
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.bind(('', 68))
+        _bind_dhcp_client_socket(s, max_bind_attempts, bind_retry_interval)
+
         s.settimeout(timeout)
         s.connect((dhcp_host, 67))
 
