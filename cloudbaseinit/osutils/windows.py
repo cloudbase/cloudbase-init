@@ -467,7 +467,7 @@ class WindowsUtils(base.BaseOSUtils):
     def get_dhcp_hosts_in_use(self):
         dhcp_hosts = []
         for net_addr in network.get_adapter_addresses():
-            if net_addr["dhcp_enabled"]:
+            if net_addr["dhcp_enabled"] and net_addr["dhcp_server"]:
                 dhcp_hosts.append((net_addr["mac_address"],
                                    net_addr["dhcp_server"]))
         return dhcp_hosts
