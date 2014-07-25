@@ -41,7 +41,8 @@ def _socket_addr_to_str(socket_addr):
         socket_addr.iSockaddrLength,
         None, addr_str, ctypes.byref(addr_str_len))
     if ret_val:
-        raise Exception("WSAAddressToStringW failed")
+        raise Exception("WSAAddressToStringW failed: %s" %
+                        ws2_32.WSAGetLastError())
 
     return addr_str.value
 
@@ -118,11 +119,15 @@ def get_adapter_addresses():
                     if not xp_data_only:
                         if curr_addr.Flags & iphlpapi.IP_ADAPTER_IPV4_ENABLED:
                             dhcp_addr = curr_addr.Dhcpv4Server
-                        elif (curr_addr.Flags &
-                              iphlpapi.IP_ADAPTER_IPV6_ENABLED):
+
+                        if ((curr_addr.Flags &
+                             iphlpapi.IP_ADAPTER_IPV6_ENABLED) and
+                            (not dhcp_addr or
+                             not dhcp_addr.iSockaddrLength)):
                             dhcp_addr = curr_addr.Dhcpv6Server
 
-                        dhcp_server = _socket_addr_to_str(dhcp_addr)
+                        if dhcp_addr and dhcp_addr.iSockaddrLength:
+                            dhcp_server = _socket_addr_to_str(dhcp_addr)
                     else:
                         dhcp_server = _get_registry_dhcp_server(
                             curr_addr.AdapterName)
