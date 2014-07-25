@@ -29,6 +29,7 @@ from win32com import client
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
+from cloudbaseinit.utils.windows import network
 
 LOG = logging.getLogger(__name__)
 
@@ -465,12 +466,10 @@ class WindowsUtils(base.BaseOSUtils):
 
     def get_dhcp_hosts_in_use(self):
         dhcp_hosts = []
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        for net_cfg in conn.Win32_NetworkAdapterConfiguration(
-                DHCPEnabled=True):
-            if net_cfg.DHCPServer:
-                dhcp_hosts.append((str(net_cfg.MACAddress),
-                                   str(net_cfg.DHCPServer)))
+        for net_addr in network.get_adapter_addresses():
+            if net_addr["dhcp_enabled"]:
+                dhcp_hosts.append((net_addr["mac_address"],
+                                   net_addr["dhcp_server"]))
         return dhcp_hosts
 
     def set_ntp_client_config(self, ntp_host):
@@ -491,15 +490,16 @@ class WindowsUtils(base.BaseOSUtils):
             raise Exception('Setting the MTU is currently not supported on '
                             'Windows XP and Windows Server 2003')
 
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        net_cfg_list = conn.Win32_NetworkAdapterConfiguration(
-            MACAddress=mac_address)
+        iface_index_list = [
+            net_addr["interface_index"] for net_addr
+            in network.get_adapter_addresses()
+            if net_addr["mac_address"] == mac_address]
 
-        if not net_cfg_list:
+        if not iface_index_list:
             raise Exception('Network interface with MAC address "%s" '
                             'not found' % mac_address)
         else:
-            net_cfg = net_cfg_list[0]
+            iface_index = iface_index_list[0]
 
             LOG.debug('Setting MTU for interface "%(mac_address)s" with '
                       'value "%(mtu)s"' %
@@ -509,7 +509,7 @@ class WindowsUtils(base.BaseOSUtils):
             netsh_path = os.path.join(base_dir, 'netsh.exe')
 
             args = [netsh_path, "interface", "ipv4", "set", "subinterface",
-                    str(net_cfg.InterfaceIndex), "mtu=%s" % mtu,
+                    str(iface_index), "mtu=%s" % mtu,
                     "store=persistent"]
             (out, err, ret_val) = self.execute_process(args, False)
             if ret_val:

@@ -1192,17 +1192,15 @@ class WindowsUtilsTest(unittest.TestCase):
     def test_execute_powershell_script_system32(self):
         self._test_execute_powershell_script(ret_val=False)
 
-    @mock.patch('wmi.WMI')
-    def test_get_dhcp_hosts_in_use(self, mock_WMI):
-        mock_net_cfg = mock.MagicMock()
-        mock_net_cfg.MACAddress = 'fake mac address'
-        mock_net_cfg.DHCPServer = 'fake dhcp server'
-        mock_WMI().Win32_NetworkAdapterConfiguration.return_value = [
-            mock_net_cfg]
+    @mock.patch('cloudbaseinit.utils.windows.network.get_adapter_addresses')
+    def test_get_dhcp_hosts_in_use(self, mock_get_adapter_addresses):
+        net_addr = {}
+        net_addr["mac_address"] = 'fake mac address'
+        net_addr["dhcp_server"] = 'fake dhcp server'
+        net_addr["dhcp_enabled"] = True
+        mock_get_adapter_addresses.return_value = [net_addr]
         response = self._winutils.get_dhcp_hosts_in_use()
-        mock_WMI.assert_called_with(moniker='//./root/cimv2')
-        mock_WMI().Win32_NetworkAdapterConfiguration.assert_called_with(
-            DHCPEnabled=True)
+        mock_get_adapter_addresses.assert_called()
         self.assertEqual(response, [('fake mac address', 'fake dhcp server')])
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
