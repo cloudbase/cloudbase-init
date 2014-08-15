@@ -54,12 +54,18 @@ class CreateUserPlugin(base.BasePlugin):
         else:
             LOG.info('Creating user "%s" and setting password' % user_name)
             osutils.create_user(user_name, password)
-            # Create a user profile in order for other plugins
-            # to access the user home, etc
-            token = osutils.create_user_logon_session(user_name,
-                                                      password,
-                                                      True)
-            osutils.close_user_logon_session(token)
+
+            try:
+                # Create a user profile in order for other plugins
+                # to access the user home, etc
+                token = osutils.create_user_logon_session(user_name,
+                                                          password,
+                                                          True)
+                osutils.close_user_logon_session(token)
+            except Exception as ex:
+                LOG.exception(ex)
+                LOG.error('Cannot create a user logon session for user: "%s"' %
+                          user_name)
 
             # TODO(alexpilotti): encrypt with DPAPI
             shared_data[constants.SHARED_DATA_PASSWORD] = password
