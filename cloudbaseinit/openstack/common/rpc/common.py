@@ -22,7 +22,7 @@ import traceback
 from oslo.config import cfg
 import six
 
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _, _LE
 from cloudbaseinit.openstack.common import importutils
 from cloudbaseinit.openstack.common import jsonutils
 from cloudbaseinit.openstack.common import local
@@ -50,7 +50,7 @@ deserialize_msg().
 The current message format (version 2.0) is very simple.  It is::
 
     {
-        'cloudbaseinit.version': <RPC Envelope Version as a String>,
+        'oslo.version': <RPC Envelope Version as a String>,
         'cloudbaseinit.message': <Application Message Payload, JSON encoded>
     }
 
@@ -66,7 +66,7 @@ which includes the JSON encoded application message body, will be passed down
 to the messaging libraries as a dict.
 '''
 
-_VERSION_KEY = 'cloudbaseinit.version'
+_VERSION_KEY = 'oslo.version'
 _MESSAGE_KEY = 'cloudbaseinit.message'
 
 _REMOTE_POSTFIX = '_Remote'
@@ -85,7 +85,7 @@ class RPCException(Exception):
             except Exception:
                 # kwargs doesn't match a variable in the message
                 # log the issue and the kwargs
-                LOG.exception(_('Exception in string format operation'))
+                LOG.exception(_LE('Exception in string format operation'))
                 for name, value in six.iteritems(kwargs):
                     LOG.error("%s: %s" % (name, value))
                 # at least get the core message out if something happened
@@ -289,7 +289,7 @@ def serialize_remote_exception(failure_info, log_failure=True):
     tb = traceback.format_exception(*failure_info)
     failure = failure_info[1]
     if log_failure:
-        LOG.error(_("Returning exception %s to caller"),
+        LOG.error(_LE("Returning exception %s to caller"),
                   six.text_type(failure))
         LOG.error(tb)
 

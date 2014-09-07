@@ -22,7 +22,7 @@ import json
 
 from oslo.config import cfg
 
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _LW
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.openstack.common.rpc import matchmaker as mm
 
@@ -72,8 +72,8 @@ class RoundRobinRingExchange(RingExchange):
     def run(self, key):
         if not self._ring_has(key):
             LOG.warn(
-                _("No key defining hosts for topic '%s', "
-                  "see ringfile") % (key, )
+                _LW("No key defining hosts for topic '%s', "
+                    "see ringfile") % (key, )
             )
             return []
         host = next(self.ring0[key])
@@ -90,8 +90,8 @@ class FanoutRingExchange(RingExchange):
         nkey = key.split('fanout~')[1:][0]
         if not self._ring_has(nkey):
             LOG.warn(
-                _("No key defining hosts for topic '%s', "
-                  "see ringfile") % (nkey, )
+                _LW("No key defining hosts for topic '%s', "
+                    "see ringfile") % (nkey, )
             )
             return []
         return map(lambda x: (key + '.' + x, x), self.ring[nkey])

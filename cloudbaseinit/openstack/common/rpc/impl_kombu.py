@@ -29,7 +29,7 @@ from oslo.config import cfg
 import six
 
 from cloudbaseinit.openstack.common import excutils
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _, _LE, _LI
 from cloudbaseinit.openstack.common import network_utils
 from cloudbaseinit.openstack.common.rpc import amqp as rpc_amqp
 from cloudbaseinit.openstack.common.rpc import common as rpc_common
@@ -50,8 +50,12 @@ kombu_opts = [
                help='SSL cert file (valid only if SSL enabled)'),
     cfg.StrOpt('kombu_ssl_ca_certs',
                default='',
-               help=('SSL certification authority file '
-                     '(valid only if SSL enabled)')),
+               help='SSL certification authority file '
+                    '(valid only if SSL enabled)'),
+    cfg.FloatOpt('kombu_reconnect_delay',
+                 default=1.0,
+                 help='How long to wait before reconnecting in response to an '
+                      'AMQP consumer cancel notification.'),
     cfg.StrOpt('rabbit_host',
                default='localhost',
                help='The RabbitMQ broker address where a single node is used'),
@@ -153,12 +157,12 @@ class ConsumerBase(object):
             callback(msg)
         except Exception:
             if self.ack_on_error:
-                LOG.exception(_("Failed to process message"
-                                " ... skipping it."))
+                LOG.exception(_LE("Failed to process message"
+                                  " ... skipping it."))
                 message.ack()
             else:
-                LOG.exception(_("Failed to process message"
-                                " ... will requeue."))
+                LOG.exception(_LE("Failed to process message"
+                                  " ... will requeue."))
                 message.requeue()
         else:
             message.ack()
@@ -458,6 +462,9 @@ class Connection(object):
 
         self.params_list = params_list
 
+        brokers_count = len(self.params_list)
+        self.next_broker_indices = itertools.cycle(range(brokers_count))
+
         self.memory_transport = self.conf.fake_rabbit
 
         self.connection = None
@@ -492,9 +499,20 @@ class Connection(object):
         be handled by the caller.
         """
         if self.connection:
-            LOG.info(_("Reconnecting to AMQP server on "
+            LOG.info(_LI("Reconnecting to AMQP server on "
                      "%(hostname)s:%(port)d") % params)
             try:
+                # XXX(nic): when reconnecting to a RabbitMQ cluster
+                # with mirrored queues in use, the attempt to release the
+                # connection can hang "indefinitely" somewhere deep down
+                # in Kombu.  Blocking the thread for a bit prior to
+                # release seems to kludge around the problem where it is
+                # otherwise reproduceable.
+                if self.conf.kombu_reconnect_delay > 0:
+                    LOG.info(_("Delaying reconnect for %1.1f seconds...") %
+                             self.conf.kombu_reconnect_delay)
+                    time.sleep(self.conf.kombu_reconnect_delay)
+
                 self.connection.release()
             except self.connection_errors:
                 pass
@@ -514,7 +532,7 @@ class Connection(object):
             self.channel._new_queue('ae.undeliver')
         for consumer in self.consumers:
             consumer.reconnect(self.channel)
-        LOG.info(_('Connected to AMQP server on %(hostname)s:%(port)d') %
+        LOG.info(_LI('Connected to AMQP server on %(hostname)s:%(port)d') %
                  params)
 
     def reconnect(self):
@@ -528,7 +546,7 @@ class Connection(object):
 
         attempt = 0
         while True:
-            params = self.params_list[attempt % len(self.params_list)]
+            params = self.params_list[next(self.next_broker_indices)]
             attempt += 1
             try:
                 self._connect(params)
@@ -546,7 +564,7 @@ class Connection(object):
                     raise
 
             log_info = {}
-            log_info['err_str'] = str(e)
+            log_info['err_str'] = e
             log_info['max_retries'] = self.max_retries
             log_info.update(params)
 
@@ -565,9 +583,9 @@ class Connection(object):
                 sleep_time = min(sleep_time, self.interval_max)
 
             log_info['sleep_time'] = sleep_time
-            LOG.error(_('AMQP server on %(hostname)s:%(port)d is '
-                        'unreachable: %(err_str)s. Trying again in '
-                        '%(sleep_time)d seconds.') % log_info)
+            LOG.error(_LE('AMQP server on %(hostname)s:%(port)d is '
+                          'unreachable: %(err_str)s. Trying again in '
+                          '%(sleep_time)d seconds.') % log_info)
             time.sleep(sleep_time)
 
     def ensure(self, error_callback, method, *args, **kwargs):
@@ -618,8 +636,8 @@ class Connection(object):
         """
 
         def _connect_error(exc):
-            log_info = {'topic': topic, 'err_str': str(exc)}
-            LOG.error(_("Failed to declare consumer for topic '%(topic)s': "
+            log_info = {'topic': topic, 'err_str': exc}
+            LOG.error(_LE("Failed to declare consumer for topic '%(topic)s': "
                       "%(err_str)s") % log_info)
 
         def _declare_consumer():
@@ -637,12 +655,12 @@ class Connection(object):
 
         def _error_callback(exc):
             if isinstance(exc, socket.timeout):
-                LOG.debug(_('Timed out waiting for RPC response: %s') %
-                          str(exc))
+                LOG.debug('Timed out waiting for RPC response: %s' %
+                          exc)
                 raise rpc_common.Timeout()
             else:
-                LOG.exception(_('Failed to consume message from queue: %s') %
-                              str(exc))
+                LOG.exception(_LE('Failed to consume message from queue: %s') %
+                              exc)
                 info['do_consume'] = True
 
         def _consume():
@@ -679,8 +697,8 @@ class Connection(object):
         """Send to a publisher based on the publisher class."""
 
         def _error_callback(exc):
-            log_info = {'topic': topic, 'err_str': str(exc)}
-            LOG.exception(_("Failed to publish message to topic "
+            log_info = {'topic': topic, 'err_str': exc}
+            LOG.exception(_LE("Failed to publish message to topic "
                           "'%(topic)s': %(err_str)s") % log_info)
 
         def _publish():

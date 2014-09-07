@@ -18,7 +18,7 @@
 from oslo.config import cfg
 
 from cloudbaseinit.openstack.common import context as req_context
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _LE
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.openstack.common import rpc
 
@@ -48,6 +48,6 @@ def notify(context, message):
         try:
             rpc.notify(context, topic, message, envelope=True)
         except Exception:
-            LOG.exception(_("Could not send notification to %(topic)s. "
-                            "Payload=%(message)s"),
+            LOG.exception(_LE("Could not send notification to %(topic)s. "
+                              "Payload=%(message)s"),
                           {"topic": topic, "message": message})

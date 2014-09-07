@@ -48,7 +48,7 @@ class RpcProxy(object):
                basis.
         :param version_cap: Optionally cap the maximum version used for sent
                messages.
-        :param serializer: Optionaly (de-)serialize entities with a
+        :param serializer: Optionally (de-)serialize entities with a
                provided helper.
         """
         self.topic = topic

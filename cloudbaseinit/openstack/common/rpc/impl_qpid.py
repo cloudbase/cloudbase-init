@@ -23,7 +23,7 @@ from oslo.config import cfg
 import six
 
 from cloudbaseinit.openstack.common import excutils
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _, _LE, _LI
 from cloudbaseinit.openstack.common import importutils
 from cloudbaseinit.openstack.common import jsonutils
 from cloudbaseinit.openstack.common import log as logging
@@ -188,7 +188,7 @@ class ConsumerBase(object):
             msg = rpc_common.deserialize_msg(message.content)
             self.callback(msg)
         except Exception:
-            LOG.exception(_("Failed to process message... skipping it."))
+            LOG.exception(_LE("Failed to process message... skipping it."))
         finally:
             # TODO(sandy): Need support for optional ack_on_error.
             self.session.acknowledge(message)
@@ -224,7 +224,7 @@ class DirectConsumer(ConsumerBase):
         elif conf.qpid_topology_version == 2:
             node_name = "amq.direct/%s" % msg_id
             node_opts = {}
-            link_name = None
+            link_name = msg_id
         else:
             raise_invalid_topology_version()
 
@@ -368,7 +368,7 @@ class DirectPublisher(Publisher):
         """Init a 'direct' publisher."""
 
         if conf.qpid_topology_version == 1:
-            node_name = msg_id
+            node_name = "%s/%s" % (msg_id, msg_id)
             node_opts = {"type": "direct"}
         elif conf.qpid_topology_version == 2:
             node_name = "amq.direct/%s" % msg_id
@@ -444,6 +444,7 @@ class Connection(object):
         if not qpid_messaging:
             raise ImportError("Failed to import qpid.messaging")
 
+        self.connection = None
         self.session = None
         self.consumers = {}
         self.consumer_thread = None
@@ -467,7 +468,10 @@ class Connection(object):
         self.brokers = params['qpid_hosts']
         self.username = params['username']
         self.password = params['password']
-        self.connection_create(self.brokers[0])
+
+        brokers_count = len(self.brokers)
+        self.next_broker_indices = itertools.cycle(range(brokers_count))
+
         self.reconnect()
 
     def connection_create(self, broker):
@@ -494,31 +498,29 @@ class Connection(object):
 
     def reconnect(self):
         """Handles reconnecting and re-establishing sessions and queues."""
-        attempt = 0
         delay = 1
         while True:
             # Close the session if necessary
-            if self.connection.opened():
+            if self.connection is not None and self.connection.opened():
                 try:
                     self.connection.close()
-                except qpid_exceptions.ConnectionError:
+                except qpid_exceptions.MessagingError:
                     pass
 
-            broker = self.brokers[attempt % len(self.brokers)]
-            attempt += 1
+            broker = self.brokers[next(self.next_broker_indices)]
 
             try:
                 self.connection_create(broker)
                 self.connection.open()
-            except qpid_exceptions.ConnectionError as e:
+            except qpid_exceptions.MessagingError as e:
                 msg_dict = dict(e=e, delay=delay)
-                msg = _("Unable to connect to AMQP server: %(e)s. "
-                        "Sleeping %(delay)s seconds") % msg_dict
+                msg = _LE("Unable to connect to AMQP server: %(e)s. "
+                          "Sleeping %(delay)s seconds") % msg_dict
                 LOG.error(msg)
                 time.sleep(delay)
-                delay = min(2 * delay, 60)
+                delay = min(delay + 1, 5)
             else:
-                LOG.info(_('Connected to AMQP server on %s'), broker)
+                LOG.info(_LI('Connected to AMQP server on %s'), broker)
                 break
 
         self.session = self.connection.session()
@@ -531,14 +533,14 @@ class Connection(object):
                 consumer.reconnect(self.session)
                 self._register_consumer(consumer)
 
-            LOG.debug(_("Re-established AMQP queues"))
+            LOG.debug("Re-established AMQP queues")
 
     def ensure(self, error_callback, method, *args, **kwargs):
         while True:
             try:
                 return method(*args, **kwargs)
             except (qpid_exceptions.Empty,
-                    qpid_exceptions.ConnectionError) as e:
+                    qpid_exceptions.MessagingError) as e:
                 if error_callback:
                     error_callback(e)
                 self.reconnect()
@@ -569,8 +571,8 @@ class Connection(object):
         add it to our list of consumers
         """
         def _connect_error(exc):
-            log_info = {'topic': topic, 'err_str': str(exc)}
-            LOG.error(_("Failed to declare consumer for topic '%(topic)s': "
+            log_info = {'topic': topic, 'err_str': exc}
+            LOG.error(_LE("Failed to declare consumer for topic '%(topic)s': "
                       "%(err_str)s") % log_info)
 
         def _declare_consumer():
@@ -585,19 +587,19 @@ class Connection(object):
 
         def _error_callback(exc):
             if isinstance(exc, qpid_exceptions.Empty):
-                LOG.debug(_('Timed out waiting for RPC response: %s') %
-                          str(exc))
+                LOG.debug('Timed out waiting for RPC response: %s' %
+                          exc)
                 raise rpc_common.Timeout()
             else:
-                LOG.exception(_('Failed to consume message from queue: %s') %
-                              str(exc))
+                LOG.exception(_LE('Failed to consume message from queue: %s') %
+                              exc)
 
         def _consume():
             nxt_receiver = self.session.next_receiver(timeout=timeout)
             try:
                 self._lookup_consumer(nxt_receiver).consume()
             except Exception:
-                LOG.exception(_("Error processing message.  Skipping it."))
+                LOG.exception(_LE("Error processing message.  Skipping it."))
 
         for iteration in itertools.count(0):
             if limit and iteration >= limit:
@@ -623,8 +625,8 @@ class Connection(object):
         """Send to a publisher based on the publisher class."""
 
         def _connect_error(exc):
-            log_info = {'topic': topic, 'err_str': str(exc)}
-            LOG.exception(_("Failed to publish message to topic "
+            log_info = {'topic': topic, 'err_str': exc}
+            LOG.exception(_LE("Failed to publish message to topic "
                           "'%(topic)s': %(err_str)s") % log_info)
 
         def _publisher_send():

@@ -22,7 +22,7 @@ import contextlib
 import eventlet
 from oslo.config import cfg
 
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _, _LI
 from cloudbaseinit.openstack.common import log as logging
 
 
@@ -127,10 +127,10 @@ class MatchMakerBase(object):
     def add_binding(self, binding, rule, last=True):
         self.bindings.append((binding, rule, False, last))
 
-    #NOTE(ewindisch): kept the following method in case we implement the
-    #                 underlying support.
-    #def add_negate_binding(self, binding, rule, last=True):
-    #    self.bindings.append((binding, rule, True, last))
+    # NOTE(ewindisch): kept the following method in case we implement the
+    #                  underlying support.
+    # def add_negate_binding(self, binding, rule, last=True):
+    #     self.bindings.append((binding, rule, True, last))
 
     def queues(self, key):
         workers = []
@@ -213,7 +213,7 @@ class HeartbeatMatchMakerBase(MatchMakerBase):
         self.hosts.discard(host)
         self.backend_unregister(key, '.'.join((key, host)))
 
-        LOG.info(_("Matchmaker unregistered: %(key)s, %(host)s"),
+        LOG.info(_LI("Matchmaker unregistered: %(key)s, %(host)s"),
                  {'key': key, 'host': host})
 
     def start_heartbeat(self):

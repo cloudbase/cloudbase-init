@@ -140,8 +140,8 @@ def multicall(conf, context, topic, msg, timeout=None):
     if not method:
         return
     args = msg.get('args', {})
-    version = msg.get('version', None)
-    namespace = msg.get('namespace', None)
+    version = msg.get('version')
+    namespace = msg.get('namespace')
 
     try:
         consumer = CONSUMERS[topic][0]
@@ -185,8 +185,8 @@ def fanout_cast(conf, context, topic, msg):
     if not method:
         return
     args = msg.get('args', {})
-    version = msg.get('version', None)
-    namespace = msg.get('namespace', None)
+    version = msg.get('version')
+    namespace = msg.get('namespace')
 
     for consumer in CONSUMERS.get(topic, []):
         try:

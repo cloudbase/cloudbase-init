@@ -19,7 +19,7 @@ import uuid
 from oslo.config import cfg
 
 from cloudbaseinit.openstack.common import context
-from cloudbaseinit.openstack.common.gettextutils import _
+from cloudbaseinit.openstack.common.gettextutils import _, _LE
 from cloudbaseinit.openstack.common import importutils
 from cloudbaseinit.openstack.common import jsonutils
 from cloudbaseinit.openstack.common import log as logging
@@ -36,7 +36,6 @@ notifier_opts = [
                default='INFO',
                help='Default notification level for outgoing notifications'),
     cfg.StrOpt('default_publisher_id',
-               default=None,
                help='Default publisher_id for outgoing notifications'),
 ]
 
@@ -142,9 +141,9 @@ def notify(context, publisher_id, event_type, priority, payload):
         try:
             driver.notify(context, msg)
         except Exception as e:
-            LOG.exception(_("Problem '%(e)s' attempting to "
-                            "send to notification system. "
-                            "Payload=%(payload)s")
+            LOG.exception(_LE("Problem '%(e)s' attempting to "
+                              "send to notification system. "
+                              "Payload=%(payload)s")
                           % dict(e=e, payload=payload))
 
 
@@ -161,8 +160,8 @@ def _get_drivers():
                 driver = importutils.import_module(notification_driver)
                 _drivers[notification_driver] = driver
             except ImportError:
-                LOG.exception(_("Failed to load notifier %s. "
-                                "These notifications will not be sent.") %
+                LOG.exception(_LE("Failed to load notifier %s. "
+                                  "These notifications will not be sent.") %
                               notification_driver)
     return _drivers.values()
 
