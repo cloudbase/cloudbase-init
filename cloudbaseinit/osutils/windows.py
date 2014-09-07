@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import _winreg
 import ctypes
 import os
 import re
@@ -25,6 +24,7 @@ import wmi
 
 from ctypes import windll
 from ctypes import wintypes
+from six.moves import winreg
 from win32com import client
 
 from cloudbaseinit.openstack.common import log as logging
@@ -432,10 +432,10 @@ class WindowsUtils(base.BaseOSUtils):
     def get_user_home(self, username):
         user_sid = self.get_user_sid(username)
         if user_sid:
-            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, 'SOFTWARE\\'
-                                 'Microsoft\\Windows NT\\CurrentVersion\\'
-                                 'ProfileList\\%s' % user_sid) as key:
-                return _winreg.QueryValueEx(key, 'ProfileImagePath')[0]
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'SOFTWARE\\'
+                                'Microsoft\\Windows NT\\CurrentVersion\\'
+                                'ProfileList\\%s' % user_sid) as key:
+                return winreg.QueryValueEx(key, 'ProfileImagePath')[0]
         LOG.debug('Home directory not found for user \'%s\'' % username)
         return None
 
@@ -561,33 +561,33 @@ class WindowsUtils(base.BaseOSUtils):
     def set_config_value(self, name, value, section=None):
         key_name = self._get_config_key_name(section)
 
-        with _winreg.CreateKey(_winreg.HKEY_LOCAL_MACHINE,
-                               key_name) as key:
+        with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE,
+                              key_name) as key:
             if type(value) == int:
-                regtype = _winreg.REG_DWORD
+                regtype = winreg.REG_DWORD
             else:
-                regtype = _winreg.REG_SZ
-            _winreg.SetValueEx(key, name, 0, regtype, value)
+                regtype = winreg.REG_SZ
+            winreg.SetValueEx(key, name, 0, regtype, value)
 
     def get_config_value(self, name, section=None):
         key_name = self._get_config_key_name(section)
 
         try:
-            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                                 key_name) as key:
-                (value, regtype) = _winreg.QueryValueEx(key, name)
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                key_name) as key:
+                (value, regtype) = winreg.QueryValueEx(key, name)
                 return value
         except WindowsError:
             return None
 
     def wait_for_boot_completion(self):
         try:
-            with _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
-                                 "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
-                                 _winreg.KEY_READ) as key:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
+                                winreg.KEY_READ) as key:
                 while True:
-                    gen_state = _winreg.QueryValueEx(key,
-                                                     "GeneralizationState")[0]
+                    gen_state = winreg.QueryValueEx(key,
+                                                    "GeneralizationState")[0]
                     if gen_state == 7:
                         break
                     time.sleep(1)

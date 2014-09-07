@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import _winreg
 import ctypes
 
 from ctypes import wintypes
+from six.moves import winreg
 
 from cloudbaseinit.utils.windows import iphlpapi
 from cloudbaseinit.utils.windows import kernel32
@@ -48,13 +48,13 @@ def _socket_addr_to_str(socket_addr):
 
 
 def _get_registry_dhcp_server(adapter_name):
-    with _winreg.OpenKey(
-            _winreg.HKEY_LOCAL_MACHINE,
+    with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
             "SYSTEM\\CurrentControlSet\\Services\\" +
             "Tcpip\\Parameters\\Interfaces\\%s" % adapter_name, 0,
-            _winreg.KEY_READ) as key:
+            winreg.KEY_READ) as key:
         try:
-            dhcp_server = _winreg.QueryValueEx(key, "DhcpServer")[0]
+            dhcp_server = winreg.QueryValueEx(key, "DhcpServer")[0]
             if dhcp_server == "255.255.255.255":
                 dhcp_server = None
             return dhcp_server
