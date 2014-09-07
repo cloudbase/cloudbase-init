@@ -950,7 +950,6 @@ class WindowsUtilsTest(unittest.TestCase):
             self.assertRaises(Exception, self._winutils._get_logical_drives)
         else:
             response = self._winutils._get_logical_drives()
-            print mock_buf.mock_calls
             mock_create_unicode_buffer.assert_called_with(261)
             mock_GetLogicalDriveStringsW.assert_called_with(260, mock_buf)
             self.assertEqual(response, ['1'])
