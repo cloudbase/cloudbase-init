@@ -503,7 +503,8 @@ def _setup_logging_from_conf(project, version):
     if CONF.publish_errors:
         try:
             handler = importutils.import_object(
-                "cloudbaseinit.openstack.common.log_handler.PublishErrorsHandler",
+                "cloudbaseinit.openstack.common.log_handler."
+                "PublishErrorsHandler",
                 logging.ERROR)
         except ImportError:
             handler = importutils.import_object(

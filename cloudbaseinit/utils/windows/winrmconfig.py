@@ -50,8 +50,6 @@ class WinRMConfig(object):
         listening_on = []
         data = {"ListeningOn": listening_on}
 
-        ns = {'cfg':
-              'http://schemas.microsoft.com/wbem/wsman/1/config/listener'}
         tree = ElementTree.fromstring(data_xml)
         for node in tree:
             tag = self._get_node_tag(node.tag)
@@ -76,9 +74,6 @@ class WinRMConfig(object):
 
         data = {}
 
-        ns = {'cfg':
-              'http://schemas.microsoft.com/wbem/wsman/1/config/service/'
-              'certmapping.xsd'}
         tree = ElementTree.fromstring(data_xml)
         for node in tree:
             tag = self._get_node_tag(node.tag)
