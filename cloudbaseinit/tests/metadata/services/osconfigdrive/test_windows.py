@@ -208,7 +208,6 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
         response = self._config_manager._extract_iso_disk_file(
             osutils=mock_osutils, iso_file_path=fake_path)
-        print mock_PhysicalDisk().open.mock_calls
 
         if not exception:
             mock_get_iso_disk_size.assert_called_once_with(

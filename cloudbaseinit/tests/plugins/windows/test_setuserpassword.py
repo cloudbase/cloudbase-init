@@ -46,7 +46,6 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         response = self._setpassword_plugin._encrypt_password(
             fake_ssh_pub_key, fake_password)
-        print mock_rsa.mock_calls
 
         mock_load_ssh_key.assert_called_with(fake_ssh_pub_key)
         mock_rsa.__enter__().public_encrypt.assert_called_with('fake password')
@@ -149,7 +148,6 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_set_password.return_value = 'fake password'
         response = self._setpassword_plugin.execute(mock_service,
                                                     fake_shared_data)
-        print mock_service.mock_calls
         mock_get_os_utils.assert_called_once_with()
         fake_shared_data.get.assert_called_with(
             constants.SHARED_DATA_USERNAME, CONF.username)

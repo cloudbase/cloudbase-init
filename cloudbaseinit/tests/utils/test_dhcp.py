@@ -78,7 +78,6 @@ class DHCPUtilsTests(unittest.TestCase):
                                    (100, None), (4, None)]
 
         response = dhcp._parse_dhcp_reply(data=fake_data, id_req=9999)
-        print mock_unpack.mock_calls
 
         if message_type != 2:
             self.assertEqual(response, (False, {}))

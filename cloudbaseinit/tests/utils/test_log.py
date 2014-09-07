@@ -35,7 +35,6 @@ class SerialPortHandlerTests(unittest.TestCase):
     def test_init(self, mock_Serial):
         mock_Serial().isOpen.return_value = False
         log.SerialPortHandler()
-        print mock_Serial.mock_calls
         mock_Serial.assert_called_with(bytesize=8, baudrate=115200,
                                        port='COM1', parity='N')
         mock_Serial().isOpen.assert_called_once_with()
