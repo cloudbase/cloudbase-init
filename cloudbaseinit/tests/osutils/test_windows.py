@@ -23,6 +23,8 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit.utils import s
+
 if sys.platform == 'win32':
     import win32process
     import win32security
@@ -250,7 +252,7 @@ class WindowsUtilsTest(unittest.TestCase):
             response = self._winutils._get_user_sid_and_domain(self._USERNAME)
 
             windll.advapi32.LookupAccountNameW.assert_called_with(
-                0, unicode(self._USERNAME), sid, ctypes.byref(cbSid),
+                0, s.unicode(self._USERNAME), sid, ctypes.byref(cbSid),
                 domainName, ctypes.byref(cchReferencedDomainName),
                 ctypes.byref(sidNameUse))
             self.assertEqual(response, (sid, domainName.value))
@@ -279,8 +281,8 @@ class WindowsUtilsTest(unittest.TestCase):
             self._winutils.add_user_to_local_group(self._USERNAME,
                                                    group_name)
             windll.netapi32.NetLocalGroupAddMembers.assert_called_with(
-                0, unicode(group_name), 3, ctypes.addressof(lmi), 1)
-            self.assertEqual(lmi.lgrmi3_domainandname, unicode(self._USERNAME))
+                0, s.unicode(group_name), 3, ctypes.addressof(lmi), 1)
+            self.assertEqual(lmi.lgrmi3_domainandname, s.unicode(self._USERNAME))
 
     def test_add_user_to_local_group_no_error(self):
         self._test_add_user_to_local_group(ret_value=0)
@@ -411,7 +413,7 @@ class WindowsUtilsTest(unittest.TestCase):
             self._winutils.set_host_name('fake name')
         mock_SetComputerNameExW.assert_called_with(
             self._winutils.ComputerNamePhysicalDnsHostname,
-            unicode('fake name'))
+            s.unicode('fake name'))
 
     def test_set_host_name(self):
         self._test_set_host_name(ret_value='fake response')

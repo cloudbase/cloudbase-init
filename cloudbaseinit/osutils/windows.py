@@ -29,6 +29,7 @@ from win32com import client
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
+from cloudbaseinit.utils import s
 from cloudbaseinit.utils.windows import network
 
 LOG = logging.getLogger(__name__)
@@ -371,7 +372,7 @@ class WindowsUtils(base.BaseOSUtils):
         sidNameUse = wintypes.DWORD()
 
         ret_val = advapi32.LookupAccountNameW(
-            0, unicode(username), sid, ctypes.byref(cbSid), domainName,
+            0, s.unicode(username), sid, ctypes.byref(cbSid), domainName,
             ctypes.byref(cchReferencedDomainName), ctypes.byref(sidNameUse))
         if not ret_val:
             raise Exception("Cannot get user SID")
@@ -381,9 +382,9 @@ class WindowsUtils(base.BaseOSUtils):
     def add_user_to_local_group(self, username, groupname):
 
         lmi = Win32_LOCALGROUP_MEMBERS_INFO_3()
-        lmi.lgrmi3_domainandname = unicode(username)
+        lmi.lgrmi3_domainandname = s.unicode(username)
 
-        ret_val = netapi32.NetLocalGroupAddMembers(0, unicode(groupname), 3,
+        ret_val = netapi32.NetLocalGroupAddMembers(0, s.unicode(groupname), 3,
                                                    ctypes.addressof(lmi), 1)
 
         if ret_val == self.NERR_GroupNotFound:
@@ -409,8 +410,8 @@ class WindowsUtils(base.BaseOSUtils):
     def create_user_logon_session(self, username, password, domain='.',
                                   load_profile=True):
         token = wintypes.HANDLE()
-        ret_val = advapi32.LogonUserW(unicode(username), unicode(domain),
-                                      unicode(password), 2, 0,
+        ret_val = advapi32.LogonUserW(s.unicode(username), s.unicode(domain),
+                                      s.unicode(password), 2, 0,
                                       ctypes.byref(token))
         if not ret_val:
             raise Exception("User logon failed")
@@ -418,7 +419,7 @@ class WindowsUtils(base.BaseOSUtils):
         if load_profile:
             pi = Win32_PROFILEINFO()
             pi.dwSize = ctypes.sizeof(Win32_PROFILEINFO)
-            pi.lpUserName = unicode(username)
+            pi.lpUserName = s.unicode(username)
             ret_val = userenv.LoadUserProfileW(token, ctypes.byref(pi))
             if not ret_val:
                 kernel32.CloseHandle(token)
@@ -445,7 +446,7 @@ class WindowsUtils(base.BaseOSUtils):
     def set_host_name(self, new_host_name):
         ret_val = kernel32.SetComputerNameExW(
             self.ComputerNamePhysicalDnsHostname,
-            unicode(new_host_name))
+            s.unicode(new_host_name))
         if not ret_val:
             raise Exception("Cannot set host name")
 
@@ -752,7 +753,7 @@ class WindowsUtils(base.BaseOSUtils):
     def get_volume_label(self, drive):
         max_label_size = 261
         label = ctypes.create_unicode_buffer(max_label_size)
-        ret_val = kernel32.GetVolumeInformationW(unicode(drive), label,
+        ret_val = kernel32.GetVolumeInformationW(s.unicode(drive), label,
                                                  max_label_size, 0, 0, 0, 0, 0)
         if ret_val:
             return label.value

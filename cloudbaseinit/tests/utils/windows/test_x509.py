@@ -20,7 +20,9 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit.utils import s
 from cloudbaseinit.utils import x509constants
+
 if sys.platform == 'win32':
     from cloudbaseinit.utils.windows import cryptoapi
     from cloudbaseinit.utils.windows import x509
@@ -211,7 +213,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             mock_CertOpenStore.assert_called_with(
                 cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
-                unicode(x509.STORE_NAME_MY))
+                s.unicode(x509.STORE_NAME_MY))
             mock_get_cert_thumprint.assert_called_once_with(
                 mock_CertCreateSelfSignCertificate())
 
@@ -341,7 +343,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             mock_CertOpenStore.assert_called_with(
                 cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
-                unicode(x509.STORE_NAME_MY))
+                s.unicode(x509.STORE_NAME_MY))
             mock_CertAddEncodedCertificateToStore.assert_called_with(
                 mock_CertOpenStore(),
                 cryptoapi.X509_ASN_ENCODING | cryptoapi.PKCS_7_ASN_ENCODING,
