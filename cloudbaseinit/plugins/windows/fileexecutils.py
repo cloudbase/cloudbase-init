@@ -57,5 +57,5 @@ def exec_file(file_path):
         LOG.debug('User_data stderr:\n%s' % err)
 
         return ret_val
-    except Exception, ex:
+    except Exception as ex:
         LOG.warning('An error occurred during file execution: \'%s\'' % ex)

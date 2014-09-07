@@ -108,7 +108,7 @@ def _bind_dhcp_client_socket(s, max_bind_attempts, bind_retry_interval):
         try:
             s.bind(('', 68))
             break
-        except socket.error, ex:
+        except socket.error as ex:
             if (bind_attempts >= max_bind_attempts or
                     ex.errno not in [48, 10048]):
                 raise

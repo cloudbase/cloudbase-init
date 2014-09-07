@@ -106,7 +106,7 @@ class UserDataPlugin(base.BasePlugin):
                                                 new_user_handlers)
                     else:
                         ret_val = user_data_plugin.process(part)
-        except Exception, ex:
+        except Exception as ex:
             LOG.error('Exception during multipart part handling: '
                       '%(content_type)s, %(filename)s' %
                       {'content_type': part.get_content_type(),

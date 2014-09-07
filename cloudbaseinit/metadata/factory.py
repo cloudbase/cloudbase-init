@@ -47,7 +47,7 @@ def get_metadata_service():
         try:
             if service.load():
                 return service
-        except Exception, ex:
+        except Exception as ex:
             LOG.error("Failed to load metadata service '%s'" % class_path)
             LOG.exception(ex)
     raise Exception("No available service found")

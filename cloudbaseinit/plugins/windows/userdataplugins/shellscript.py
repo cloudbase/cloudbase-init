@@ -36,7 +36,7 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
                 f.write(part.get_payload())
 
             return fileexecutils.exec_file(target_path)
-        except Exception, ex:
+        except Exception as ex:
             LOG.warning('An error occurred during user_data execution: \'%s\''
                         % ex)
         finally:

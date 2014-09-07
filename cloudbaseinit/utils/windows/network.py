@@ -58,7 +58,7 @@ def _get_registry_dhcp_server(adapter_name):
             if dhcp_server == "255.255.255.255":
                 dhcp_server = None
             return dhcp_server
-        except Exception, ex:
+        except Exception as ex:
             # Not found
             if ex.errno != 2:
                 raise

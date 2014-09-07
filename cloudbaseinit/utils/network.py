@@ -60,6 +60,6 @@ def check_metadata_ip_route(metadata_url):
                                                  gateway,
                                                  interface_index,
                                                  10)
-                    except Exception, ex:
+                    except Exception as ex:
                         # Ignore it
                         LOG.exception(ex)

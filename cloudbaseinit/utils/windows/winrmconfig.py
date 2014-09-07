@@ -103,7 +103,7 @@ class WinRMConfig(object):
         session = self._get_wsman_session()
         try:
             return session.Get(resource_uri)
-        except pywintypes.com_error, ex:
+        except pywintypes.com_error as ex:
             if len(ex.excepinfo) > 5 and ex.excepinfo[5] == -2144108544:
                 return None
             else:

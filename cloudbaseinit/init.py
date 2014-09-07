@@ -70,7 +70,7 @@ class InitManager(object):
                 self._set_plugin_status(osutils, instance_id, plugin_name,
                                         status)
                 return reboot_required
-            except Exception, ex:
+            except Exception as ex:
                 LOG.error('plugin \'%(plugin_name)s\' failed with error '
                           '\'%(ex)s\'', {'plugin_name': plugin_name, 'ex': ex})
                 LOG.exception(ex)
@@ -124,7 +124,7 @@ class InitManager(object):
         if reboot_required and CONF.allow_reboot:
             try:
                 osutils.reboot()
-            except Exception, ex:
+            except Exception as ex:
                 LOG.error('reboot failed with error \'%s\'' % ex)
         elif CONF.stop_service_on_exit:
             osutils.terminate()

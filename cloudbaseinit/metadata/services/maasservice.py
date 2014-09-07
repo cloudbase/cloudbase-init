@@ -59,7 +59,7 @@ class MaaSHttpService(base.BaseMetadataService):
             try:
                 self._get_data('%s/meta-data/' % self._metadata_version)
                 return True
-            except Exception, ex:
+            except Exception as ex:
                 LOG.exception(ex)
                 LOG.debug('Metadata not found at URL \'%s\'' %
                           CONF.maas_metadata_url)

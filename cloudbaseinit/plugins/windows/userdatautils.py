@@ -69,7 +69,7 @@ def execute_user_data_script(user_data):
         LOG.debug('User_data stderr:\n%s' % err)
 
         return ret_val
-    except Exception, ex:
+    except Exception as ex:
         LOG.warning('An error occurred during user_data execution: \'%s\''
                     % ex)
     finally:

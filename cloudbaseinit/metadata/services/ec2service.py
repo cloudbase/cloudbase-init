@@ -51,7 +51,7 @@ class EC2Service(base.BaseMetadataService):
         try:
             self.get_host_name()
             return True
-        except Exception, ex:
+        except Exception as ex:
             LOG.exception(ex)
             LOG.debug('Metadata not found at URL \'%s\'' %
                       CONF.ec2_metadata_base_url)
