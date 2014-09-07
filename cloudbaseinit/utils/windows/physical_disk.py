@@ -42,7 +42,7 @@ class PhysicalDisk(object):
     INVALID_HANDLE_VALUE = -1
     IOCTL_DISK_GET_DRIVE_GEOMETRY = 0x70000
     FILE_BEGIN = 0
-    INVALID_SET_FILE_POINTER = 0xFFFFFFFFL
+    INVALID_SET_FILE_POINTER = 0xFFFFFFFF
 
     def __init__(self, path):
         self._path = path
@@ -90,7 +90,7 @@ class PhysicalDisk(object):
 
     def seek(self, offset):
         high = wintypes.DWORD(offset >> 32)
-        low = wintypes.DWORD(offset & 0xFFFFFFFFL)
+        low = wintypes.DWORD(offset & 0xFFFFFFFF)
 
         ret_val = kernel32.SetFilePointer(self._handle, low,
                                           ctypes.byref(high),
