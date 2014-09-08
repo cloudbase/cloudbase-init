@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import binascii
 import mock
 import netifaces
 import struct
@@ -28,9 +29,9 @@ class DHCPUtilsTests(unittest.TestCase):
 
     def test_get_dhcp_request_data(self):
 
-        fake_mac_address = '01:02:03:04:05:06'
-        fake_mac_address_b = bytearray(
-            fake_mac_address.replace(':', '').decode('hex'))
+        fake_mac_address = '010203040506'
+        fake_mac_address_a = fake_mac_address.encode('ascii', 'strict')
+        fake_mac_address_b = bytearray(binascii.unhexlify(fake_mac_address_a))
 
         data = b'\x01'
         data += b'\x01'
@@ -66,12 +67,12 @@ class DHCPUtilsTests(unittest.TestCase):
     @mock.patch('struct.unpack')
     def _test_parse_dhcp_reply(self, mock_unpack, message_type,
                                id_reply, equals_cookie):
-        fake_data = 236 * "1"
+        fake_data = 236 * b"1"
         if equals_cookie:
-            fake_data += dhcp._DHCP_COOKIE + '11'
+            fake_data += dhcp._DHCP_COOKIE + b'11'
         else:
-            fake_data += '111111'
-        fake_data += 'fake'
+            fake_data += b'111111'
+        fake_data += b'fake'
         fake_data += dhcp._OPTION_END
 
         mock_unpack.side_effect = [(message_type, None), (id_reply, None),
@@ -86,7 +87,7 @@ class DHCPUtilsTests(unittest.TestCase):
         elif fake_data[236:240] != dhcp._DHCP_COOKIE:
             self.assertEqual(response, (False, {}))
         else:
-            self.assertEqual(response, (True, {100: 'fake'}))
+            self.assertEqual(response, (True, {100: b'fake'}))
 
     def test_parse_dhcp_reply(self):
         self._test_parse_dhcp_reply(message_type=2, id_reply=9999,

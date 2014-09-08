@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import binascii
 import datetime
 import netifaces
 import random
@@ -33,7 +34,8 @@ LOG = logging.getLogger(__name__)
 def _get_dhcp_request_data(id_req, mac_address, requested_options,
                            vendor_id):
 
-    mac_address_b = bytearray(mac_address.replace(':', '').decode('hex'))
+    mac_address_ascii = mac_address.replace(':', '').encode('ascii', 'strict')
+    mac_address_b = bytearray(binascii.unhexlify(mac_address_ascii))
 
     # See: http://www.ietf.org/rfc/rfc2131.txt
     data = b'\x01'
@@ -69,7 +71,7 @@ def _get_dhcp_request_data(id_req, mac_address, requested_options,
 
 
 def _parse_dhcp_reply(data, id_req):
-    message_type = struct.unpack('b', data[0])[0]
+    message_type = struct.unpack('b', data[0:1])[0]
 
     if message_type != 2:
         return (False, {})
@@ -84,9 +86,10 @@ def _parse_dhcp_reply(data, id_req):
     options = {}
 
     i = 240
-    while data[i] != _OPTION_END:
-        id_option = struct.unpack('b', data[i])[0]
-        option_data_len = struct.unpack('b', data[i + 1])[0]
+    data_len = len(data)
+    while i < data_len and data[i:i + 1] != _OPTION_END:
+        id_option = struct.unpack('b', data[i:i + 1])[0]
+        option_data_len = struct.unpack('b', data[i + 1:i + 2])[0]
         i += 2
         options[id_option] = data[i: i + option_data_len]
         i += option_data_len
