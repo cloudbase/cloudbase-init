@@ -105,10 +105,10 @@ class InitManagerTest(unittest.TestCase):
                                                            fake_name, status)
             self.assertTrue(response)
 
-    def test_test_exec_plugin_execution_done(self):
+    def test_exec_plugin_execution_done(self):
         self._test_exec_plugin(base.PLUGIN_EXECUTION_DONE)
 
-    def test_test_exec_plugin(self):
+    def test_exec_plugin(self):
         self._test_exec_plugin(base.PLUGIN_EXECUTE_ON_NEXT_BOOT)
 
     def _test_check_plugin_os_requirements(self, requirements):

@@ -364,10 +364,10 @@ class WinRMConfigTests(unittest.TestCase):
             certificate='certificate', credSSP='credSSP',
             cbt_hardening_level='cbt_hardening_level')
 
-        self.assertEqual(sorted(expected_find),
-                         sorted(mock_tree.find.call_args_list))
-        self.assertEqual(sorted(expected_get_xml_bool),
-                         sorted(mock_get_xml_bool.call_args_list))
+        self.assertEqual(sorted(mock_tree.find.call_args_list),
+                         sorted(expected_find))
+        self.assertEqual(sorted(mock_get_xml_bool.call_args_list),
+                         sorted(expected_get_xml_bool))
 
         mock_get_wsman_session.assert_called_once_with()
         mock_session.Get.assert_called_with(

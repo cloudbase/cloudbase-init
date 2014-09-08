@@ -29,11 +29,13 @@ class NTPClientPluginTests(unittest.TestCase):
     def setUp(self):
         self._ntpclient = ntpclient.NTPClientPlugin()
 
-    def _test_check_w32time_svc_status(self, start_mode, fail_service_start):
+    @mock.patch('time.sleep')
+    def _test_check_w32time_svc_status(self, mock_sleep, start_mode,
+                                       fail_service_start):
         # TODO(rtingirica): use _W32TIME_SERVICE when it will be moved outside
         # of method declaration
         mock_osutils = mock.MagicMock()
-        mock_osutils.SERVICE_START_MODE_AUTOMATIC = "automatic"
+        mock_osutils.SERVICE_START_MODE_AUTOMATIC = "Automatic"
         mock_osutils.SERVICE_STATUS_RUNNING = "running"
         mock_osutils.SERVICE_STATUS_STOPPED = "stopped"
         mock_osutils.get_service_start_mode.return_value = start_mode
@@ -47,17 +49,22 @@ class NTPClientPluginTests(unittest.TestCase):
         else:
             mock_osutils.get_service_status.side_effect = [
                 "stopped", mock_osutils.SERVICE_STATUS_RUNNING]
+
             self._ntpclient._check_w32time_svc_status(osutils=mock_osutils)
-            mock_osutils.get_service_start_mode.assert_called_once_with(
-                "w32time")
 
             if start_mode != mock_osutils.SERVICE_START_MODE_AUTOMATIC:
                 mock_osutils.set_service_start_mode.assert_called_once_with(
-                    "w32time", mock_osutils.SERVICE_START_MODE_AUTOMATIC)
+                    ntpclient._W32TIME_SERVICE,
+                    mock_osutils.SERVICE_START_MODE_AUTOMATIC)
 
-            mock_osutils.start_service.assert_called_once_with("w32time")
+            mock_sleep.assert_called_once_with(1)
+            mock_osutils.start_service.assert_called_once_with(
+                ntpclient._W32TIME_SERVICE)
 
-        mock_osutils.get_service_status.assert_called_with("w32time")
+        mock_osutils.get_service_start_mode.assert_called_once_with(
+            ntpclient._W32TIME_SERVICE)
+        mock_osutils.get_service_status.assert_called_with(
+            ntpclient._W32TIME_SERVICE)
 
     def test_check_w32time_svc_status_other_start_mode(self):
         self._test_check_w32time_svc_status(start_mode="not automatic",

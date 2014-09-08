@@ -17,7 +17,6 @@
 import importlib
 import mock
 import re
-import sys
 import unittest
 
 from oslo.config import cfg

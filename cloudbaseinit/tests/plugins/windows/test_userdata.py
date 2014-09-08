@@ -36,43 +36,54 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
                 '._process_user_data')
-    def _test_execute(self, mock_process_user_data, user_data_in,
-                      user_data_out=None):
+    @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
+                '._check_gzip_compression')
+    def _test_execute(self, mock_check_gzip_compression,
+                      mock_process_user_data, ret_val):
         mock_service = mock.MagicMock()
-        mock_service.get_user_data.side_effect = [user_data_in]
+        mock_service.get_user_data.side_effect = [ret_val]
+
         response = self._userdata.execute(service=mock_service,
                                           shared_data=None)
+
         mock_service.get_user_data.assert_called_once_with()
-        if user_data_in is metadata_services_base.NotExistingMetadataException:
+        if ret_val is metadata_services_base.NotExistingMetadataException:
             self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
-        elif user_data_in is None:
+        elif ret_val is None:
             self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
         else:
-            if user_data_out:
-                user_data = user_data_out
-            else:
-                user_data = user_data_in
-
-            mock_process_user_data.assert_called_once_with(user_data)
-            self.assertEqual(response, mock_process_user_data())
+            mock_check_gzip_compression.assert_called_once_with(ret_val)
+            mock_process_user_data.assert_called_once_with(
+                mock_check_gzip_compression.return_value)
+            self.assertEqual(response, mock_process_user_data.return_value)
 
     def test_execute(self):
-        self._test_execute(user_data_in='fake data')
+        self._test_execute(ret_val=mock.sentinel.fake_data)
 
-    def test_execute_gzipped_user_data(self):
-        fake_user_data_in = (b'\x1f\x8b\x08\x00\x8c\xdc\x14S\x02\xffKK'
-                             b'\xccNUHI,I\x04\x00(\xc9\xcfI\t\x00\x00\x00')
-        fake_user_data_out = b'fake data'
-
-        self._test_execute(user_data_in=fake_user_data_in,
-                           user_data_out=fake_user_data_out)
+    def test_execute_no_data(self):
+        self._test_execute(ret_val=None)
 
     def test_execute_NotExistingMetadataException(self):
         self._test_execute(
-            user_data_in=metadata_services_base.NotExistingMetadataException)
+            ret_val=metadata_services_base.NotExistingMetadataException)
 
     def test_execute_not_user_data(self):
-        self._test_execute(user_data_in=None)
+        self._test_execute(ret_val=None)
+
+    @mock.patch('io.BytesIO')
+    @mock.patch('gzip.GzipFile')
+    def test_check_gzip_compression(self, mock_GzipFile, mock_BytesIO):
+        fake_userdata = b'\x1f\x8b'
+        fake_userdata += self._userdata._GZIP_MAGIC_NUMBER
+
+        response = self._userdata._check_gzip_compression(fake_userdata)
+
+        mock_BytesIO.assert_called_once_with(fake_userdata)
+        mock_GzipFile.assert_called_once_with(
+            fileobj=mock_BytesIO.return_value, mode='rb')
+        data = mock_GzipFile().__enter__().read.return_value
+        self.assertEqual(data, response)
+
 
     @mock.patch('email.message_from_string')
     def test_parse_mime(self, mock_message_from_string):
