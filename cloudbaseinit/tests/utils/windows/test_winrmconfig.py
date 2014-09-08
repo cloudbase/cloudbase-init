@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import importlib
 import mock
 import unittest
 
@@ -30,8 +31,8 @@ class WinRMConfigTests(unittest.TestCase):
 
         self._module_patcher.start()
 
-        from cloudbaseinit.utils.windows import winrmconfig
-
+        winrmconfig = importlib.import_module(
+            "cloudbaseinit.utils.windows.winrmconfig")
         self._winrmconfig = winrmconfig.WinRMConfig()
 
     def tearDown(self):
