@@ -155,7 +155,7 @@ class ExtendVolumesPlugin(base.BasePlugin):
 
     def _get_volumes_to_extend(self):
         if CONF.volumes_to_extend is not None:
-            return map(int, CONF.volumes_to_extend)
+            return list(map(int, CONF.volumes_to_extend))
 
     def execute(self, service, shared_data):
         svc = vds.load_vds_service()
