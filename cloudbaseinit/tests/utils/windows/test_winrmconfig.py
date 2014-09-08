@@ -334,20 +334,16 @@ class WinRMConfigTests(unittest.TestCase):
         mock_session = mock.MagicMock()
         mock_tree = mock.MagicMock()
         mock_node = mock.MagicMock()
-        base_url = 'http://schemas.microsoft.com/wbem/wsman/1/config/service/'
+        url = 'http://schemas.microsoft.com/wbem/wsman/1/config/service/auth'
+
         expected_find = [
-            mock.call('.//cfg:Certificate', namespaces={
-                'cfg': base_url + 'auth'}),
-            mock.call('.//cfg:Kerberos',
-                      namespaces={'cfg': base_url + 'auth'}),
-            mock.call('.//cfg:CbtHardeningLevel',
-                      namespaces={'cfg': base_url + 'auth'}),
-            mock.call('.//cfg:Negotiate',
-                      namespaces={'cfg': base_url + 'auth'}),
-            mock.call('.//cfg:CredSSP',
-                      namespaces={'cfg': base_url + 'auth'}),
-            mock.call('.//cfg:Basic',
-                      namespaces={'cfg': base_url + 'auth'})]
+            mock.call('.//cfg:Certificate', namespaces={'cfg': url}),
+            mock.call('.//cfg:Kerberos', namespaces={'cfg': url}),
+            mock.call('.//cfg:CbtHardeningLevel', namespaces={'cfg': url}),
+            mock.call('.//cfg:Negotiate', namespaces={'cfg': url}),
+            mock.call('.//cfg:CredSSP', namespaces={'cfg': url}),
+            mock.call('.//cfg:Basic', namespaces={'cfg': url})]
+
         expected_get_xml_bool = [mock.call('certificate'),
                                  mock.call('kerberos'),
                                  mock.call('cbt_hardening_level'),
@@ -367,9 +363,11 @@ class WinRMConfigTests(unittest.TestCase):
             basic='basic', kerberos='kerberos', negotiate='negotiate',
             certificate='certificate', credSSP='credSSP',
             cbt_hardening_level='cbt_hardening_level')
-        self.assertEqual(mock_tree.find.call_args_list, expected_find)
-        self.assertEqual(mock_get_xml_bool.call_args_list,
-                         expected_get_xml_bool)
+
+        self.assertEqual(sorted(expected_find),
+                         sorted(mock_tree.find.call_args_list))
+        self.assertEqual(sorted(expected_get_xml_bool),
+                         sorted(mock_get_xml_bool.call_args_list))
 
         mock_get_wsman_session.assert_called_once_with()
         mock_session.Get.assert_called_with(
