@@ -70,7 +70,7 @@ def get_adapter_addresses():
     size = wintypes.ULONG()
     ret_val = iphlpapi.GetAdaptersAddresses(
         ws2_32.AF_UNSPEC,
-        iphlpapi.GAA_FLAG_SKIP_ANYCAST | iphlpapi.GAA_FLAG_SKIP_ANYCAST,
+        iphlpapi.GAA_FLAG_SKIP_ANYCAST,
         None, None, ctypes.byref(size))
 
     if ret_val == kernel32.ERROR_NO_DATA:
@@ -90,7 +90,6 @@ def get_adapter_addresses():
 
             ret_val = iphlpapi.GetAdaptersAddresses(
                 ws2_32.AF_UNSPEC,
-                iphlpapi.GAA_FLAG_SKIP_ANYCAST |
                 iphlpapi.GAA_FLAG_SKIP_ANYCAST,
                 None, p_addr, ctypes.byref(size))
 
