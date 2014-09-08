@@ -27,7 +27,7 @@ CONF = cfg.CONF
 
 class NetworkUtilsTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    @mock.patch('urlparse.urlparse')
+    @mock.patch('six.moves.urllib.parse.urlparse')
     def _test_check_metadata_ip_route(self, mock_urlparse, mock_get_os_utils,
                                       side_effect):
         mock_utils = mock.MagicMock()

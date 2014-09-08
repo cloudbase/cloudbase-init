@@ -13,8 +13,9 @@
 #    under the License.
 
 import sys
-import urllib2
-import urlparse
+
+from six.moves.urllib import parse
+from six.moves.urllib import request
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
@@ -28,7 +29,7 @@ def check_url(url, retries_count=MAX_URL_CHECK_RETRIES):
     for i in range(0, MAX_URL_CHECK_RETRIES):
         try:
             LOG.debug("Testing url: %s" % url)
-            urllib2.urlopen(url)
+            request.urlopen(url)
             return True
         except Exception:
             pass
@@ -44,7 +45,7 @@ def check_metadata_ip_route(metadata_url):
     if sys.platform == 'win32' and osutils.check_os_version(6, 0):
         # 169.254.x.x addresses are not getting routed starting from
         # Windows Vista / 2008
-        metadata_netloc = urlparse.urlparse(metadata_url).netloc
+        metadata_netloc = parse.urlparse(metadata_url).netloc
         metadata_host = metadata_netloc.split(':')[0]
 
         if metadata_host.startswith("169.254."):
