@@ -69,7 +69,8 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         mock_enum.Next.assert_called_with(1)
         mock_unk.QueryInterface.assert_called_once_with(_vds_mock)
         mock_volume.GetProperties.assert_called_once_with()
-        self._ctypes_mock.wstring_at.assert_called_with(mock_properties.pwszName)
+        self._ctypes_mock.wstring_at.assert_called_with(
+            mock_properties.pwszName)
         mock_get_volume_index.assert_called_once_with('fake name')
         mock_extend_volume.assert_called_once_with(mock_pack, mock_volume,
                                                    mock_properties)

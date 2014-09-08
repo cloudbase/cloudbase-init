@@ -25,6 +25,7 @@ from oslo.config import cfg
 
 CONF = cfg.CONF
 
+
 class ConfigDriveServiceTest(unittest.TestCase):
     def setUp(self):
         self._win32com_mock = mock.MagicMock()

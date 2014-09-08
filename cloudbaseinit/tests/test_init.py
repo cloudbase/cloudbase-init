@@ -25,6 +25,7 @@ from cloudbaseinit.plugins import base
 
 CONF = cfg.CONF
 
+
 class InitManagerTest(unittest.TestCase):
     def setUp(self):
         self._win32com_mock = mock.MagicMock()
