@@ -60,9 +60,9 @@ class UserDataPluginTest(unittest.TestCase):
         self._test_execute(user_data_in='fake data')
 
     def test_execute_gzipped_user_data(self):
-        fake_user_data_in = ('\x1f\x8b\x08\x00\x8c\xdc\x14S\x02\xffKK'
-                             '\xccNUHI,I\x04\x00(\xc9\xcfI\t\x00\x00\x00')
-        fake_user_data_out = 'fake data'
+        fake_user_data_in = (b'\x1f\x8b\x08\x00\x8c\xdc\x14S\x02\xffKK'
+                             b'\xccNUHI,I\x04\x00(\xc9\xcfI\t\x00\x00\x00')
+        fake_user_data_out = b'fake data'
 
         self._test_execute(user_data_in=fake_user_data_in,
                            user_data_out=fake_user_data_out)

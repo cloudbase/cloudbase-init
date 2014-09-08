@@ -16,7 +16,7 @@
 
 import email
 import gzip
-import six
+import io
 
 from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.openstack.common import log as logging
@@ -29,7 +29,7 @@ LOG = logging.getLogger(__name__)
 
 class UserDataPlugin(base.BasePlugin):
     _PART_HANDLER_CONTENT_TYPE = "text/part-handler"
-    _GZIP_MAGIC_NUMBER = '\x1f\x8b'
+    _GZIP_MAGIC_NUMBER = b'\x1f\x8b'
 
     def execute(self, service, shared_data):
         try:
@@ -46,8 +46,8 @@ class UserDataPlugin(base.BasePlugin):
 
     def _check_gzip_compression(self, user_data):
         if user_data[:2] == self._GZIP_MAGIC_NUMBER:
-            sio = six.StringIO(user_data)
-            with gzip.GzipFile(fileobj=sio, mode='rb') as f:
+            bio = io.BytesIO(user_data)
+            with gzip.GzipFile(fileobj=bio, mode='rb') as f:
                 user_data = f.read()
 
         return user_data
