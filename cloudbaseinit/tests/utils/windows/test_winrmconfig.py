@@ -319,7 +319,7 @@ class WinRMConfigTests(unittest.TestCase):
                                           cert_thumbprint=None,
                                           address="fake:\\address",
                                           enabled=True)
-        
+
         mock_create_resource.assert_called_once_with(
             self._winrmconfig._SERVICE_LISTENER_URI % dict,
             '<p:Listener xmlns:p="http://schemas.microsoft.com/'
