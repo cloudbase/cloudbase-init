@@ -17,7 +17,6 @@
 import ctypes
 import mock
 import os
-import time
 import sys
 import unittest
 
@@ -28,11 +27,9 @@ from cloudbaseinit.utils import s
 if sys.platform == 'win32':
     import win32process
     import win32security
-    import wmi
 
     from ctypes import windll
     from ctypes import wintypes
-    from six.moves import winreg
 
     from cloudbaseinit.osutils import windows as windows_utils
 
@@ -424,30 +421,32 @@ class WindowsUtilsTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.get_user_sid')
-    def _test_get_user_home(self, mock_get_user_sid, user_sid):
-        key = mock.MagicMock()
+    @mock.patch('six.moves.winreg.OpenKey')
+    @mock.patch('six.moves.winreg.QueryValueEx')
+    @mock.patch('six.moves.winreg.HKEY_LOCAL_MACHINE')
+    def _test_get_user_home(self, user_sid, mock_hklm, mock_query_value_ex,
+                            mock_open_key, mock_get_user_sid):
         mock_get_user_sid.return_value = user_sid
-        winreg.OpenKey = mock.MagicMock(return_value=key)
-        winreg.QueryValueEx = mock.MagicMock()
+
         response = self._winutils.get_user_home(self._USERNAME)
+
         if user_sid:
             mock_get_user_sid.assert_called_with(self._USERNAME)
-            winreg.OpenKey.assert_called_with(
-                winreg.HKEY_LOCAL_MACHINE, 'SOFTWARE\\Microsoft\\Windows '
-                                           'NT\\CurrentVersion\\ProfileList\\'
-                                           '%s' % mock_get_user_sid())
+            mock_open_key.assert_called_with(
+                mock_hklm, 'SOFTWARE\\Microsoft\\Windows '
+                'NT\\CurrentVersion\\ProfileList\\%s' % mock_get_user_sid())
             self.assertTrue(response is not None)
-            winreg.QueryValueEx.assert_called_with(
-                winreg.OpenKey().__enter__(), 'ProfileImagePath')
+            mock_query_value_ex.assert_called_with(
+                mock_open_key().__enter__(), 'ProfileImagePath')
         else:
             self.assertTrue(response is None)
 
     def test_get_user_home(self):
         user = mock.MagicMock()
-        self._test_get_user_home(user_sid=user)
+        self._test_get_user_home(user)
 
     def test_get_user_home_fail(self):
-        self._test_get_user_home(user_sid=None)
+        self._test_get_user_home(None)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_os_version')
@@ -478,10 +477,12 @@ class WindowsUtilsTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._sanitize_wmi_input')
-    def _test_set_static_network_config(self, mock_sanitize_wmi_input,
+    @mock.patch('wmi.WMI')
+    def _test_set_static_network_config(self, mock_wmi,
+                                        mock_sanitize_wmi_input,
                                         adapter, ret_val1=None,
                                         ret_val2=None, ret_val3=None):
-        wmi.WMI = mock.MagicMock(return_value=self._conn)
+        mock_wmi.return_value = self._conn
         address = '10.10.10.10'
         adapter_name = 'adapter_name'
         broadcast = '0.0.0.0'
@@ -606,57 +607,66 @@ class WindowsUtilsTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_config_key_name')
-    def _test_set_config_value(self, mock_get_config_key_name, value):
+    @mock.patch('six.moves.winreg.CreateKey')
+    @mock.patch('six.moves.winreg.SetValueEx')
+    @mock.patch('six.moves.winreg.REG_DWORD')
+    @mock.patch('six.moves.winreg.REG_SZ')
+    @mock.patch('six.moves.winreg.HKEY_LOCAL_MACHINE')
+    def _test_set_config_value(self, value, mock_hklm, mock_reg_sz,
+                               mock_reg_dword, mock_set_value_ex,
+                               mock_create_key, mock_get_config_key_name):
         key = mock.MagicMock()
-        key_name = self._winutils._config_key + self._SECTION + '\\' + self\
-            ._CONFIG_NAME
+        key_name = (self._winutils._config_key + self._SECTION + '\\' +
+                    self._CONFIG_NAME)
         mock_get_config_key_name.return_value = key_name
-
-        winreg.CreateKey = mock.MagicMock()
-        winreg.REG_DWORD = mock.Mock()
-        winreg.REG_SZ = mock.Mock()
-        winreg.SetValueEx = mock.MagicMock()
 
         self._winutils.set_config_value(self._CONFIG_NAME, value,
                                         self._SECTION)
 
-        winreg.CreateKey.__enter__.return_value = key
-        with winreg.CreateKey as m:
+        mock_create_key.__enter__.return_value = key
+        with mock_create_key as m:
             assert m == key
 
-        winreg.CreateKey.__enter__.assert_called_with()
-        winreg.CreateKey.__exit__.assert_called_with(None, None, None)
-        winreg.CreateKey.assert_called_with(winreg.HKEY_LOCAL_MACHINE,
-                                            key_name)
+        mock_create_key.__enter__.assert_called_with()
+        mock_create_key.__exit__.assert_called_with(None, None, None)
+        mock_create_key.assert_called_with(mock_hklm,
+                                           key_name)
         mock_get_config_key_name.assert_called_with(self._SECTION)
         if type(value) == int:
-            winreg.SetValueEx.assert_called_with(
-                winreg.CreateKey().__enter__(), self._CONFIG_NAME, 0,
-                winreg.REG_DWORD, value)
+            mock_set_value_ex.assert_called_with(
+                mock_create_key().__enter__(), self._CONFIG_NAME, 0,
+                mock_reg_dword, value)
         else:
-            winreg.SetValueEx.assert_called_with(
-                winreg.CreateKey().__enter__(), self._CONFIG_NAME, 0,
-                winreg.REG_SZ, value)
+            mock_set_value_ex.assert_called_with(
+                mock_create_key().__enter__(), self._CONFIG_NAME, 0,
+                mock_reg_sz, value)
 
     def test_set_config_value_int(self):
-        self._test_set_config_value(value=1)
+        self._test_set_config_value(1)
 
     def test_set_config_value_not_int(self):
-        self._test_set_config_value(value='1')
+        self._test_set_config_value('1')
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_config_key_name')
-    def _test_get_config_value(self, mock_get_config_key_name, value):
+    @mock.patch('six.moves.winreg.OpenKey')
+    @mock.patch('six.moves.winreg.QueryValueEx')
+    @mock.patch('six.moves.winreg.REG_DWORD')
+    @mock.patch('six.moves.winreg.REG_SZ')
+    @mock.patch('six.moves.winreg.HKEY_LOCAL_MACHINE')
+    def _test_get_config_value(self, value, mock_hklm, mock_reg_sz,
+                               mock_reg_dword, mock_query_value_ex,
+                               mock_open_key, mock_get_config_key_name):
         key_name = self._winutils._config_key + self._SECTION + '\\'
         key_name += self._CONFIG_NAME
-        winreg.OpenKey = mock.MagicMock()
-        winreg.REG_DWORD = mock.Mock()
-        winreg.REG_SZ = mock.Mock()
+
         if type(value) == int:
-            regtype = winreg.REG_DWORD
+            regtype = mock_reg_dword
         else:
-            regtype = winreg.REG_SZ
-        winreg.QueryValueEx = mock.MagicMock(return_value=(value, regtype))
+            regtype = mock_reg_sz
+
+        mock_query_value_ex.return_value = (value, regtype)
+
         if value is None:
             mock_get_config_key_name.side_effect = [WindowsError]
             self.assertRaises(WindowsError, self._winutils.get_config_value,
@@ -665,36 +675,41 @@ class WindowsUtilsTest(unittest.TestCase):
             mock_get_config_key_name.return_value = key_name
             response = self._winutils.get_config_value(self._CONFIG_NAME,
                                                        self._SECTION)
-            winreg.OpenKey.assert_called_with(winreg.HKEY_LOCAL_MACHINE,
-                                              key_name)
+            mock_open_key.assert_called_with(mock_hklm, key_name)
             mock_get_config_key_name.assert_called_with(self._SECTION)
-            winreg.QueryValueEx.assert_called_with(
-                winreg.OpenKey().__enter__(), self._CONFIG_NAME)
+            mock_query_value_ex.assert_called_with(
+                mock_open_key().__enter__(), self._CONFIG_NAME)
             self.assertEqual(response, value)
 
     def test_get_config_value_type_int(self):
-        self._test_get_config_value(value=1)
+        self._test_get_config_value(1)
 
     def test_get_config_value_type_str(self):
-        self._test_get_config_value(value='fake')
+        self._test_get_config_value('fake')
 
     def test_get_config_value_type_error(self):
-        self._test_get_config_value(value=None)
+        self._test_get_config_value(None)
 
-    def _test_wait_for_boot_completion(self, ret_val):
+    @mock.patch('six.moves.winreg.OpenKey')
+    @mock.patch('six.moves.winreg.QueryValueEx')
+    @mock.patch('six.moves.winreg.KEY_READ')
+    @mock.patch('six.moves.winreg.HKEY_LOCAL_MACHINE')
+    @mock.patch('time.sleep')
+    def _test_wait_for_boot_completion(self, ret_val, mock_sleep, mock_hklm,
+                                       mock_key_read, mock_query_value_ex,
+                                       mock_open_key):
         key = mock.MagicMock()
-        time.sleep = mock.MagicMock()
-        winreg.OpenKey = mock.MagicMock()
-        winreg.QueryValueEx = mock.MagicMock()
-        winreg.QueryValueEx.side_effect = ret_val
-        self._winutils.wait_for_boot_completion()
-        winreg.OpenKey.__enter__.return_value = key
-        winreg.OpenKey.assert_called_with(
-            winreg.HKEY_LOCAL_MACHINE,
-            "SYSTEM\\Setup\\Status\\SysprepStatus", 0, winreg.KEY_READ)
+        mock_query_value_ex.side_effect = ret_val
 
-        winreg.QueryValueEx.assert_called_with(
-            winreg.OpenKey().__enter__(), "GeneralizationState")
+        self._winutils.wait_for_boot_completion()
+
+        mock_open_key.__enter__.return_value = key
+        mock_open_key.assert_called_with(
+            mock_hklm, "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
+            mock_key_read)
+
+        mock_query_value_ex.assert_called_with(
+            mock_open_key().__enter__(), "GeneralizationState")
 
     def test_wait_for_boot_completion(self):
         ret_val = [[7]]
@@ -794,11 +809,11 @@ class WindowsUtilsTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.stop_service')
-    def test_terminate(self, mock_stop_service):
-        time.sleep = mock.MagicMock()
+    @mock.patch('time.sleep')
+    def test_terminate(self, mock_sleep, mock_stop_service):
         self._winutils.terminate()
         mock_stop_service.assert_called_with(self._winutils._service_name)
-        time.sleep.assert_called_with(3)
+        mock_sleep.assert_called_with(3)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_ipv4_routing_table')
