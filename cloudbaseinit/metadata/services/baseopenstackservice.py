@@ -48,10 +48,7 @@ class BaseOpenStackService(base.BaseMetadataService):
         path = posixpath.normpath(
             posixpath.join('openstack', version, 'meta_data.json'))
         data = self._get_cache_data(path)
-        if type(data) is str:
-            return json.loads(self._get_cache_data(path))
-        else:
-            return data
+        return json.loads(data.decode('utf8'))
 
     def get_instance_id(self):
         return self._get_meta_data().get('uuid')

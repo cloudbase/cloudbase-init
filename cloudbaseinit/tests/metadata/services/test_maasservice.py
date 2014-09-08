@@ -18,9 +18,10 @@ import mock
 import os
 import posixpath
 import unittest
-import urllib2
 
 from oslo.config import cfg
+from six.moves.urllib import error
+
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import maasservice
 from cloudbaseinit.utils import x509constants
@@ -52,15 +53,15 @@ class MaaSHttpServiceTest(unittest.TestCase):
     def test_load_no_ip(self):
         self._test_load(ip=None)
 
-    @mock.patch('urllib2.urlopen')
+    @mock.patch('six.moves.urllib.request.urlopen')
     def _test_get_response(self, mock_urlopen, ret_val):
         mock_request = mock.MagicMock()
         mock_urlopen.side_effect = [ret_val]
-        if isinstance(ret_val, urllib2.HTTPError) and ret_val.code == 404:
+        if isinstance(ret_val, error.HTTPError) and ret_val.code == 404:
             self.assertRaises(base.NotExistingMetadataException,
                               self._maasservice._get_response, mock_request)
-        elif isinstance(ret_val, urllib2.HTTPError) and ret_val.code != 404:
-            self.assertRaises(urllib2.HTTPError,
+        elif isinstance(ret_val, error.HTTPError) and ret_val.code != 404:
+            self.assertRaises(error.HTTPError,
                               self._maasservice._get_response, mock_request)
         else:
             response = self._maasservice._get_response(req=mock_request)
@@ -71,13 +72,13 @@ class MaaSHttpServiceTest(unittest.TestCase):
         self._test_get_response(ret_val='fake response')
 
     def test_get_response_error_404(self):
-        err = urllib2.HTTPError("http://169.254.169.254/", 404,
-                                'test error 404', {}, None)
+        err = error.HTTPError("http://169.254.169.254/", 404,
+                              'test error 404', {}, None)
         self._test_get_response(ret_val=err)
 
     def test_get_response_error_not_404(self):
-        err = urllib2.HTTPError("http://169.254.169.254/", 409,
-                                'test other error', {}, None)
+        err = error.HTTPError("http://169.254.169.254/", 409,
+                              'test other error', {}, None)
         self._test_get_response(ret_val=err)
 
     @mock.patch('time.time')
@@ -109,7 +110,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_oauth_headers")
-    @mock.patch("urllib2.Request")
+    @mock.patch("six.moves.urllib.request.Request")
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_response")
     def test_get_data(self, mock_get_response, mock_Request,

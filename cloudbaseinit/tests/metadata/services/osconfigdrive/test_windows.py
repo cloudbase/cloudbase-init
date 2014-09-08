@@ -155,7 +155,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         fake_path = os.path.join('fake', 'path')
 
         mock_phys_disk.get_geometry.return_value = mock_geom
-        with mock.patch('__builtin__.open', mock.mock_open(),
+        with mock.patch('six.moves.builtins.open', mock.mock_open(),
                         create=True) as f:
             self._config_manager._write_iso_file(mock_phys_disk, fake_path,
                                                  10)

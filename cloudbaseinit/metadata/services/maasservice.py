@@ -14,10 +14,11 @@
 
 import posixpath
 import time
-import urllib2
 
 from oauth import oauth
 from oslo.config import cfg
+from six.moves.urllib import error
+from six.moves.urllib import request
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
@@ -67,8 +68,8 @@ class MaaSHttpService(base.BaseMetadataService):
 
     def _get_response(self, req):
         try:
-            return urllib2.urlopen(req)
-        except urllib2.HTTPError as ex:
+            return request.urlopen(req)
+        except error.HTTPError as ex:
             if ex.code == 404:
                 raise base.NotExistingMetadataException()
             else:
@@ -98,7 +99,7 @@ class MaaSHttpService(base.BaseMetadataService):
 
         LOG.debug('Getting metadata from: %(norm_path)s',
                   {'norm_path': norm_path})
-        req = urllib2.Request(norm_path, headers=oauth_headers)
+        req = request.Request(norm_path, headers=oauth_headers)
         response = self._get_response(req)
         return response.read()
 

@@ -15,9 +15,10 @@
 #    under the License.
 
 import posixpath
-import urllib2
 
 from oslo.config import cfg
+from six.moves.urllib import error
+from six.moves.urllib import request
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
@@ -59,8 +60,8 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
 
     def _get_response(self, req):
         try:
-            return urllib2.urlopen(req)
-        except urllib2.HTTPError as ex:
+            return request.urlopen(req)
+        except error.HTTPError as ex:
             if ex.code == 404:
                 raise base.NotExistingMetadataException()
             else:
@@ -69,14 +70,14 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
     def _get_data(self, path):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
         LOG.debug('Getting metadata from: %s', norm_path)
-        req = urllib2.Request(norm_path)
+        req = request.Request(norm_path)
         response = self._get_response(req)
         return response.read()
 
     def _post_data(self, path, data):
         norm_path = posixpath.join(CONF.metadata_base_url, path)
         LOG.debug('Posting metadata to: %s', norm_path)
-        req = urllib2.Request(norm_path, data=data)
+        req = request.Request(norm_path, data=data)
         self._get_response(req)
         return True
 
@@ -101,7 +102,7 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
             path = self._get_password_path()
             action = lambda: self._post_data(path, enc_password_b64)
             return self._exec_with_retry(action)
-        except urllib2.HTTPError as ex:
+        except error.HTTPError as ex:
             if ex.code == 409:
                 # Password already set
                 return False

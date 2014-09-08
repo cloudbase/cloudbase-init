@@ -49,24 +49,13 @@ class BaseOpenStackServiceTest(unittest.TestCase):
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_cache_data")
-    @mock.patch('json.loads')
-    def _test_get_meta_data(self, mock_loads, mock_get_cache_data, data):
-        mock_get_cache_data.return_value = data
+    def test_get_meta_data(self, mock_get_cache_data):
+        mock_get_cache_data.return_value = b'{"fake": "data"}'
         response = self._service._get_meta_data(
             version='fake version')
         path = posixpath.join('openstack', 'fake version', 'meta_data.json')
         mock_get_cache_data.assert_called_with(path)
-        if type(data) is str:
-            mock_loads.assert_called_once_with(mock_get_cache_data())
-            self.assertEqual(response, mock_loads())
-        else:
-            self.assertEqual(response, data)
-
-    def test_get_meta_data_string(self):
-        self._test_get_meta_data(data='fake data')
-
-    def test_get_meta_data_dict(self):
-        self._test_get_meta_data(data={'fake': 'data'})
+        self.assertEqual({"fake": "data"}, response)
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_meta_data")

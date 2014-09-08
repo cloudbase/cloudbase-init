@@ -17,11 +17,12 @@
 import mock
 import posixpath
 import unittest
-import urllib2
+
+from oslo.config import cfg
+from six.moves.urllib import error
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import ec2service
-from oslo.config import cfg
 
 CONF = cfg.CONF
 
@@ -52,16 +53,16 @@ class EC2ServiceTest(unittest.TestCase):
     def test_load_exception(self):
         self._test_load(side_effect=Exception)
 
-    @mock.patch('urllib2.urlopen')
+    @mock.patch('six.moves.urllib.request.urlopen')
     def _test_get_response(self, mock_urlopen, ret_value):
         req = mock.MagicMock()
         mock_urlopen.side_effect = [ret_value]
-        is_instance = isinstance(ret_value, urllib2.HTTPError)
+        is_instance = isinstance(ret_value, error.HTTPError)
         if is_instance and ret_value.code == 404:
             self.assertRaises(base.NotExistingMetadataException,
                               self._service._get_response, req)
         elif is_instance and ret_value.code != 404:
-            self.assertRaises(urllib2.HTTPError,
+            self.assertRaises(error.HTTPError,
                               self._service._get_response, req)
         else:
             response = self._service._get_response(req)
@@ -72,16 +73,16 @@ class EC2ServiceTest(unittest.TestCase):
         self._test_get_response(ret_value=None)
 
     def test_get_response_error_404(self):
-        err = urllib2.HTTPError("http://169.254.169.254/", 404,
-                                'test error 404', {}, None)
+        err = error.HTTPError("http://169.254.169.254/", 404,
+                              'test error 404', {}, None)
         self._test_get_response(ret_value=err)
 
     def test_get_response_error_other(self):
-        err = urllib2.HTTPError("http://169.254.169.254/", 409,
-                                'test error 409', {}, None)
+        err = error.HTTPError("http://169.254.169.254/", 409,
+                              'test error 409', {}, None)
         self._test_get_response(ret_value=err)
 
-    @mock.patch('urllib2.Request')
+    @mock.patch('six.moves.urllib.request.Request')
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
                 '._get_response')
     def test_get_data(self, mock_get_response, mock_Request):

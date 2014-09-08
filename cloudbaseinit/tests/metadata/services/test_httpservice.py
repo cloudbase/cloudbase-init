@@ -17,9 +17,9 @@
 import mock
 import os
 import unittest
-import urllib2
 
 from oslo.config import cfg
+from six.moves.urllib import error
 
 from cloudbaseinit.metadata.services import httpservice
 from cloudbaseinit.metadata.services import base
@@ -53,7 +53,7 @@ class HttpServiceTest(unittest.TestCase):
     def test_load_exception(self):
         self._test_load(side_effect=Exception)
 
-    @mock.patch('urllib2.urlopen')
+    @mock.patch('six.moves.urllib.request.urlopen')
     def _test_get_response(self, mock_urlopen, side_effect):
         mock_req = mock.MagicMock
         if side_effect and side_effect.code is 404:
@@ -71,14 +71,14 @@ class HttpServiceTest(unittest.TestCase):
             self.assertEqual(response, 'fake url')
 
     def test_get_response_fail_HTTPError(self):
-        error = urllib2.HTTPError("http://169.254.169.254/", 404,
-                                  'test error 404', {}, None)
-        self._test_get_response(side_effect=error)
+        err = error.HTTPError("http://169.254.169.254/", 404,
+                              'test error 404', {}, None)
+        self._test_get_response(side_effect=err)
 
     def test_get_response_fail_other_exception(self):
-        error = urllib2.HTTPError("http://169.254.169.254/", 409,
-                                  'test error 409', {}, None)
-        self._test_get_response(side_effect=error)
+        err = error.HTTPError("http://169.254.169.254/", 409,
+                              'test error 409', {}, None)
+        self._test_get_response(side_effect=err)
 
     def test_get_response(self):
         self._test_get_response(side_effect=None)
@@ -86,7 +86,7 @@ class HttpServiceTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._get_response')
     @mock.patch('posixpath.join')
-    @mock.patch('urllib2.Request')
+    @mock.patch('six.moves.urllib.request.Request')
     def test_get_data(self, mock_Request, mock_posix_join,
                       mock_get_response):
         fake_path = os.path.join('fake', 'path')
@@ -107,7 +107,7 @@ class HttpServiceTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._get_response')
     @mock.patch('posixpath.join')
-    @mock.patch('urllib2.Request')
+    @mock.patch('six.moves.urllib.request.Request')
     def test_post_data(self, mock_Request, mock_posix_join,
                        mock_get_response):
         fake_path = os.path.join('fake', 'path')
@@ -142,12 +142,12 @@ class HttpServiceTest(unittest.TestCase):
     def _test_post_password(self, mock_exec_with_retry, mock_post_data,
                             mock_get_password_path, ret_val):
         mock_exec_with_retry.side_effect = [ret_val]
-        if isinstance(ret_val, urllib2.HTTPError) and ret_val.code == 409:
+        if isinstance(ret_val, error.HTTPError) and ret_val.code == 409:
             response = self._httpservice.post_password(
                 enc_password_b64='fake')
             self.assertEqual(response, False)
-        elif isinstance(ret_val, urllib2.HTTPError) and ret_val.code != 409:
-            self.assertRaises(urllib2.HTTPError,
+        elif isinstance(ret_val, error.HTTPError) and ret_val.code != 409:
+            self.assertRaises(error.HTTPError,
                               self._httpservice.post_password, 'fake')
         else:
             response = self._httpservice.post_password(
@@ -159,11 +159,11 @@ class HttpServiceTest(unittest.TestCase):
         self._test_post_password(ret_val='fake return')
 
     def test_post_password_HTTPError_409(self):
-        err = urllib2.HTTPError("http://169.254.169.254/", 409,
-                                'test error 409', {}, None)
+        err = error.HTTPError("http://169.254.169.254/", 409,
+                              'test error 409', {}, None)
         self._test_post_password(ret_val=err)
 
     def test_post_password_other_HTTPError(self):
-        err = urllib2.HTTPError("http://169.254.169.254/", 404,
-                                'test error 404', {}, None)
+        err = error.HTTPError("http://169.254.169.254/", 404,
+                              'test error 404', {}, None)
         self._test_post_password(ret_val=err)
