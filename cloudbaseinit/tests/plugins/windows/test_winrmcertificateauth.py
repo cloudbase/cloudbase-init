@@ -16,7 +16,6 @@
 
 import importlib
 import mock
-import sys
 import unittest
 
 from cloudbaseinit.plugins import base

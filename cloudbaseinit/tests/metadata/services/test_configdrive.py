@@ -17,7 +17,6 @@
 import importlib
 import mock
 import os
-import sys
 import unittest
 import uuid
 

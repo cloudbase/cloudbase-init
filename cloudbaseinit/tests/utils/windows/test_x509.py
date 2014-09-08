@@ -103,7 +103,6 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 self.assertRaises(cryptoapi.CryptoAPIException,
                                   self._x509._generate_key, 'fake container',
                                   True)
-                mock_byref.assert_called_with(mock_HANDLE())
             else:
                 self._x509._generate_key('fake container', True)
                 mock_CryptAcquireContext.assert_called_with(
