@@ -84,7 +84,6 @@ class UserDataPluginTest(unittest.TestCase):
         data = mock_GzipFile().__enter__().read.return_value
         self.assertEqual(data, response)
 
-
     @mock.patch('email.message_from_string')
     def test_parse_mime(self, mock_message_from_string):
         fake_user_data = 'fake data'
