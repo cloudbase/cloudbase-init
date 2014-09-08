@@ -282,7 +282,8 @@ class WindowsUtilsTest(unittest.TestCase):
                                                    group_name)
             windll.netapi32.NetLocalGroupAddMembers.assert_called_with(
                 0, s.unicode(group_name), 3, ctypes.addressof(lmi), 1)
-            self.assertEqual(lmi.lgrmi3_domainandname, s.unicode(self._USERNAME))
+            self.assertEqual(lmi.lgrmi3_domainandname,
+                             s.unicode(self._USERNAME))
 
     def test_add_user_to_local_group_no_error(self):
         self._test_add_user_to_local_group(ret_value=0)

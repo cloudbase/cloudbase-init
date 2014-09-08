@@ -16,6 +16,7 @@ import sys
 
 _unicode = None
 
+
 def unicode(obj):
     def unicode_2(obj):
         import __builtin__
