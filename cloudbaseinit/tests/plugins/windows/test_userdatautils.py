@@ -18,6 +18,7 @@ import uuid
 import unittest
 
 from oslo.config import cfg
+from six import moves
 
 from cloudbaseinit.plugins.windows import userdatautils
 from cloudbaseinit.tests.metadata import fake_json_response
@@ -32,7 +33,7 @@ class UserDataUtilsTest(unittest.TestCase):
             '2013-04-04')
 
     def tearDown(self):
-        reload(uuid)
+        moves.reload_module(uuid)
 
     @mock.patch('re.search')
     @mock.patch('tempfile.gettempdir')

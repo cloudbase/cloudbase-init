@@ -45,7 +45,7 @@ class HeatUserDataHandlerTests(unittest.TestCase):
                       mock_execute_user_data_script, filename):
         mock_part = mock.MagicMock()
         mock_part.get_filename.return_value = filename
-        with mock.patch('__builtin__.open', mock.mock_open(),
+        with mock.patch('six.moves.builtins.open', mock.mock_open(),
                         create=True) as handle:
             response = self._heat.process(mock_part)
             handle().write.assert_called_once_with(mock_part.get_payload())

@@ -21,6 +21,7 @@ import sys
 import unittest
 
 from oslo.config import cfg
+from six import moves
 
 CONF = cfg.CONF
 
@@ -37,7 +38,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         self._extend_volumes = extendvolumes.ExtendVolumesPlugin()
 
     def tearDown(self):
-        reload(sys)
+        moves.reload_module(sys)
 
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes'
                 '.ExtendVolumesPlugin._get_volume_index')

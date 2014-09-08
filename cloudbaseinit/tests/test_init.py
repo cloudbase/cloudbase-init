@@ -15,10 +15,11 @@
 #    under the License.
 
 import mock
-import unittest
 import sys
+import unittest
 
 from oslo.config import cfg
+from six import moves
 
 from cloudbaseinit import init
 from cloudbaseinit.plugins import base
@@ -44,8 +45,8 @@ class InitManagerTest(unittest.TestCase):
         self._init = init.InitManager()
 
     def tearDown(self):
-        reload(sys)
-        reload(init)
+        moves.reload_module(sys)
+        moves.reload_module(init)
 
     def _test_get_plugin_section(self, instance_id):
         response = self._init._get_plugins_section(instance_id=instance_id)

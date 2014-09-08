@@ -19,6 +19,8 @@ import mock
 import sys
 import unittest
 
+from six import moves
+
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
 
@@ -41,7 +43,7 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
         self._certif_auth = self.winrmcert.ConfigWinRMCertificateAuthPlugin()
 
     def tearDown(self):
-        reload(sys)
+        moves.reload_module(sys)
 
     def _test_get_credentials(self, fake_user, fake_password):
         mock_shared_data = mock.MagicMock()
