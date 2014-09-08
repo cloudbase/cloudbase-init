@@ -15,36 +15,45 @@
 #    under the License.
 
 import mock
-import sys
 import unittest
 
-from oslo.config import cfg
 
-if sys.platform == 'win32':
-    from cloudbaseinit.utils.windows import winrmconfig
-
-CONF = cfg.CONF
-
-
-@unittest.skipUnless(sys.platform == "win32", "requires Windows")
 class WinRMConfigTests(unittest.TestCase):
 
     def setUp(self):
+        self._pywintypes_mock = mock.MagicMock()
+        self._win32com_mock = mock.MagicMock()
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'win32com': self._win32com_mock,
+             'pywintypes': self._pywintypes_mock})
+
+        self._module_patcher.start()
+
+        from cloudbaseinit.utils.windows import winrmconfig
+
         self._winrmconfig = winrmconfig.WinRMConfig()
 
-    @mock.patch('win32com.client.Dispatch')
-    def test_get_wsman_session(self, mock_Dispatch):
+    def tearDown(self):
+        self._module_patcher.stop()
+
+    def test_get_wsman_session(self):
         mock_wsman = mock.MagicMock()
-        mock_Dispatch.return_value = mock_wsman
+        self._win32com_mock.client.Dispatch.return_value = mock_wsman
+
         response = self._winrmconfig._get_wsman_session()
-        mock_Dispatch.assert_called_once_with('WSMan.Automation')
+
+        self._win32com_mock.client.Dispatch.assert_called_once_with(
+            'WSMan.Automation')
         mock_wsman.CreateSession.assert_called_once_with()
         self.assertEqual(response, mock_wsman.CreateSession())
 
     @mock.patch('re.match')
     def test_get_node_tag(self, mock_match):
         mock_tag = mock.MagicMock()
+
         response = self._winrmconfig._get_node_tag(mock_tag)
+
         mock_match.assert_called_once_with("^{.*}(.*)$", mock_tag)
         self.assertEqual(response, mock_match().groups().__getitem__())
 
@@ -59,7 +68,9 @@ class WinRMConfigTests(unittest.TestCase):
         fake_tree = [mock_node]
         mock_get_node_tag.return_value = tag
         mock_fromstring.return_value = fake_tree
+
         response = self._winrmconfig._parse_listener_xml(data_xml=data_xml)
+
         if data_xml is None:
             self.assertEqual(response, None)
         else:
@@ -115,7 +126,9 @@ class WinRMConfigTests(unittest.TestCase):
         fake_tree = [mock_node]
         mock_get_node_tag.return_value = tag
         mock_fromstring.return_value = fake_tree
+
         response = self._winrmconfig._parse_cert_mapping_xml(data_xml=data_xml)
+
         if data_xml is None:
             self.assertEqual(response, None)
         else:
@@ -164,11 +177,13 @@ class WinRMConfigTests(unittest.TestCase):
         fake_uri = 'fake:\\uri'
         fake_session.Get.side_effect = [resource]
         mock_get_wsman_session.return_value = fake_session
+
         if resource is Exception:
             self.assertRaises(Exception, self._winrmconfig._get_resource,
                               fake_uri)
         else:
             response = self._winrmconfig._get_resource(fake_uri)
+
             mock_get_wsman_session.assert_called_once_with()
             fake_session.Get.assert_called_once_with(fake_uri)
             self.assertEqual(response, resource)
@@ -185,7 +200,9 @@ class WinRMConfigTests(unittest.TestCase):
         fake_session = mock.MagicMock()
         fake_uri = 'fake:\\uri'
         mock_get_wsman_session.return_value = fake_session
+
         self._winrmconfig._delete_resource(fake_uri)
+
         fake_session.Delete.assert_called_once_with(fake_uri)
 
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
@@ -194,7 +211,9 @@ class WinRMConfigTests(unittest.TestCase):
         fake_session = mock.MagicMock()
         fake_uri = 'fake:\\uri'
         mock_get_wsman_session.return_value = fake_session
+
         self._winrmconfig._create_resource(fake_uri, 'fake data')
+
         fake_session.Create.assert_called_once_with(fake_uri, 'fake data')
 
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
@@ -208,8 +227,10 @@ class WinRMConfigTests(unittest.TestCase):
                      'uri': 'fake:\\uri'}
         mock_parse_cert_mapping_xml.return_value = 'fake response'
         mock_get_resource.return_value = 'fake resource'
+
         response = self._winrmconfig.get_cert_mapping('issuer', 'subject',
                                                       uri='fake:\\uri')
+
         mock_parse_cert_mapping_xml.assert_called_with('fake resource')
         mock_get_resource.assert_called_with(
             self._winrmconfig._SERVICE_CERTMAPPING_URI % fake_dict)
@@ -221,8 +242,10 @@ class WinRMConfigTests(unittest.TestCase):
         fake_dict = {'issuer': 'issuer',
                      'subject': 'subject',
                      'uri': 'fake:\\uri'}
+
         self._winrmconfig.delete_cert_mapping('issuer', 'subject',
                                               uri='fake:\\uri')
+
         mock_delete_resource.assert_called_with(
             self._winrmconfig._SERVICE_CERTMAPPING_URI % fake_dict)
 
@@ -236,9 +259,11 @@ class WinRMConfigTests(unittest.TestCase):
                      'subject': 'subject',
                      'uri': 'fake:\\uri'}
         mock_get_xml_bool.return_value = True
+
         self._winrmconfig.create_cert_mapping(
             issuer='issuer', subject='subject', username='fake user',
             password='fake password', uri='fake:\\uri', enabled=True)
+
         mock_get_xml_bool.assert_called_once_with(True)
         mock_create_resource.assert_called_once_with(
             self._winrmconfig._SERVICE_CERTMAPPING_URI % fake_dict,
@@ -260,8 +285,10 @@ class WinRMConfigTests(unittest.TestCase):
                 'address': 'fake:\\address'}
         mock_get_resource.return_value = 'fake resource'
         mock_parse_listener_xml.return_value = 'fake response'
+
         response = self._winrmconfig.get_listener(protocol='HTTPS',
                                                   address="fake:\\address")
+
         mock_get_resource.assert_called_with(
             self._winrmconfig._SERVICE_LISTENER_URI % dict)
         mock_parse_listener_xml.assert_called_once_with('fake resource')
@@ -272,8 +299,10 @@ class WinRMConfigTests(unittest.TestCase):
     def test_delete_listener(self, mock_delete_resource):
         dict = {'protocol': 'HTTPS',
                 'address': 'fake:\\address'}
+
         self._winrmconfig.delete_listener(protocol='HTTPS',
                                           address="fake:\\address")
+
         mock_delete_resource.assert_called_with(
             self._winrmconfig._SERVICE_LISTENER_URI % dict)
 
@@ -285,10 +314,12 @@ class WinRMConfigTests(unittest.TestCase):
         dict = {'protocol': 'HTTPS',
                 'address': 'fake:\\address'}
         mock_get_xml_bool.return_value = True
+
         self._winrmconfig.create_listener(protocol='HTTPS',
                                           cert_thumbprint=None,
                                           address="fake:\\address",
                                           enabled=True)
+        
         mock_create_resource.assert_called_once_with(
             self._winrmconfig._SERVICE_LISTENER_URI % dict,
             '<p:Listener xmlns:p="http://schemas.microsoft.com/'
