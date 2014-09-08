@@ -22,30 +22,32 @@ import unittest
 import uuid
 
 from oslo.config import cfg
-from six import moves
 
 CONF = cfg.CONF
-_win32com_mock = mock.MagicMock()
-_ctypes_mock = mock.MagicMock()
-_ctypes_util_mock = mock.MagicMock()
-_win32com_client_mock = mock.MagicMock()
-_pywintypes_mock = mock.MagicMock()
-_mock_dict = {'win32com': _win32com_mock,
-              'ctypes': _ctypes_mock,
-              'ctypes.util': _ctypes_util_mock,
-              'win32com.client': _win32com_client_mock,
-              'pywintypes': _pywintypes_mock}
-
 
 class ConfigDriveServiceTest(unittest.TestCase):
-    @mock.patch.dict(sys.modules, _mock_dict)
     def setUp(self):
+        self._win32com_mock = mock.MagicMock()
+        self._ctypes_mock = mock.MagicMock()
+        self._ctypes_util_mock = mock.MagicMock()
+        self._win32com_client_mock = mock.MagicMock()
+        self._pywintypes_mock = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'win32com': self._win32com_mock,
+             'ctypes': self._ctypes_mock,
+             'ctypes.util': self._ctypes_util_mock,
+             'win32com.client': self._win32com_client_mock,
+             'pywintypes': self._pywintypes_mock})
+        self._module_patcher.start()
+
         configdrive = importlib.import_module('cloudbaseinit.metadata.services'
                                               '.configdrive')
         self._config_drive = configdrive.ConfigDriveService()
 
     def tearDown(self):
-        moves.reload_module(uuid)
+        self._module_patcher.stop()
 
     @mock.patch('tempfile.gettempdir')
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.factory.'

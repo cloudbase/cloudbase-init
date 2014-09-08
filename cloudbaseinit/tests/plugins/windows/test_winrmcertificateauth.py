@@ -19,31 +19,33 @@ import mock
 import sys
 import unittest
 
-from six import moves
-
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
 
 from oslo.config import cfg
 
 CONF = cfg.CONF
-_ctypes_mock = mock.MagicMock()
-_win32com_mock = mock.MagicMock()
-_pywintypes_mock = mock.MagicMock()
-mock_dict = {'ctypes': _ctypes_mock,
-             'win32com': _win32com_mock,
-             'pywintypes': _pywintypes_mock}
 
 
 class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
-    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
+        self._ctypes_mock = mock.MagicMock()
+        self._win32com_mock = mock.MagicMock()
+        self._pywintypes_mock = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'ctypes': self._ctypes_mock,
+             'win32com': self._win32com_mock,
+             'pywintypes': self._pywintypes_mock})
+        self._module_patcher.start()
+
         self.winrmcert = importlib.import_module(
             'cloudbaseinit.plugins.windows.winrmcertificateauth')
         self._certif_auth = self.winrmcert.ConfigWinRMCertificateAuthPlugin()
 
     def tearDown(self):
-        moves.reload_module(sys)
+        self._module_patcher.stop()
 
     def _test_get_credentials(self, fake_user, fake_password):
         mock_shared_data = mock.MagicMock()

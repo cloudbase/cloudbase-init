@@ -21,24 +21,28 @@ import sys
 import unittest
 
 from oslo.config import cfg
-from six import moves
 
 CONF = cfg.CONF
 
-_ctypes_mock = mock.MagicMock()
-_comtypes_mock = mock.MagicMock()
-
 
 class ExtendVolumesPluginTests(unittest.TestCase):
-    @mock.patch.dict(sys.modules, {'comtypes': _comtypes_mock,
-                                   'ctypes': _ctypes_mock})
     def setUp(self):
+        self._ctypes_mock = mock.MagicMock()
+        self._comtypes_mock = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'comtypes': self._comtypes_mock,
+             'ctypes': self._ctypes_mock})
+
+        self._module_patcher.start()
+
         extendvolumes = importlib.import_module('cloudbaseinit.plugins.'
                                                 'windows.extendvolumes')
         self._extend_volumes = extendvolumes.ExtendVolumesPlugin()
 
     def tearDown(self):
-        moves.reload_module(sys)
+        self._module_patcher.stop()
 
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes'
                 '.ExtendVolumesPlugin._get_volume_index')
@@ -58,18 +62,18 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         mock_enum.Next.side_effect = [(mock_unk, mock_c), (None, None)]
         mock_unk.QueryInterface.return_value = mock_volume
         mock_volume.GetProperties.return_value = mock_properties
-        _ctypes_mock.wstring_at.return_value = 'fake name'
+        self._ctypes_mock.wstring_at.return_value = 'fake name'
         mock_get_volume_index.return_value = mock_volume_idxs
         self._extend_volumes._extend_volumes(mock_pack, [mock_volume_idxs])
         mock_pack.QueryVolumes.assert_called_once_with()
         mock_enum.Next.assert_called_with(1)
         mock_unk.QueryInterface.assert_called_once_with(_vds_mock)
         mock_volume.GetProperties.assert_called_once_with()
-        _ctypes_mock.wstring_at.assert_called_with(mock_properties.pwszName)
+        self._ctypes_mock.wstring_at.assert_called_with(mock_properties.pwszName)
         mock_get_volume_index.assert_called_once_with('fake name')
         mock_extend_volume.assert_called_once_with(mock_pack, mock_volume,
                                                    mock_properties)
-        _ctypes_mock.windll.ole32.CoTaskMemFree.assert_called_once_with(
+        self._ctypes_mock.windll.ole32.CoTaskMemFree.assert_called_once_with(
             mock_properties.pwszName)
 
     def test_get_volume_index(self):
@@ -101,7 +105,8 @@ class ExtendVolumesPluginTests(unittest.TestCase):
 
         mock_get_volume_extents_to_resize.assert_called_once_with(
             mock_pack, mock_properties.id)
-        _ctypes_mock.wstring_at.assert_called_with(mock_properties.pwszName)
+        self._ctypes_mock.wstring_at.assert_called_with(
+            mock_properties.pwszName)
         mock_volume.Extend.assert_called_once_with(
             mock_VDS_INPUT_DISK.__mul__()(), 1)
         mock_async.Wait.assert_called_once_with()
@@ -132,15 +137,15 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         mock_pack.QueryDisks.assert_called_once_with()
         mock_enum.Next.assert_called_with(1)
         mock_unk.QueryInterface.assert_called_once_with(mock_IVdsDisk)
-        _ctypes_mock.addressof.assert_called_with(mock_extents_p.contents)
+        self._ctypes_mock.addressof.assert_called_with(mock_extents_p.contents)
         mock_VDS_DISK_EXTENT.__mul__().from_address.assert_called_with(
-            _ctypes_mock.addressof(mock_extents_p.contents))
+            self._ctypes_mock.addressof(mock_extents_p.contents))
 
-        _ctypes_mock.pointer.assert_called_once_with(
+        self._ctypes_mock.pointer.assert_called_once_with(
             mock_VDS_DISK_EXTENT())
         self.assertEqual(response, [])
 
-        _ctypes_mock.windll.ole32.CoTaskMemFree.assert_called_with(
+        self._ctypes_mock.windll.ole32.CoTaskMemFree.assert_called_with(
             mock_extents_p)
 
     @mock.patch('cloudbaseinit.utils.windows.vds.'

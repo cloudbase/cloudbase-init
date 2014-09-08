@@ -23,21 +23,28 @@ from cloudbaseinit.plugins import base
 from oslo.config import cfg
 
 CONF = cfg.CONF
-_mock_wintypes = mock.MagicMock()
-_mock_pywintypes = mock.MagicMock()
-_mock_win32 = mock.MagicMock()
-mock_dict = {'ctypes': _mock_wintypes,
-             'ctypes.wintypes': _mock_wintypes,
-             'pywintypes': _mock_pywintypes,
-             'win32com': _mock_win32}
 
 
 class ConfigWinRMListenerPluginTests(unittest.TestCase):
-    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
+        self._mock_wintypes = mock.MagicMock()
+        self._mock_pywintypes = mock.MagicMock()
+        self._mock_win32 = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'ctypes': self._mock_wintypes,
+             'ctypes.wintypes': self._mock_wintypes,
+             'pywintypes': self._mock_pywintypes,
+             'win32com': self._mock_win32})
+        self._module_patcher.start()
+
         winrmlistener = importlib.import_module('cloudbaseinit.plugins.'
                                                 'windows.winrmlistener')
         self._winrmlistener = winrmlistener.ConfigWinRMListenerPlugin()
+
+    def tearDown(self):
+        self._module_patcher.stop()
 
     def _test_check_winrm_service(self, service_exists):
         mock_osutils = mock.MagicMock()

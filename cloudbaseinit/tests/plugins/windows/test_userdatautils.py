@@ -18,7 +18,6 @@ import uuid
 import unittest
 
 from oslo.config import cfg
-from six import moves
 
 from cloudbaseinit.plugins.windows import userdatautils
 from cloudbaseinit.tests.metadata import fake_json_response
@@ -32,23 +31,21 @@ class UserDataUtilsTest(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
-    def tearDown(self):
-        moves.reload_module(uuid)
-
     @mock.patch('re.search')
     @mock.patch('tempfile.gettempdir')
     @mock.patch('os.remove')
     @mock.patch('os.path.exists')
     @mock.patch('os.path.expandvars')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    def _test_execute_user_data_script(self, mock_get_os_utils,
+    @mock.patch('uuid.uuid4')
+    def _test_execute_user_data_script(self, mock_uuid4, mock_get_os_utils,
                                        mock_path_expandvars,
                                        mock_path_exists, mock_os_remove,
                                        mock_gettempdir, mock_re_search,
                                        fake_user_data):
         mock_osutils = mock.MagicMock()
         mock_gettempdir.return_value = 'fake_temp'
-        uuid.uuid4 = mock.MagicMock(return_value='randomID')
+        mock_uuid4.return_value = 'randomID'
         match_instance = mock.MagicMock()
         path = os.path.join('fake_temp', 'randomID')
         args = None

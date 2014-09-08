@@ -19,34 +19,37 @@ import sys
 import unittest
 
 from oslo.config import cfg
-from six import moves
 
 from cloudbaseinit import init
 from cloudbaseinit.plugins import base
 
 CONF = cfg.CONF
-_win32com_mock = mock.MagicMock()
-_comtypes_mock = mock.MagicMock()
-_pywintypes_mock = mock.MagicMock()
-_ctypes_mock = mock.MagicMock()
-_ctypes_util_mock = mock.MagicMock()
-mock_dict = {'ctypes.util': _ctypes_util_mock,
-             'win32com': _win32com_mock,
-             'comtypes': _comtypes_mock,
-             'pywintypes': _pywintypes_mock,
-             'ctypes': _ctypes_mock}
-
 
 class InitManagerTest(unittest.TestCase):
-    @mock.patch.dict(sys.modules, mock_dict)
     def setUp(self):
+        self._win32com_mock = mock.MagicMock()
+        self._comtypes_mock = mock.MagicMock()
+        self._pywintypes_mock = mock.MagicMock()
+        self._ctypes_mock = mock.MagicMock()
+        self._ctypes_util_mock = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'ctypes.util': self._ctypes_util_mock,
+             'win32com': self._win32com_mock,
+             'comtypes': self._comtypes_mock,
+             'pywintypes': self._pywintypes_mock,
+             'ctypes': self._ctypes_mock})
+
+        self._module_patcher.start()
+
         self.osutils = mock.MagicMock()
         self.plugin = mock.MagicMock()
+
         self._init = init.InitManager()
 
     def tearDown(self):
-        moves.reload_module(sys)
-        moves.reload_module(init)
+        self._module_patcher.stop()
 
     def _test_get_plugin_section(self, instance_id):
         response = self._init._get_plugins_section(instance_id=instance_id)
