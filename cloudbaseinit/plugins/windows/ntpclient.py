@@ -33,10 +33,11 @@ CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
 
+_W32TIME_SERVICE = "w32time"
+
 
 class NTPClientPlugin(base.BasePlugin):
     def _check_w32time_svc_status(self, osutils):
-        _W32TIME_SERVICE = "w32time"
 
         svc_start_mode = osutils.get_service_start_mode(
             _W32TIME_SERVICE)
