@@ -14,6 +14,7 @@
 
 import logging
 import serial
+import six
 
 from oslo.config import cfg
 
@@ -34,6 +35,16 @@ LOG = openstack_logging.getLogger(__name__)
 
 
 class SerialPortHandler(logging.StreamHandler):
+    class _UnicodeToBytesStream(object):
+        def __init__(self, stream):
+            self._stream = stream
+
+        def write(self, data):
+            if isinstance(data, six.text_type):
+                self._stream.write(data.encode("utf-8"))
+            else:
+                self._stream.write(data)
+
     def __init__(self):
         self._port = None
 
@@ -51,7 +62,9 @@ class SerialPortHandler(logging.StreamHandler):
                 # Log to other handlers
                 LOG.exception(ex)
 
-        super(SerialPortHandler, self).__init__(self._port)
+        # Unicode strings are not properly handled by the serial module
+        super(SerialPortHandler, self).__init__(
+            self._UnicodeToBytesStream(self._port))
 
     def close(self):
         if self._port and self._port.isOpen():
