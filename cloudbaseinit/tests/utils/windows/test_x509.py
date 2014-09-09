@@ -16,9 +16,9 @@
 
 import importlib
 import mock
+import six
 import unittest
 
-from cloudbaseinit.utils import s
 from cloudbaseinit.utils import x509constants
 
 
@@ -220,7 +220,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             mock_CertOpenStore.assert_called_with(
                 self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
-                s.unicode(self.x509.STORE_NAME_MY))
+                six.text_type(self.x509.STORE_NAME_MY))
             mock_get_cert_thumprint.assert_called_once_with(
                 mock_CertCreateSelfSignCertificate())
 
@@ -353,7 +353,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             mock_CertOpenStore.assert_called_with(
                 self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
-                s.unicode(self.x509.STORE_NAME_MY))
+                six.text_type(self.x509.STORE_NAME_MY))
 
             mock_CertAddEncodedCertificateToStore.assert_called_with(
                 mock_CertOpenStore(),

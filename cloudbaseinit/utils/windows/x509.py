@@ -16,11 +16,11 @@
 
 import copy
 import ctypes
+import six
 import uuid
 
 from ctypes import wintypes
 
-from cloudbaseinit.utils import s
 from cloudbaseinit.utils.windows import cryptoapi
 from cloudbaseinit.utils import x509constants
 
@@ -182,7 +182,7 @@ class CryptoAPICertManager(object):
 
             store_handle = cryptoapi.CertOpenStore(
                 cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
-                s.unicode(store_name))
+                six.text_type(store_name))
             if not store_handle:
                 raise cryptoapi.CryptoAPIException()
 
@@ -246,7 +246,7 @@ class CryptoAPICertManager(object):
 
             store_handle = cryptoapi.CertOpenStore(
                 cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
-                s.unicode(store_name))
+                six.text_type(store_name))
             if not store_handle:
                 raise cryptoapi.CryptoAPIException()
 

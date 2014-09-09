@@ -18,12 +18,10 @@ import ctypes
 import importlib
 import mock
 import os
+import six
 import unittest
 
 from oslo.config import cfg
-
-from cloudbaseinit.utils import s
-
 
 CONF = cfg.CONF
 
@@ -273,7 +271,7 @@ class WindowsUtilsTest(unittest.TestCase):
             response = self._winutils._get_user_sid_and_domain(self._USERNAME)
 
             advapi32.LookupAccountNameW.assert_called_with(
-                0, s.unicode(self._USERNAME), sid,
+                0, six.text_type(self._USERNAME), sid,
                 self._ctypes_mock.byref(cbSid), domainName,
                 self._ctypes_mock.byref(cchReferencedDomainName),
                 self._ctypes_mock.byref(sidNameUse))
@@ -308,12 +306,12 @@ class WindowsUtilsTest(unittest.TestCase):
                                                    group_name)
 
             netapi32.NetLocalGroupAddMembers.assert_called_with(
-                0, s.unicode(group_name), 3,
+                0, six.text_type(group_name), 3,
                 self._ctypes_mock.addressof.return_value, 1)
 
             self._ctypes_mock.addressof.assert_called_once_with(lmi)
             self.assertEqual(lmi.lgrmi3_domainandname,
-                             s.unicode(self._USERNAME))
+                             six.text_type(self._USERNAME))
 
     def test_add_user_to_local_group_no_error(self):
         self._test_add_user_to_local_group(ret_value=0)
@@ -461,7 +459,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         mock_SetComputerNameExW.assert_called_with(
             self._winutils.ComputerNamePhysicalDnsHostname,
-            s.unicode('fake name'))
+            six.text_type('fake name'))
 
     def test_set_host_name(self):
         self._test_set_host_name(ret_value='fake response')
