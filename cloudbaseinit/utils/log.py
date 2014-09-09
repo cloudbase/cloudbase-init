@@ -30,20 +30,28 @@ CONF = cfg.CONF
 CONF.register_opts(opts)
 CONF.import_opt('log_date_format', 'cloudbaseinit.openstack.common.log')
 
+LOG = openstack_logging.getLogger(__name__)
+
 
 class SerialPortHandler(logging.StreamHandler):
     def __init__(self):
+        self._port = None
+
         if CONF.logging_serial_port_settings:
             settings = CONF.logging_serial_port_settings.split(',')
 
-            self._port = serial.Serial(port=settings[0],
-                                       baudrate=int(settings[1]),
-                                       parity=settings[2],
-                                       bytesize=int(settings[3]))
-            if not self._port.isOpen():
-                self._port.open()
+            try:
+                self._port = serial.Serial(port=settings[0],
+                                           baudrate=int(settings[1]),
+                                           parity=settings[2],
+                                           bytesize=int(settings[3]))
+                if not self._port.isOpen():
+                    self._port.open()
+            except serial.SerialException as ex:
+                # Log to other handlers
+                LOG.exception(ex)
 
-            super(SerialPortHandler, self).__init__(self._port)
+        super(SerialPortHandler, self).__init__(self._port)
 
     def close(self):
         if self._port and self._port.isOpen():
