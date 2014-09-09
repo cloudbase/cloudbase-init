@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import mock
 import sys
 import unittest
@@ -24,17 +23,27 @@ from cloudbaseinit.metadata.services.osconfigdrive import factory
 
 class ClassloaderTest(unittest.TestCase):
 
+    def setUp(self):
+        self.original_platform = sys.platform
+
+    def tearDown(self):
+        sys.platform = self.original_platform
+
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
     def _test_get_config_drive_manager(self, mock_load_class, platform):
         sys.platform = platform
+
         if platform is not "win32":
             self.assertRaises(NotImplementedError,
                               factory.get_config_drive_manager)
+
         else:
             response = factory.get_config_drive_manager()
+
             mock_load_class.assert_called_once_with(
                 'cloudbaseinit.metadata.services.osconfigdrive.'
                 'windows.WindowsConfigDriveManager')
+
             self.assertIsNotNone(response)
 
     def test_get_config_drive_manager(self):
