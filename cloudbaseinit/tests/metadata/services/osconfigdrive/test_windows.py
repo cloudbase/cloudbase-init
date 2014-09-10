@@ -39,7 +39,9 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         self.physical_disk = importlib.import_module(
             "cloudbaseinit.utils.windows.physical_disk")
 
-        # self.physical_disk.Win32_DiskGeometry = mock.MagicMock()
+        self.physical_disk.Win32_DiskGeometry = mock.MagicMock()
+        self.windows.physical_disk.PhysicalDisk = mock.MagicMock()
+
         self._config_manager = self.windows.WindowsConfigDriveManager()
 
     def tearDown(self):
@@ -88,13 +90,11 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._c_char_array_to_c_ushort')
-    @mock.patch("cloudbaseinit.utils.windows.physical_disk.Win32_DiskGeometry")
-    def _test_get_iso_disk_size(self, mock_Win32_DiskGeometry,
-                                mock_c_char_array_to_c_ushort, media_type,
-                                value, iso_id):
+    def _test_get_iso_disk_size(self, mock_c_char_array_to_c_ushort,
+                                media_type, value, iso_id):
 
         if media_type == "fixed":
-            media_type = mock_Win32_DiskGeometry.FixedMedia
+            media_type = self.physical_disk.Win32_DiskGeometry.FixedMedia
 
         boot_record_off = 0x8000
         volume_size_off = 80
@@ -215,37 +215,42 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._get_iso_disk_size')
-    @mock.patch('cloudbaseinit.utils.windows.physical_disk.PhysicalDisk')
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._write_iso_file')
     def _test_extract_iso_disk_file(self, mock_write_iso_file,
-                                    mock_PhysicalDisk, mock_get_iso_disk_size,
-                                    exception):
+                                    mock_get_iso_disk_size, exception):
+
         mock_osutils = mock.MagicMock()
         fake_path = os.path.join('fake', 'path')
         fake_path_physical = os.path.join(fake_path, 'physical')
+
         mock_osutils.get_physical_disks.return_value = [fake_path_physical]
         mock_get_iso_disk_size.return_value = 'fake iso size'
 
+        mock_PhysDisk = self.windows.physical_disk.PhysicalDisk.return_value
+
         if exception:
-            mock_PhysicalDisk().open.side_effect = [Exception]
+            mock_PhysDisk.open.side_effect = [Exception]
 
         response = self._config_manager._extract_iso_disk_file(
             osutils=mock_osutils, iso_file_path=fake_path)
 
         if not exception:
             mock_get_iso_disk_size.assert_called_once_with(
-                mock_PhysicalDisk())
-            mock_write_iso_file.assert_called_once_with(mock_PhysicalDisk(),
-                                                        fake_path,
-                                                        'fake iso size')
+                mock_PhysDisk)
+            mock_write_iso_file.assert_called_once_with(
+                mock_PhysDisk, fake_path, 'fake iso size')
+
+            self.windows.physical_disk.PhysicalDisk.assert_called_once_with(
+                fake_path_physical)
+            mock_osutils.get_physical_disks.assert_called_once_with()
+
+            mock_PhysDisk.open.assert_called_once_with()
+            mock_PhysDisk.close.assert_called_once_with()
+
             self.assertTrue(response)
         else:
             self.assertFalse(response)
-
-        mock_PhysicalDisk().open.assert_called_once_with()
-        mock_osutils.get_physical_disks.assert_called_once_with()
-        mock_PhysicalDisk().close.assert_called_once_with()
 
     def test_extract_iso_disk_file_disk_found(self):
         self._test_extract_iso_disk_file(exception=False)
