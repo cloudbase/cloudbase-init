@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import tempfile
 import os
+import tempfile
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.windows import fileexecutils

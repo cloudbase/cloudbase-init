@@ -23,8 +23,8 @@ from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.metadata.services.osconfigdrive import factory
+from cloudbaseinit.openstack.common import log as logging
 
 opts = [
     cfg.BoolOpt('config_drive_raw_hhd', default=True,

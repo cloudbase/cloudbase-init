@@ -26,11 +26,11 @@ class Win32_DiskGeometry(ctypes.Structure):
     FixedMedia = 12
 
     _fields_ = [
-        ('Cylinders',         wintypes.LARGE_INTEGER),
-        ('MediaType',         wintypes.DWORD),
+        ('Cylinders', wintypes.LARGE_INTEGER),
+        ('MediaType', wintypes.DWORD),
         ('TracksPerCylinder', wintypes.DWORD),
-        ('SectorsPerTrack',   wintypes.DWORD),
-        ('BytesPerSector',    wintypes.DWORD),
+        ('SectorsPerTrack', wintypes.DWORD),
+        ('BytesPerSector', wintypes.DWORD),
     ]
 
 

@@ -27,13 +27,13 @@ VERSION_2_2 = (2 << 8) + 2
 class SOCKADDR(ctypes.Structure):
     _fields_ = [
         ('sa_family', wintypes.USHORT),
-        ('sa_data', ctypes.c_char*14),
+        ('sa_data', ctypes.c_char * 14),
     ]
 
 
 class WSADATA(ctypes.Structure):
     _fields_ = [
-        ('opaque_data', wintypes.BYTE*400),
+        ('opaque_data', wintypes.BYTE * 400),
     ]
 
 
