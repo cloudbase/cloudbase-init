@@ -50,7 +50,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_load_ssh_key.assert_called_with(fake_ssh_pub_key)
         mock_rsa.__enter__().public_encrypt.assert_called_with('fake password')
         mock_b64encode.assert_called_with('public encrypted')
-        self.assertEqual(response, 'encrypted password')
+        self.assertEqual('encrypted password', response)
 
     def _test_get_ssh_public_key(self, data_exists):
         mock_service = mock.MagicMock()
@@ -58,7 +58,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_service.get_public_keys.return_value = public_keys
         response = self._setpassword_plugin._get_ssh_public_key(mock_service)
         mock_service.get_public_keys.assert_called_with()
-        self.assertEqual(response, public_keys[0])
+        self.assertEqual(public_keys[0], response)
 
     def test_get_ssh_plublic_key(self):
         self._test_get_ssh_public_key(data_exists=True)
@@ -78,7 +78,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             mock_service.get_admin_password.assert_called_with()
         else:
             mock_osutils.generate_random_password.assert_called_once_with(14)
-        self.assertEqual(response, 'Passw0rd')
+        self.assertEqual('Passw0rd', response)
 
     def test_get_password_inject_true(self):
         self._test_get_password(inject_password=True)
@@ -100,14 +100,14 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         response = self._setpassword_plugin._set_metadata_password(
             fake_passw0rd, mock_service)
         if ssh_pub_key is None:
-            self.assertEqual(response, True)
+            self.assertTrue(response)
         else:
             mock_get_key.assert_called_once_with(mock_service)
             mock_encrypt_password.assert_called_once_with(ssh_pub_key,
                                                           fake_passw0rd)
             mock_service.post_password.assert_called_with(
                 'encrypted password')
-            self.assertEqual(response, 'value')
+            self.assertEqual('value', response)
 
     def test_set_metadata_password_with_ssh_key(self):
         fake_key = 'fake key'
@@ -156,4 +156,4 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                                                   'fake username')
         mock_set_metadata_password.assert_called_once_with('fake password',
                                                            mock_service)
-        self.assertEqual(response, (2, False))
+        self.assertEqual((2, False), response)

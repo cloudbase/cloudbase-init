@@ -106,13 +106,13 @@ class NTPClientPluginTests(unittest.TestCase):
         mock_options_data.get.assert_called_once_with(dhcp.OPTION_NTP_SERVERS)
         if ntp_data:
             mock_inet_ntoa.assert_called_once_with(ntp_data[:4])
-            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+            self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
             mock_check_w32time_svc_status.assert_called_once_with(mock_osutils)
             mock_osutils.set_ntp_client_config.assert_called_once_with(
                 'fake host')
         else:
-            self.assertEqual(response,
-                             (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False))
+            self.assertEqual((base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False),
+                             response)
 
     def test_execute_no_ntp_options_data(self):
         self._test_execute(ntp_data=None)

@@ -37,7 +37,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_content('fake name')
         path = posixpath.join('openstack', 'content', 'fake name')
         mock_get_cache_data.assert_called_once_with(path)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_cache_data")
@@ -45,7 +45,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_user_data()
         path = posixpath.join('openstack', 'latest', 'user_data')
         mock_get_cache_data.assert_called_once_with(path)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_cache_data")
@@ -63,7 +63,8 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_instance_id()
         mock_get_meta_data.assert_called_once_with()
         mock_get_meta_data().get.assert_called_once_with('uuid')
-        self.assertEqual(response, mock_get_meta_data().get())
+        self.assertEqual(mock_get_meta_data.return_value.get.return_value,
+                         response)
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_meta_data")
@@ -71,7 +72,8 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_host_name()
         mock_get_meta_data.assert_called_once_with()
         mock_get_meta_data().get.assert_called_once_with('hostname')
-        self.assertEqual(response, mock_get_meta_data().get())
+        self.assertEqual(mock_get_meta_data.return_value.get.return_value,
+                         response)
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_meta_data")
@@ -79,7 +81,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_public_keys()
         mock_get_meta_data.assert_called_once_with()
         mock_get_meta_data().get.assert_called_once_with('public_keys')
-        self.assertEqual(response, mock_get_meta_data().get().values())
+        self.assertEqual(mock_get_meta_data().get().values(), response)
 
     @mock.patch("cloudbaseinit.metadata.services.baseopenstackservice"
                 ".BaseOpenStackService._get_meta_data")
@@ -96,11 +98,11 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_admin_password()
         mock_get_meta_data.assert_called_once_with()
         if meta_data and 'admin_pass' in meta_data:
-            self.assertEqual(response, meta_data['admin_pass'])
+            self.assertEqual(meta_data['admin_pass'], response)
         elif meta_data and 'admin_pass' in meta_data.get('meta'):
-            self.assertEqual(response, meta_data.get('meta')['admin_pass'])
+            self.assertEqual(meta_data.get('meta')['admin_pass'], response)
         else:
-            self.assertEqual(response, None)
+            self.assertEqual(None, response)
 
     def test_get_admin_pass(self):
         self._test_get_admin_password(meta_data={'admin_pass': 'fake pass'})
@@ -124,13 +126,13 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_client_auth_certs()
         mock_get_meta_data.assert_called_once_with()
         if 'meta' in meta_data:
-            self.assertEqual(response, ['fake cert'])
+            self.assertEqual(['fake cert'], response)
         elif type(ret_value) is str and ret_value.startswith(
                 x509constants.PEM_HEADER):
             mock_get_user_data.assert_called_once_with()
-            self.assertEqual(response, [ret_value])
+            self.assertEqual([ret_value], response)
         elif ret_value is base.NotExistingMetadataException:
-            self.assertEqual(response, None)
+            self.assertEqual(None, response)
 
     def test_get_client_auth_certs(self):
         self._test_get_client_auth_certs(

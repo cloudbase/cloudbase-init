@@ -92,18 +92,18 @@ class UserDataUtilsTest(unittest.TestCase):
                         mock.mock_open(), create=True):
             response = userdatautils.execute_user_data_script(fake_user_data)
         mock_gettempdir.assert_called_once_with()
-        self.assertEqual(mock_re_search.call_count, number_of_calls)
+        self.assertEqual(number_of_calls, mock_re_search.call_count)
         if args:
             mock_osutils.execute_process.assert_called_with(args, shell)
             mock_os_remove.assert_called_once_with(path + extension)
-            self.assertEqual(response, None)
+            self.assertEqual(None, response)
         elif powershell:
             mock_osutils.execute_powershell_script.assert_called_with(
                 path + extension, sysnative)
             mock_os_remove.assert_called_once_with(path + extension)
-            self.assertEqual(response, None)
+            self.assertEqual(None, response)
         else:
-            self.assertEqual(response, 0)
+            self.assertEqual(0, response)
 
     def test_handle_batch(self):
         fake_user_data = '^rem cmd\s'

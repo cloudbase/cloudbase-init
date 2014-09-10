@@ -143,7 +143,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
 
         self._ctypes_mock.pointer.assert_called_once_with(
             mock_VDS_DISK_EXTENT())
-        self.assertEqual(response, [])
+        self.assertEqual([], response)
 
         self._ctypes_mock.windll.ole32.CoTaskMemFree.assert_called_with(
             mock_extents_p)
@@ -166,7 +166,7 @@ class ExtendVolumesPluginTests(unittest.TestCase):
             mock_VDS_QUERY_SOFTWARE_PROVIDERS)
         mock_enum.Next.assert_called_with(1)
         mock_unk.QueryInterface.assert_called_once_with(mock_IVdsSwProvider)
-        self.assertEqual(response, ['fake providers'])
+        self.assertEqual(['fake providers'], response)
 
     @mock.patch('cloudbaseinit.utils.windows.vds.IVdsPack')
     def test_query_packs(self, mock_IVdsPack):
@@ -183,12 +183,12 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         mock_provider.QueryPacks.assert_called_once_with()
         mock_enum.Next.assert_called_with(1)
         mock_unk.QueryInterface.assert_called_once_with(mock_IVdsPack)
-        self.assertEqual(response, ['fake packs'])
+        self.assertEqual(['fake packs'], response)
 
     def test_get_volumes_to_extend(self):
         CONF.set_override('volumes_to_extend', '1')
         response = self._extend_volumes._get_volumes_to_extend()
-        self.assertEqual(response, [1])
+        self.assertEqual([1], response)
 
     @mock.patch('cloudbaseinit.utils.windows.vds.load_vds_service')
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes.'

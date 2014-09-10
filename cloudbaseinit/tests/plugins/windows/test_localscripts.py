@@ -37,9 +37,9 @@ class LocalScriptsPluginTests(unittest.TestCase):
         mock_listdir.return_value = fake_file_list
         response = self._localscripts._get_files_in_dir(fake_path)
         mock_listdir.assert_called_once_with(fake_path)
-        self.assertEqual(sorted(os.path.join(fake_path,
-                                             f) for f in fake_file_list),
-                         response)
+        self.assertEqual(
+            sorted(os.path.join(fake_path, f) for f in fake_file_list),
+            response)
 
     @mock.patch('cloudbaseinit.plugins.windows.localscripts'
                 '.LocalScriptsPlugin._get_files_in_dir')
@@ -55,4 +55,4 @@ class LocalScriptsPluginTests(unittest.TestCase):
 
         mock_get_files_in_dir.assert_called_once_with(CONF.local_scripts_path)
         mock_exec_file.assert_called_once_with(fake_path)
-        self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+        self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)

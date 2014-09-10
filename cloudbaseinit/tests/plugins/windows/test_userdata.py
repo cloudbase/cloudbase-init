@@ -115,10 +115,11 @@ class UserDataPluginTest(unittest.TestCase):
             mock_parse_mime.assert_called_once_with(user_data)
             mock_process_part.assert_called_once_with(mock_part,
                                                       mock_load_plugins(), {})
-            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, reboot))
+            self.assertEqual((base.PLUGIN_EXECUTION_DONE, reboot), response)
         else:
             mock_process_non_multi_part.assert_called_once_with(user_data)
-            self.assertEqual(response, mock_process_non_multi_part())
+            self.assertEqual(mock_process_non_multi_part.return_value,
+                             response)
 
     def test_process_user_data_multipart_reboot_true(self):
         self._test_process_user_data(user_data='Content-Type: multipart',
@@ -158,15 +159,15 @@ class UserDataPluginTest(unittest.TestCase):
         mock_user_handlers.get.assert_called_once_with(
             _content_type)
         if handler_func and handler_func is Exception:
-            self.assertEqual(mock_part.get_content_type.call_count, 2)
-            self.assertEqual(mock_part.get_filename.call_count, 2)
+            self.assertEqual(2, mock_part.get_content_type.call_count)
+            self.assertEqual(2, mock_part.get_filename.call_count)
         elif handler_func:
             handler_func.assert_called_once_with(None, _content_type,
                                                  mock_part.get_filename(),
                                                  mock_part.get_payload())
 
-            self.assertEqual(mock_part.get_content_type.call_count, 1)
-            self.assertEqual(mock_part.get_filename.call_count, 2)
+            self.assertEqual(1, mock_part.get_content_type.call_count)
+            self.assertEqual(2, mock_part.get_filename.call_count)
         else:
             mock_user_data_plugins.get.assert_called_once_with(_content_type)
             if user_data_plugin and content_type:
@@ -177,7 +178,8 @@ class UserDataPluginTest(unittest.TestCase):
             elif user_data_plugin and not content_type:
                 mock_get_plugin_return_value.assert_called_once_with(
                     user_data_plugin.process())
-                self.assertEqual(response, mock_get_plugin_return_value())
+                self.assertEqual(mock_get_plugin_return_value.return_value,
+                                 response)
 
     def test_process_part(self):
         handler_func = mock.MagicMock()
@@ -253,4 +255,4 @@ class UserDataPluginTest(unittest.TestCase):
         mock_execute_user_data_script.assert_called_once_with(user_data)
         mock_get_plugin_return_value.assert_called_once_with(
             mock_execute_user_data_script())
-        self.assertEqual(response, mock_get_plugin_return_value())
+        self.assertEqual(mock_get_plugin_return_value.return_value, response)

@@ -49,7 +49,7 @@ class ShellScriptPluginTests(unittest.TestCase):
         mock_part.get_payload.assert_called_once_with()
         mock_gettempdir.assert_called_once_with()
         if not exception:
-            self.assertEqual(response, 'fake response')
+            self.assertEqual('fake response', response)
 
     def test_process(self):
         self._test_process(exception=False)

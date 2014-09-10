@@ -68,7 +68,7 @@ class NetworkConfigPluginPluginTests(unittest.TestCase):
                 search_result.group('broadcast'),
                 search_result.group('gateway'),
                 search_result.group('dnsnameservers').strip().split(' '))
-            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+            self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
 
     def test_execute(self):
         m = mock.MagicMock()

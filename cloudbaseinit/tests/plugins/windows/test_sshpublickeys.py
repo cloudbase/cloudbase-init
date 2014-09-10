@@ -59,11 +59,10 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
                                                              fake_shared_data)
                 mock_service.get_public_keys.assert_called_with()
                 mock_osutils.get_user_home.assert_called_with('fake user')
-                self.assertEqual(mock_os_path.join.call_count, 2)
+                self.assertEqual(2, mock_os_path.join.call_count)
                 mock_os_makedirs.assert_called_once_with(mock_os_path.join())
 
-                self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE,
-                                            False))
+                self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
 
     def test_execute_with_user_home(self):
         fake_user_home = os.path.join('fake', 'home')

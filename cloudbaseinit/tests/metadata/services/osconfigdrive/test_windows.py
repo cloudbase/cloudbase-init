@@ -63,7 +63,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         mock_osutils.get_volume_label.assert_called_once_with('fake drive')
 
         if exists:
-            self.assertEqual(response, 'fake drive')
+            self.assertEqual('fake drive', response)
         else:
             self.assertIsNone(response)
 
@@ -79,14 +79,14 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
         response = self._config_manager._c_char_array_to_c_ushort(mock_buf, 1)
 
-        self.assertEqual(self._ctypes_mock.cast.call_count, 2)
+        self.assertEqual(2, self._ctypes_mock.cast.call_count)
         self._ctypes_mock.POINTER.assert_called_with(
             self._ctypes_mock.wintypes.WORD)
 
         self._ctypes_mock.cast.assert_called_with(
             mock_buf.__getitem__(), self._ctypes_mock.POINTER.return_value)
 
-        self.assertEqual(response, contents.value.__lshift__().__add__())
+        self.assertEqual(contents.value.__lshift__().__add__(), response)
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._c_char_array_to_c_ushort')
@@ -147,7 +147,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
                 mock_c_char_array_to_c_ushort.assert_has_calls(
                     mock.call(mock_buff, buf_off_volume),
                     mock.call(mock_buff, buf_off_block))
-                self.assertEqual(response, 10000)
+                self.assertEqual(10000, response)
 
     def test_test_get_iso_disk_size(self):
         self._test_get_iso_disk_size(

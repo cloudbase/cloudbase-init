@@ -49,5 +49,5 @@ class PartHandlerPluginTests(unittest.TestCase):
         mock_load_module.assert_called_once_with(os.path.join(
             'fake_directory', 'fake_name'))
         mock_part_handler.list_types.assert_called_once_with()
-        self.assertEqual(response, {'fake part':
-                                    mock_part_handler.handle_part})
+        self.assertEqual({'fake part': mock_part_handler.handle_part},
+                         response)

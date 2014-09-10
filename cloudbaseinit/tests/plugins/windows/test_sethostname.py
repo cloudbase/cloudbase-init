@@ -78,9 +78,9 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
             else:
                 mock_osutils.set_host_name.assert_called_once_with(hostname)
 
-        self.assertEqual(
-            response, (base.PLUGIN_EXECUTION_DONE,
-                       hostname_exists and not hostname_already_set))
+        self.assertEqual((base.PLUGIN_EXECUTION_DONE,
+                          hostname_exists and not hostname_already_set),
+                         response)
 
     def test_execute_hostname_already_set(self):
         self._test_execute(hostname_already_set=True)

@@ -55,11 +55,11 @@ class InitManagerTest(unittest.TestCase):
     def _test_get_plugin_section(self, instance_id):
         response = self._init._get_plugins_section(instance_id=instance_id)
         if not instance_id:
-            self.assertEqual(response, self._init._PLUGINS_CONFIG_SECTION)
+            self.assertEqual(self._init._PLUGINS_CONFIG_SECTION, response)
         else:
             self.assertEqual(
-                response,
-                instance_id + "/" + self._init._PLUGINS_CONFIG_SECTION)
+                instance_id + "/" + self._init._PLUGINS_CONFIG_SECTION,
+                response)
 
     @mock.patch('cloudbaseinit.init.InitManager._get_plugins_section')
     def test_get_plugin_status(self, mock_get_plugins_section):
