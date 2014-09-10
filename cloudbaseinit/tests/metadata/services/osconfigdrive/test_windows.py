@@ -14,24 +14,36 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import importlib
 import mock
 import os
-import sys
 import unittest
 
-if sys.platform == 'win32':
-    from cloudbaseinit.metadata.services.osconfigdrive import windows
-    from cloudbaseinit.utils.windows import physical_disk
 from oslo.config import cfg
 
 CONF = cfg.CONF
 
 
-@unittest.skipUnless(sys.platform == "win32", "requires Windows")
 class TestWindowsConfigDriveManager(unittest.TestCase):
 
     def setUp(self):
-        self._config_manager = windows.WindowsConfigDriveManager()
+        self._ctypes_mock = mock.MagicMock()
+
+        self._module_patcher = mock.patch.dict('sys.modules',
+                                               {'ctypes': self._ctypes_mock})
+
+        self._module_patcher.start()
+
+        self.windows = importlib.import_module(
+            "cloudbaseinit.metadata.services.osconfigdrive.windows")
+        self.physical_disk = importlib.import_module(
+            "cloudbaseinit.utils.windows.physical_disk")
+
+        # self.physical_disk.Win32_DiskGeometry = mock.MagicMock()
+        self._config_manager = self.windows.WindowsConfigDriveManager()
+
+    def tearDown(self):
+        self._module_patcher.stop()
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('os.path.exists')
@@ -59,26 +71,30 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
     def test_get_config_drive_cdrom_mount_point_exists_false(self):
         self._test_get_config_drive_cdrom_mount_point(exists=False)
 
-    @mock.patch('ctypes.cast')
-    @mock.patch('ctypes.POINTER')
-    @mock.patch('ctypes.wintypes.WORD')
-    def test_c_char_array_to_c_ushort(self, mock_WORD, mock_POINTER,
-                                      mock_cast):
+    def test_c_char_array_to_c_ushort(self):
         mock_buf = mock.MagicMock()
+        contents = self._ctypes_mock.cast.return_value.contents
 
-        response = self._config_manager._c_char_array_to_c_ushort(mock_buf,
-                                                                  1)
+        response = self._config_manager._c_char_array_to_c_ushort(mock_buf, 1)
 
-        self.assertEqual(mock_cast.call_count, 2)
-        mock_POINTER.assert_called_with(mock_WORD)
-        mock_cast.assert_called_with(mock_buf.__getitem__(), mock_POINTER())
-        self.assertEqual(response,
-                         mock_cast().contents.value.__lshift__().__add__())
+        self.assertEqual(self._ctypes_mock.cast.call_count, 2)
+        self._ctypes_mock.POINTER.assert_called_with(
+            self._ctypes_mock.wintypes.WORD)
+
+        self._ctypes_mock.cast.assert_called_with(
+            mock_buf.__getitem__(), self._ctypes_mock.POINTER.return_value)
+
+        self.assertEqual(response, contents.value.__lshift__().__add__())
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._c_char_array_to_c_ushort')
-    def _test_get_iso_disk_size(self, mock_c_char_array_to_c_ushort,
-                                media_type, value, iso_id):
+    @mock.patch("cloudbaseinit.utils.windows.physical_disk.Win32_DiskGeometry")
+    def _test_get_iso_disk_size(self, mock_Win32_DiskGeometry,
+                                mock_c_char_array_to_c_ushort, media_type,
+                                value, iso_id):
+
+        if media_type == "fixed":
+            media_type = mock_Win32_DiskGeometry.FixedMedia
 
         boot_record_off = 0x8000
         volume_size_off = 80
@@ -89,12 +105,15 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         mock_geom = mock.MagicMock()
 
         mock_phys_disk.get_geometry.return_value = mock_geom
+
         mock_geom.MediaType = media_type
         mock_geom.Cylinders = value
         mock_geom.TracksPerCylinder = 2
         mock_geom.SectorsPerTrack = 2
         mock_geom.BytesPerSector = 2
+
         mock_phys_disk.read.return_value = (mock_buff, 'fake value')
+
         mock_buff.__getitem__.return_value = iso_id
         mock_c_char_array_to_c_ushort.return_value = 100
 
@@ -108,15 +127,20 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         buf_off_block = boot_record_off - offset + block_size_off
 
         response = self._config_manager._get_iso_disk_size(mock_phys_disk)
+
         mock_phys_disk.get_geometry.assert_called_once_with()
-        if mock_geom.MediaType != physical_disk.Win32_DiskGeometry.FixedMedia:
+
+        if media_type != self.physical_disk.Win32_DiskGeometry.FixedMedia:
             self.assertIsNone(response)
+
         elif disk_size <= offset + mock_geom.BytesPerSector:
             self.assertIsNone(response)
+
         else:
             mock_phys_disk.seek.assert_called_once_with(offset)
             mock_phys_disk.read.assert_called_once_with(
                 mock_geom.BytesPerSector)
+
             if iso_id != 'CD001':
                 self.assertIsNone(response)
             else:
@@ -127,21 +151,21 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
     def test_test_get_iso_disk_size(self):
         self._test_get_iso_disk_size(
-            media_type=physical_disk.Win32_DiskGeometry.FixedMedia,
+            media_type="fixed",
             value=100, iso_id='CD001')
 
     def test_test_get_iso_disk_size_other_media_type(self):
-        self._test_get_iso_disk_size(media_type="fake media type", value=100,
+        self._test_get_iso_disk_size(media_type="other", value=100,
                                      iso_id='CD001')
 
     def test_test_get_iso_disk_size_other_disk_size_too_small(self):
         self._test_get_iso_disk_size(
-            media_type=physical_disk.Win32_DiskGeometry.FixedMedia, value=0,
-            iso_id='CD001')
+            media_type="fixed",
+            value=0, iso_id='CD001')
 
     def test_test_get_iso_disk_size_other_id(self):
         self._test_get_iso_disk_size(
-            media_type=physical_disk.Win32_DiskGeometry.FixedMedia,
+            media_type="fixed",
             value=100, iso_id='other id')
 
     def test_write_iso_file(self):
