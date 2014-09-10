@@ -14,14 +14,11 @@
 
 import mock
 import netifaces
-import struct
 import socket
+import struct
 import unittest
 
 from cloudbaseinit.utils import dhcp
-from oslo.config import cfg
-
-CONF = cfg.CONF
 
 
 class DHCPUtilsTests(unittest.TestCase):

@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import ctypes
 import importlib
 import mock
 import os
@@ -27,7 +26,7 @@ CONF = cfg.CONF
 
 
 class WindowsUtilsTest(unittest.TestCase):
-    '''Tests for the windows utils class'''
+    '''Tests for the windows utils class.'''
 
     _CONFIG_NAME = 'FakeConfig'
     _DESTINATION = '192.168.192.168'
