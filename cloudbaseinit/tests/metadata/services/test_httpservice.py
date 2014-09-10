@@ -43,9 +43,9 @@ class HttpServiceTest(unittest.TestCase):
             CONF.metadata_base_url)
         mock_get_meta_data.assert_called_once_with()
         if side_effect:
-            self.assertEqual(response, False)
+            self.assertFalse(response)
         else:
-            self.assertEqual(response, True)
+            self.assertTrue(response)
 
     def test_load(self):
         self._test_load(side_effect=None)
@@ -68,7 +68,7 @@ class HttpServiceTest(unittest.TestCase):
         else:
             mock_urlopen.return_value = 'fake url'
             response = self._httpservice._get_response(mock_req)
-            self.assertEqual(response, 'fake url')
+            self.assertEqual('fake url', response)
 
     def test_get_response_fail_HTTPError(self):
         err = error.HTTPError("http://169.254.169.254/", 404,
@@ -102,7 +102,7 @@ class HttpServiceTest(unittest.TestCase):
         mock_posix_join.assert_called_with(CONF.metadata_base_url, fake_path)
         mock_Request.assert_called_once_with(mock_norm_path)
         mock_get_response.assert_called_once_with(mock_req)
-        self.assertEqual(response, mock_data.read())
+        self.assertEqual(mock_data.read.return_value, response)
 
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._get_response')
@@ -125,13 +125,12 @@ class HttpServiceTest(unittest.TestCase):
                                            fake_path)
         mock_Request.assert_called_once_with(mock_norm_path, data=fake_data)
         mock_get_response.assert_called_once_with(mock_req)
-        self.assertEqual(response, True)
+        self.assertTrue(response)
 
     def test_get_password_path(self):
         response = self._httpservice._get_password_path()
-        self.assertEqual(
-            response, 'openstack/%s/password' %
-                      self._httpservice._POST_PASSWORD_MD_VER)
+        self.assertEqual('openstack/%s/password' %
+                         self._httpservice._POST_PASSWORD_MD_VER, response)
 
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._get_password_path')
@@ -153,7 +152,7 @@ class HttpServiceTest(unittest.TestCase):
             response = self._httpservice.post_password(
                 enc_password_b64='fake')
             mock_get_password_path.assert_called_once_with()
-            self.assertEqual(response, ret_val)
+            self.assertEqual(ret_val, response)
 
     def test_post_password(self):
         self._test_post_password(ret_val='fake return')

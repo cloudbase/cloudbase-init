@@ -47,7 +47,7 @@ class TestFileExecutilsPlugin(unittest.TestCase):
             mock_osutils.execute_powershell_script.assert_called_once_with(
                 filename)
         else:
-            self.assertEqual(response, 0)
+            self.assertEqual(0, response)
 
     def test_process_cmd(self):
         self._test_exec_file(filename='fake.cmd')

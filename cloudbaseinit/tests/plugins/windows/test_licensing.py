@@ -53,7 +53,7 @@ class WindowsLicensingPluginTests(unittest.TestCase):
         else:
             response = self._licensing._run_slmgr(osutils=mock_osutils,
                                                   args=['fake args'])
-            self.assertEqual(response, 'fake output')
+            self.assertEqual('fake output', response)
 
         mock_osutils.check_sysnative_dir_exists.assert_called_once_with()
         if sysnative:
@@ -63,8 +63,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
 
         mock_osutils.execute_process.assert_called_once_with(
             [cscript_path, slmgr_path, 'fake args'], False)
-        self.assertEqual(mock_osutils.get_system32_dir.call_args_list,
-                         get_system32_dir_calls)
+        self.assertEqual(get_system32_dir_calls,
+                         mock_osutils.get_system32_dir.call_args_list)
 
     def test_run_slmgr_sysnative(self):
         self._test_run_slmgr(sysnative=True, exit_code=None)
@@ -91,8 +91,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
         if activate_windows:
             run_slmgr_calls.append(mock.call(mock_osutils, ['/ato']))
 
-        self.assertEqual(mock_run_slmgr.call_args_list, run_slmgr_calls)
-        self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+        self.assertEqual(run_slmgr_calls, mock_run_slmgr.call_args_list)
+        self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
 
     def test_execute_activate_windows_true(self):
         self._test_execute(activate_windows=True)

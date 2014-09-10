@@ -35,7 +35,7 @@ class CreateUserPluginTests(unittest.TestCase):
         mock_osutils.generate_random_password.return_value = 'fake password'
         response = self._create_user._get_password(mock_osutils)
         mock_osutils.generate_random_password.assert_called_once_with(14)
-        self.assertEqual(response, 'fake password')
+        self.assertEqual('fake password', response)
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.plugins.windows.createuser.CreateUserPlugin'
@@ -69,7 +69,7 @@ class CreateUserPluginTests(unittest.TestCase):
                 mock_token)
         mock_osutils.add_user_to_local_group.assert_called_once_with(
             CONF.username, CONF.groups[0])
-        self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+        self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
 
     def test_execute_user_exists(self):
         self._test_execute(user_exists=True)

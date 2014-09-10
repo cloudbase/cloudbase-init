@@ -66,7 +66,7 @@ class EC2ServiceTest(unittest.TestCase):
                               self._service._get_response, req)
         else:
             response = self._service._get_response(req)
-            self.assertEqual(response, ret_value)
+            self.assertEqual(ret_value, response)
         mock_urlopen.assert_called_once_with(req)
 
     def test_get_response(self):
@@ -90,7 +90,8 @@ class EC2ServiceTest(unittest.TestCase):
         fake_path = posixpath.join(CONF.ec2_metadata_base_url, 'fake')
         mock_Request.assert_called_once_with(fake_path)
         mock_get_response.assert_called_once_with(mock_Request())
-        self.assertEqual(response, mock_get_response().read())
+        self.assertEqual(mock_get_response.return_value.read.return_value,
+                         response)
 
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
                 '._get_cache_data')
@@ -98,7 +99,7 @@ class EC2ServiceTest(unittest.TestCase):
         response = self._service.get_host_name()
         mock_get_cache_data.assert_called_once_with(
             '%s/meta-data/local-hostname' % self._service._metadata_version)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
                 '._get_cache_data')
@@ -106,7 +107,7 @@ class EC2ServiceTest(unittest.TestCase):
         response = self._service.get_instance_id()
         mock_get_cache_data.assert_called_once_with(
             '%s/meta-data/instance-id' % self._service._metadata_version)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
                 '._get_cache_data')
@@ -120,5 +121,5 @@ class EC2ServiceTest(unittest.TestCase):
                       'idx)s/openssh-key' %
                       {'version': self._service._metadata_version,
                        'idx': 'key'})]
-        self.assertEqual(mock_get_cache_data.call_args_list, expected)
-        self.assertEqual(response, ['fake key'])
+        self.assertEqual(expected, mock_get_cache_data.call_args_list)
+        self.assertEqual(['fake key'], response)

@@ -32,5 +32,5 @@ class PluginFactoryTests(unittest.TestCase):
         for path in CONF.plugins:
             expected.append(mock.call(path))
         response = factory.load_plugins()
-        self.assertEqual(mock_load_class.call_args_list, expected)
+        self.assertEqual(expected, mock_load_class.call_args_list)
         self.assertTrue(response is not None)

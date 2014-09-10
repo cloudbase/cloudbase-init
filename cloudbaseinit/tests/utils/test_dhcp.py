@@ -57,7 +57,7 @@ class DHCPUtilsTests(unittest.TestCase):
         response = dhcp._get_dhcp_request_data(
             id_req=9999, mac_address=fake_mac_address,
             requested_options=[100], vendor_id='fake id')
-        self.assertEqual(response, data)
+        self.assertEqual(data, response)
 
     @mock.patch('struct.unpack')
     def _test_parse_dhcp_reply(self, mock_unpack, message_type,
@@ -76,13 +76,13 @@ class DHCPUtilsTests(unittest.TestCase):
         response = dhcp._parse_dhcp_reply(data=fake_data, id_req=9999)
 
         if message_type != 2:
-            self.assertEqual(response, (False, {}))
+            self.assertEqual((False, {}), response)
         elif id_reply != 9999:
-            self.assertEqual(response, (False, {}))
+            self.assertEqual((False, {}), response)
         elif fake_data[236:240] != dhcp._DHCP_COOKIE:
-            self.assertEqual(response, (False, {}))
+            self.assertEqual((False, {}), response)
         else:
-            self.assertEqual(response, (True, {100: b'fake'}))
+            self.assertEqual((True, {100: b'fake'}), response)
 
     def test_parse_dhcp_reply(self):
         self._test_parse_dhcp_reply(message_type=2, id_reply=9999,
@@ -115,8 +115,8 @@ class DHCPUtilsTests(unittest.TestCase):
 
         mock_interfaces.assert_called_once_with()
         mock_ifaddresses.assert_called_once_with('fake interface')
-        self.assertEqual(response,
-                         fake_addresses[netifaces.AF_LINK][0]['addr'])
+        self.assertEqual(fake_addresses[netifaces.AF_LINK][0]['addr'],
+                         response)
 
     @mock.patch('random.randint')
     @mock.patch('socket.socket')
@@ -153,4 +153,4 @@ class DHCPUtilsTests(unittest.TestCase):
         mock_parse_dhcp_reply.assert_called_once_with(mock_socket().recv(),
                                                       'fake int')
         mock_socket().close.assert_called_once_with()
-        self.assertEqual(response, 'fake replied options')
+        self.assertEqual('fake replied options', response)

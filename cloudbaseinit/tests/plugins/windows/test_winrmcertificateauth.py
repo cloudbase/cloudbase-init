@@ -57,10 +57,12 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
             response = self._certif_auth._get_credentials(mock_shared_data)
             expected = [mock.call(constants.SHARED_DATA_USERNAME),
                         mock.call(constants.SHARED_DATA_PASSWORD)]
-            self.assertEqual(mock_shared_data.get.call_args_list, expected)
+            self.assertEqual(expected, mock_shared_data.get.call_args_list)
+
             mock_shared_data.__setitem__.assert_called_once_with(
                 'admin_password', None)
-            self.assertEqual(response, (fake_user, fake_password))
+
+            self.assertEqual((fake_user, fake_password), response)
 
     def test_test_get_credentials(self):
         self._test_get_credentials(fake_user='fake user',
@@ -93,7 +95,7 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
                                              shared_data='fake data')
         mock_service.get_client_auth_certs.assert_called_once_with()
         if not cert_data:
-            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+            self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
         else:
             mock_get_credentials.assert_called_once_with('fake data')
             mock_import_cert.assert_called_once_with(
@@ -108,7 +110,7 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
             mock_WinRMConfig().create_cert_mapping.assert_called_once_with(
                 mock_cert_thumprint, cert_upn, 'fake user',
                 'fake password')
-            self.assertEqual(response, (base.PLUGIN_EXECUTION_DONE, False))
+            self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
 
     def test_execute(self):
         cert_data = 'fake cert data'

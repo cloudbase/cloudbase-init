@@ -163,13 +163,13 @@ class WindowsUtilsTest(unittest.TestCase):
         unsanitised = ' \' '
         response = self._winutils._sanitize_wmi_input(unsanitised)
         sanitised = ' \'\' '
-        self.assertEqual(response, sanitised)
+        self.assertEqual(sanitised, response)
 
     def test_sanitize_shell_input(self):
         unsanitised = ' " '
         response = self._winutils.sanitize_shell_input(unsanitised)
         sanitised = ' \\" '
-        self.assertEqual(response, sanitised)
+        self.assertEqual(sanitised, response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._set_user_password_expiration')
@@ -274,7 +274,7 @@ class WindowsUtilsTest(unittest.TestCase):
                 self._ctypes_mock.byref(cbSid), domainName,
                 self._ctypes_mock.byref(cchReferencedDomainName),
                 self._ctypes_mock.byref(sidNameUse))
-            self.assertEqual(response, (sid, domainName.value))
+            self.assertEqual((sid, domainName.value), response)
 
     def test_get_user_sid_and_domain(self):
         fake_obj = mock.Mock()
@@ -510,7 +510,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.get_network_adapters()
         conn.return_value.query.assert_called_with(wql)
-        self.assertEqual(response, [mock_response.Name])
+        self.assertEqual([mock_response.Name], response)
 
     def test_get_network_adapters(self):
         self._test_get_network_adapters(False)
@@ -636,10 +636,10 @@ class WindowsUtilsTest(unittest.TestCase):
     def _test_get_config_key_name(self, section):
         response = self._winutils._get_config_key_name(section)
         if section:
-            self.assertEqual(
-                response, self._winutils._config_key + section + '\\')
+            self.assertEqual(self._winutils._config_key + section + '\\',
+                             response)
         else:
-            self.assertEqual(response, self._winutils._config_key)
+            self.assertEqual(self._winutils._config_key, response)
 
     def test_get_config_key_name_with_section(self):
         self._test_get_config_key_name(self._SECTION)
@@ -695,7 +695,7 @@ class WindowsUtilsTest(unittest.TestCase):
                 self.windows_utils.WindowsError]
             response = self._winutils.get_config_value(self._CONFIG_NAME,
                                                        self._SECTION)
-            self.assertEqual(response, None)
+            self.assertEqual(None, response)
 
         else:
             mock_get_config_key_name.return_value = key_name
@@ -708,7 +708,7 @@ class WindowsUtilsTest(unittest.TestCase):
             mock_get_config_key_name.assert_called_with(self._SECTION)
             self._winreg_mock.QueryValueEx.assert_called_with(
                 self._winreg_mock.OpenKey().__enter__(), self._CONFIG_NAME)
-            self.assertEqual(response, value)
+            self.assertEqual(value, response)
 
     def test_get_config_value_type_int(self):
         self._test_get_config_value(1)
@@ -746,7 +746,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         conn.assert_called_with(moniker='//./root/cimv2')
         conn.return_value.Win32_Service.assert_called_with(Name='fake name')
-        self.assertEqual(response, 'fake name')
+        self.assertEqual('fake name', response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service')
@@ -755,7 +755,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.check_service_exists('fake name')
 
-        self.assertEqual(response, True)
+        self.assertTrue(response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service')
@@ -765,7 +765,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.get_service_status('fake name')
 
-        self.assertEqual(response, mock_service.State)
+        self.assertEqual(mock_service.State, response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service')
@@ -775,7 +775,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.get_service_start_mode('fake name')
 
-        self.assertEqual(response, mock_service.StartMode)
+        self.assertEqual(mock_service.StartMode, response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service')
@@ -859,9 +859,9 @@ class WindowsUtilsTest(unittest.TestCase):
         response = self._winutils.get_default_gateway()
         mock_get_ipv4_routing_table.assert_called_once_with()
         if routing_table[0] == '0.0.0.0':
-            self.assertEqual(response, (routing_table[3], routing_table[2]))
+            self.assertEqual((routing_table[3], routing_table[2]), response)
         else:
-            self.assertEqual(response, (None, None))
+            self.assertEqual((None, None), response)
 
     def test_get_default_gateway(self):
         routing_table = ['0.0.0.0', '1.1.1.1', self._GATEWAY, '8.8.8.8']
@@ -937,15 +937,16 @@ class WindowsUtilsTest(unittest.TestCase):
             self._ctypes_mock.sizeof.assert_called_once_with(
                 self.windows_utils.Win32_OSVERSIONINFOEX_W)
             self.assertEqual(
-                self._windll_mock.kernel32.VerSetConditionMask.call_count, 3)
+                3, self._windll_mock.kernel32.VerSetConditionMask.call_count)
+
             self._windll_mock.kernel32.VerifyVersionInfoW.assert_called_with(
-                self._ctypes_mock.byref(), 1 | 2 | 3 | 7, 2)
+                self._ctypes_mock.byref.return_value, 1 | 2 | 3 | 7, 2)
 
             if error_value is old_version:
                 self._windll_mock.kernel32.GetLastError.assert_called_with()
-                self.assertEqual(response, False)
+                self.assertFalse(response)
             else:
-                self.assertEqual(response, True)
+                self.assertTrue(response)
 
     def test_check_os_version(self):
         m = mock.MagicMock()
@@ -995,7 +996,7 @@ class WindowsUtilsTest(unittest.TestCase):
         response = self._winutils.generate_random_password(length)
 
         mock_generate_random_password.assert_called_once_with(length)
-        self.assertEqual(response, 'Passw0rd')
+        self.assertEqual('Passw0rd', response)
 
     def _test_get_logical_drives(self, buf_length):
         mock_buf = mock.MagicMock()
@@ -1013,7 +1014,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
             self._ctypes_mock.create_unicode_buffer.assert_called_with(261)
             mock_get_drives.assert_called_with(260, mock_buf)
-            self.assertEqual(response, ['1'])
+            self.assertEqual(['1'], response)
 
     def test_get_logical_drives_exception(self):
         self._test_get_logical_drives(buf_length=None)
@@ -1031,7 +1032,7 @@ class WindowsUtilsTest(unittest.TestCase):
         response = self._winutils.get_cdrom_drives()
 
         mock_get_logical_drives.assert_called_with()
-        self.assertEqual(response, ['drive'])
+        self.assertEqual(['drive'], response)
 
     @mock.patch('cloudbaseinit.osutils.windows.msvcrt')
     @mock.patch('cloudbaseinit.osutils.windows.kernel32')
@@ -1078,12 +1079,13 @@ class WindowsUtilsTest(unittest.TestCase):
         else:
             response = self._winutils.get_physical_disks()
 
-            self.assertEqual(self._ctypes_mock.sizeof.call_args_list,
-                             sizeof_calls)
+            self.assertEqual(sizeof_calls,
+                             self._ctypes_mock.sizeof.call_args_list)
 
             self.assertEqual(
-                mock_setupapi.SetupDiEnumDeviceInterfaces.call_args_list,
-                device_interfaces_calls)
+                device_interfaces_calls,
+                mock_setupapi.SetupDiEnumDeviceInterfaces.call_args_list)
+
             if not interface_detail:
                 mock_kernel32.GetLastError.assert_called_once_with()
 
@@ -1092,8 +1094,7 @@ class WindowsUtilsTest(unittest.TestCase):
             mock_msvcrt.malloc.assert_called_with(
                 self._wintypes_mock.DWORD.return_value)
 
-            self.assertEqual(self._ctypes_mock.cast.call_args_list,
-                             cast_calls)
+            self.assertEqual(cast_calls, self._ctypes_mock.cast.call_args_list)
 
             mock_setup_interface.assert_called_with(
                 handle_disks, self._ctypes_mock.byref.return_value,
@@ -1113,7 +1114,7 @@ class WindowsUtilsTest(unittest.TestCase):
                 self._ctypes_mock.sizeof.return_value,
                 self._ctypes_mock.byref.return_value, None)
 
-            self.assertEqual(response, ["\\\\.\PHYSICALDRIVE1"])
+            self.assertEqual(["\\\\.\PHYSICALDRIVE1"], response)
 
             mock_setupapi.SetupDiDestroyDeviceInfoList.assert_called_once_with(
                 handle_disks)
@@ -1173,7 +1174,7 @@ class WindowsUtilsTest(unittest.TestCase):
         self._winutils.firewall_create_rule(
             name='fake name', port=9999, protocol=self._winutils.PROTOCOL_TCP)
 
-        self.assertEqual(self._client_mock.Dispatch.call_args_list, expected)
+        self.assertEqual(expected, self._client_mock.Dispatch.call_args_list)
         mock_get_fw_protocol.assert_called_once_with(
             self._winutils.PROTOCOL_TCP)
 
@@ -1204,7 +1205,7 @@ class WindowsUtilsTest(unittest.TestCase):
             mock_IsWow64Process.assert_called_once_with(
                 mock_GetCurrentProcess(), self._ctypes_mock.byref.return_value)
 
-            self.assertEqual(response, True)
+            self.assertTrue(response)
 
     def test_is_wow64(self):
         self._test_is_wow64(ret_val=True)
@@ -1218,7 +1219,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.get_system32_dir()
 
-        self.assertEqual(response, 'fake_system32')
+        self.assertEqual('fake_system32', response)
 
     @mock.patch('os.path.expandvars')
     def test_get_sysnative_dir(self, mock_expandvars):
@@ -1226,7 +1227,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.get_sysnative_dir()
 
-        self.assertEqual(response, 'fake_sysnative')
+        self.assertEqual('fake_sysnative', response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.get_sysnative_dir')
@@ -1238,7 +1239,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.check_sysnative_dir_exists()
 
-        self.assertEqual(response, True)
+        self.assertTrue(response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')
@@ -1270,7 +1271,7 @@ class WindowsUtilsTest(unittest.TestCase):
             mock_get_system32_dir.assert_called_once_with()
 
         mock_execute_process.assert_called_with(args, False)
-        self.assertEqual(response, mock_execute_process())
+        self.assertEqual(mock_execute_process.return_value, response)
 
     def test_execute_powershell_script_sysnative(self):
         self._test_execute_powershell_script(ret_val=True)
@@ -1289,7 +1290,7 @@ class WindowsUtilsTest(unittest.TestCase):
         response = self._winutils.get_dhcp_hosts_in_use()
 
         mock_get_adapter_addresses.assert_called()
-        self.assertEqual(response, [('fake mac address', 'fake dhcp server')])
+        self.assertEqual([('fake mac address', 'fake dhcp server')], response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')

@@ -66,7 +66,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
         else:
             response = self._maasservice._get_response(req=mock_request)
             mock_urlopen.assert_called_once_with(mock_request)
-            self.assertEqual(response, ret_val)
+            self.assertEqual(ret_val, response)
 
     def test_get_response(self):
         self._test_get_response(ret_val='fake response')
@@ -106,7 +106,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_req.sign_request.assert_called_once_with(
             self.mock_oauth.OAuthSignatureMethod_PLAINTEXT(), mock_consumer,
             mock_token)
-        self.assertEqual(response, mock_req.to_header())
+        self.assertEqual(mock_req.to_header.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_oauth_headers")
@@ -124,7 +124,8 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_Request.assert_called_once_with(norm_path,
                                              headers='fake headers')
         mock_get_response.assert_called_once_with(mock_Request())
-        self.assertEqual(response, mock_get_response().read())
+        self.assertEqual(mock_get_response.return_value.read.return_value,
+                         response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
@@ -133,7 +134,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_get_cache_data.assert_called_once_with(
             '%s/meta-data/local-hostname' %
             self._maasservice._metadata_version)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
@@ -141,11 +142,11 @@ class MaaSHttpServiceTest(unittest.TestCase):
         response = self._maasservice.get_instance_id()
         mock_get_cache_data.assert_called_once_with(
             '%s/meta-data/instance-id' % self._maasservice._metadata_version)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)
 
     def test_get_list_from_text(self):
         response = self._maasservice._get_list_from_text('fake:text', ':')
-        self.assertEqual(response, ['fake:', 'text:'])
+        self.assertEqual(['fake:', 'text:'], response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_list_from_text")
@@ -158,7 +159,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
             '%s/meta-data/public-keys' % self._maasservice._metadata_version)
         mock_get_list_from_text.assert_called_once_with(mock_get_cache_data(),
                                                         "\n")
-        self.assertEqual(response, mock_get_list_from_text())
+        self.assertEqual(mock_get_list_from_text.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_list_from_text")
@@ -171,7 +172,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
             '%s/meta-data/x509' % self._maasservice._metadata_version)
         mock_get_list_from_text.assert_called_once_with(
             mock_get_cache_data(), "%s\n" % x509constants.PEM_FOOTER)
-        self.assertEqual(response, mock_get_list_from_text())
+        self.assertEqual(mock_get_list_from_text.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
@@ -180,4 +181,4 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_get_cache_data.assert_called_once_with(
             '%s/user-data' %
             self._maasservice._metadata_version)
-        self.assertEqual(response, mock_get_cache_data())
+        self.assertEqual(mock_get_cache_data.return_value, response)

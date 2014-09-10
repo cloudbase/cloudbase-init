@@ -73,12 +73,13 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 fake_cert_context_p)
 
             self.assertEqual(
-                mock_CertGetCertificateContextProperty.call_args_list,
-                expected)
+                expected,
+                mock_CertGetCertificateContextProperty.call_args_list)
+
             mock_malloc.assert_called_with(mock_DWORD.return_value)
             mock_cast.assert_called_with(mock_malloc(), mock_pointer)
             mock_free.assert_called_with(mock_malloc())
-            self.assertEqual(response, '10')
+            self.assertEqual('10', response)
 
     def test_get_cert_thumprint(self):
         self._test_get_cert_thumprint(ret_val=True)
@@ -229,7 +230,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 mock_CertCreateSelfSignCertificate())
             mock_free.assert_called_once_with(mock_cast())
 
-            self.assertEqual(response, mock_get_cert_thumprint())
+            self.assertEqual(mock_get_cert_thumprint.return_value, response)
 
         mock_generate_key.assert_called_once_with('fake_name', True)
 
@@ -281,7 +282,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         fake_cert_data += 'fake cert' + '\n'
         fake_cert_data += x509constants.PEM_FOOTER
         response = self._x509_manager._get_cert_base64(fake_cert_data)
-        self.assertEqual(response, 'fake cert')
+        self.assertEqual('fake cert', response)
 
     @mock.patch('cloudbaseinit.utils.windows.x509.free')
     @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
@@ -348,8 +349,8 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             response = self._x509_manager.import_cert(fake_cert_data)
 
             mock_cast.assert_called_with(mock_malloc(), mock_POINTER())
-            self.assertEqual(mock_CryptStringToBinaryA.call_args_list,
-                             expected)
+            self.assertEqual(expected,
+                             mock_CryptStringToBinaryA.call_args_list)
             mock_CertOpenStore.assert_called_with(
                 self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
@@ -364,7 +365,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 mock_byref())
 
             mock_create_unicode_buffer.assert_called_with(2)
-            self.assertEqual(mock_CertGetNameString.call_args_list, expected2)
+            self.assertEqual(expected2, mock_CertGetNameString.call_args_list)
             mock_get_cert_thumprint.assert_called_once_with(mock_POINTER()())
 
             mock_CertFreeCertificateContext.assert_called_once_with(
@@ -373,8 +374,9 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 mock_CertOpenStore(), 0)
 
             mock_free.assert_called_once_with(mock_cast())
-            self.assertEqual(response, (mock_get_cert_thumprint(),
-                                        mock_create_unicode_buffer().value))
+            self.assertEqual(
+                (mock_get_cert_thumprint(),
+                 mock_create_unicode_buffer().value), response)
 
         mock_get_cert_base64.assert_called_with(fake_cert_data)
 

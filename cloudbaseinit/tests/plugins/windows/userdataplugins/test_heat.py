@@ -54,7 +54,8 @@ class HeatUserDataHandlerTests(unittest.TestCase):
         if filename == self._heat._heat_user_data_filename:
             mock_execute_user_data_script.assert_called_with(
                 mock_part.get_payload())
-            self.assertEqual(response, mock_execute_user_data_script())
+            self.assertEqual(mock_execute_user_data_script.return_value,
+                             response)
         else:
             self.assertTrue(response is None)
 

@@ -29,7 +29,7 @@ class MetadataServiceFactoryTests(unittest.TestCase):
             self.assertRaises(Exception, factory.get_metadata_service)
         else:
             response = factory.get_metadata_service()
-            self.assertEqual(response, mock_load_class()())
+            self.assertEqual(mock_load_class()(), response)
 
     def test_get_metadata_service(self):
         m = mock.MagicMock()

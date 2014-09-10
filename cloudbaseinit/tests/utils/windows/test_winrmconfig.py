@@ -47,7 +47,7 @@ class WinRMConfigTests(unittest.TestCase):
         self._win32com_mock.client.Dispatch.assert_called_once_with(
             'WSMan.Automation')
         mock_wsman.CreateSession.assert_called_once_with()
-        self.assertEqual(response, mock_wsman.CreateSession())
+        self.assertEqual(mock_wsman.CreateSession.return_value, response)
 
     @mock.patch('re.match')
     def test_get_node_tag(self, mock_match):
@@ -56,7 +56,7 @@ class WinRMConfigTests(unittest.TestCase):
         response = self._winrmconfig._get_node_tag(mock_tag)
 
         mock_match.assert_called_once_with("^{.*}(.*)$", mock_tag)
-        self.assertEqual(response, mock_match().groups().__getitem__())
+        self.assertEqual(mock_match().groups().__getitem__(), response)
 
     @mock.patch('xml.etree.ElementTree.fromstring')
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
@@ -73,25 +73,25 @@ class WinRMConfigTests(unittest.TestCase):
         response = self._winrmconfig._parse_listener_xml(data_xml=data_xml)
 
         if data_xml is None:
-            self.assertEqual(response, None)
+            self.assertEqual(None, response)
         else:
             mock_fromstring.assert_called_once_with(data_xml)
             mock_get_node_tag.assert_called_once_with(tag)
             if tag is "ListeningOn":
-                self.assertEqual(response, {'ListeningOn': ['Fake']})
+                self.assertEqual({'ListeningOn': ['Fake']}, response)
             elif tag is "Enabled":
                 if text is 'true':
-                    self.assertEqual(response, {'ListeningOn': [],
-                                                'Enabled': True})
+                    self.assertEqual({'ListeningOn': [],
+                                      'Enabled': True}, response)
                 else:
-                    self.assertEqual(response, {'ListeningOn': [],
-                                                'Enabled': False})
+                    self.assertEqual({'ListeningOn': [],
+                                      'Enabled': False}, response)
             elif tag is 'Port':
-                self.assertEqual(response, {'ListeningOn': [],
-                                            'Port': int(text)})
+                self.assertEqual({'ListeningOn': [],
+                                  'Port': int(text)}, response)
             else:
-                self.assertEqual(response, {'ListeningOn': [],
-                                            tag: text})
+                self.assertEqual({'ListeningOn': [],
+                                  tag: text}, response)
 
     def test_parse_listener_xml_no_data(self):
         self._test_parse_listener_xml(data_xml=None)
@@ -137,11 +137,11 @@ class WinRMConfigTests(unittest.TestCase):
             mock_get_node_tag.assert_called_once_with(tag)
             if tag is "Enabled":
                 if text is 'true':
-                    self.assertEqual(response, {'Enabled': True})
+                    self.assertEqual({'Enabled': True}, response)
                 else:
-                    self.assertEqual(response, {'Enabled': False})
+                    self.assertEqual({'Enabled': False}, response)
             else:
-                self.assertEqual(response, {tag: text})
+                self.assertEqual({tag: text}, response)
 
     def test_parse_cert_mapping_xml_no_data(self):
         self._test_parse_cert_mapping_xml(data_xml=None)
@@ -161,9 +161,9 @@ class WinRMConfigTests(unittest.TestCase):
     def _test_get_xml_bool(self, value):
         response = self._winrmconfig._get_xml_bool(value)
         if value:
-            self.assertEqual(response, 'true')
+            self.assertEqual('true', response)
         else:
-            self.assertEqual(response, 'false')
+            self.assertEqual('false', response)
 
     def test_get_xml_bool_true(self):
         self._test_get_xml_bool(value='fake value')
@@ -187,7 +187,7 @@ class WinRMConfigTests(unittest.TestCase):
 
             mock_get_wsman_session.assert_called_once_with()
             fake_session.Get.assert_called_once_with(fake_uri)
-            self.assertEqual(response, resource)
+            self.assertEqual(resource, response)
 
     def test_get_resource(self):
         self._test_get_resource(resource='fake resource')
@@ -235,7 +235,7 @@ class WinRMConfigTests(unittest.TestCase):
         mock_parse_cert_mapping_xml.assert_called_with('fake resource')
         mock_get_resource.assert_called_with(
             self._winrmconfig._SERVICE_CERTMAPPING_URI % fake_dict)
-        self.assertEqual(response, 'fake response')
+        self.assertEqual('fake response', response)
 
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_delete_resource')
@@ -293,7 +293,7 @@ class WinRMConfigTests(unittest.TestCase):
         mock_get_resource.assert_called_with(
             self._winrmconfig._SERVICE_LISTENER_URI % dict)
         mock_parse_listener_xml.assert_called_once_with('fake resource')
-        self.assertEqual(response, 'fake response')
+        self.assertEqual('fake response', response)
 
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_delete_resource')
@@ -353,7 +353,7 @@ class WinRMConfigTests(unittest.TestCase):
             self._winrmconfig._SERVICE_AUTH_URI)
         mock_fromstring.assert_called_once_with('fake data xml')
         mock_get_node_tag.assert_called_once_with(mock_node.tag)
-        self.assertEqual(response, {'tag': 'value'})
+        self.assertEqual({'tag': 'value'}, response)
 
     @mock.patch('xml.etree.ElementTree.fromstring')
     @mock.patch('xml.etree.ElementTree.tostring')
@@ -396,10 +396,10 @@ class WinRMConfigTests(unittest.TestCase):
             certificate='certificate', credSSP='credSSP',
             cbt_hardening_level='cbt_hardening_level')
 
-        self.assertEqual(sorted(mock_tree.find.call_args_list),
-                         sorted(expected_find))
-        self.assertEqual(sorted(mock_get_xml_bool.call_args_list),
-                         sorted(expected_get_xml_bool))
+        self.assertEqual(sorted(expected_find),
+                         sorted(mock_tree.find.call_args_list))
+        self.assertEqual(sorted(expected_get_xml_bool),
+                         sorted(mock_get_xml_bool.call_args_list))
 
         mock_get_wsman_session.assert_called_once_with()
         mock_session.Get.assert_called_with(

@@ -67,8 +67,8 @@ class ConfigDriveServiceTest(unittest.TestCase):
         mock_get_config_drive_manager.assert_called_once_with()
         mock_manager.get_config_drive_files.assert_called_once_with(
             fake_path, CONF.config_drive_raw_hhd, CONF.config_drive_cdrom)
-        self.assertEqual(response, True)
-        self.assertEqual(self._config_drive._metadata_path, fake_path)
+        self.assertTrue(response)
+        self.assertEqual(fake_path, self._config_drive._metadata_path)
 
     @mock.patch('os.path.normpath')
     @mock.patch('os.path.join')
@@ -77,7 +77,7 @@ class ConfigDriveServiceTest(unittest.TestCase):
         with mock.patch('six.moves.builtins.open',
                         mock.mock_open(read_data='fake data'), create=True):
             response = self._config_drive._get_data(fake_path)
-            self.assertEqual(response, 'fake data')
+            self.assertEqual('fake data', response)
             mock_join.assert_called_with(
                 self._config_drive._metadata_path, fake_path)
 
@@ -86,4 +86,4 @@ class ConfigDriveServiceTest(unittest.TestCase):
         fake_path = os.path.join('fake', 'path')
         self._config_drive._metadata_path = fake_path
         self._config_drive.cleanup()
-        self.assertEqual(self._config_drive._metadata_path, None)
+        self.assertEqual(None, self._config_drive._metadata_path)
