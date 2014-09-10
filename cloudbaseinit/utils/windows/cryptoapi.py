@@ -32,59 +32,59 @@ class CryptoAPIException(Exception):
 
 class SYSTEMTIME(ctypes.Structure):
     _fields_ = [
-        ('wYear',           wintypes.WORD),
-        ('wMonth',          wintypes.WORD),
-        ('wDayOfWeek',      wintypes.WORD),
-        ('wDay',            wintypes.WORD),
-        ('wHour',           wintypes.WORD),
-        ('wMinute',         wintypes.WORD),
-        ('wSecond',         wintypes.WORD),
-        ('wMilliseconds',   wintypes.WORD),
+        ('wYear', wintypes.WORD),
+        ('wMonth', wintypes.WORD),
+        ('wDayOfWeek', wintypes.WORD),
+        ('wDay', wintypes.WORD),
+        ('wHour', wintypes.WORD),
+        ('wMinute', wintypes.WORD),
+        ('wSecond', wintypes.WORD),
+        ('wMilliseconds', wintypes.WORD),
     ]
 
 
 class CERT_CONTEXT(ctypes.Structure):
     _fields_ = [
-        ('dwCertEncodingType',  wintypes.DWORD),
-        ('pbCertEncoded',  ctypes.POINTER(wintypes.BYTE)),
-        ('cbCertEncoded',  wintypes.DWORD),
-        ('pCertInfo',  ctypes.c_void_p),
-        ('hCertStore',  wintypes.HANDLE),
+        ('dwCertEncodingType', wintypes.DWORD),
+        ('pbCertEncoded', ctypes.POINTER(wintypes.BYTE)),
+        ('cbCertEncoded', wintypes.DWORD),
+        ('pCertInfo', ctypes.c_void_p),
+        ('hCertStore', wintypes.HANDLE),
     ]
 
 
 class CRYPTOAPI_BLOB(ctypes.Structure):
     _fields_ = [
-        ('cbData',  wintypes.DWORD),
-        ('pbData',  ctypes.POINTER(wintypes.BYTE)),
+        ('cbData', wintypes.DWORD),
+        ('pbData', ctypes.POINTER(wintypes.BYTE)),
     ]
 
 
 class CRYPT_ALGORITHM_IDENTIFIER(ctypes.Structure):
     _fields_ = [
-        ('pszObjId',    wintypes.LPSTR),
-        ('Parameters',  CRYPTOAPI_BLOB),
+        ('pszObjId', wintypes.LPSTR),
+        ('Parameters', CRYPTOAPI_BLOB),
     ]
 
 
 class CRYPT_KEY_PROV_PARAM(ctypes.Structure):
     _fields_ = [
         ('dwParam', wintypes.DWORD),
-        ('pbData',  ctypes.POINTER(wintypes.BYTE)),
-        ('cbData',  wintypes.DWORD),
+        ('pbData', ctypes.POINTER(wintypes.BYTE)),
+        ('cbData', wintypes.DWORD),
         ('dwFlags', wintypes.DWORD),
     ]
 
 
 class CRYPT_KEY_PROV_INFO(ctypes.Structure):
     _fields_ = [
-        ('pwszContainerName',   wintypes.LPWSTR),
-        ('pwszProvName',        wintypes.LPWSTR),
-        ('dwProvType',          wintypes.DWORD),
-        ('dwFlags',             wintypes.DWORD),
-        ('cProvParam',          wintypes.DWORD),
-        ('cProvParam',          ctypes.POINTER(CRYPT_KEY_PROV_PARAM)),
-        ('dwKeySpec',           wintypes.DWORD),
+        ('pwszContainerName', wintypes.LPWSTR),
+        ('pwszProvName', wintypes.LPWSTR),
+        ('dwProvType', wintypes.DWORD),
+        ('dwFlags', wintypes.DWORD),
+        ('cProvParam', wintypes.DWORD),
+        ('cProvParam', ctypes.POINTER(CRYPT_KEY_PROV_PARAM)),
+        ('dwKeySpec', wintypes.DWORD),
     ]
 
 

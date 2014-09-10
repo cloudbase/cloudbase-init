@@ -331,7 +331,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                               mock_byref(), None, None),
                     mock.call('fake cert', len('fake cert'),
                               self.x509.cryptoapi.CRYPT_STRING_BASE64,
-                              mock_cast(),  mock_byref(), None, None)]
+                              mock_cast(), mock_byref(), None, None)]
         expected2 = [mock.call(mock_POINTER()(),
                                self.x509.cryptoapi.CERT_NAME_UPN_TYPE,
                                0, None, None, 0),

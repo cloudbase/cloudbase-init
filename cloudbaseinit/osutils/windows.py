@@ -46,14 +46,14 @@ msvcrt = ctypes.cdll.msvcrt
 
 class Win32_PROFILEINFO(ctypes.Structure):
     _fields_ = [
-        ('dwSize',          wintypes.DWORD),
-        ('dwFlags',         wintypes.DWORD),
-        ('lpUserName',      wintypes.LPWSTR),
-        ('lpProfilePath',   wintypes.LPWSTR),
-        ('lpDefaultPath',   wintypes.LPWSTR),
-        ('lpServerName',    wintypes.LPWSTR),
-        ('lpPolicyPath',    wintypes.LPWSTR),
-        ('hprofile',        wintypes.HANDLE)
+        ('dwSize', wintypes.DWORD),
+        ('dwFlags', wintypes.DWORD),
+        ('lpUserName', wintypes.LPWSTR),
+        ('lpProfilePath', wintypes.LPWSTR),
+        ('lpDefaultPath', wintypes.LPWSTR),
+        ('lpServerName', wintypes.LPWSTR),
+        ('lpPolicyPath', wintypes.LPWSTR),
+        ('hprofile', wintypes.HANDLE)
     ]
 
 
