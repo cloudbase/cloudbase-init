@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import binascii
 import datetime
 import netifaces
 import random
@@ -34,9 +33,7 @@ LOG = logging.getLogger(__name__)
 def _get_dhcp_request_data(id_req, mac_address, requested_options,
                            vendor_id):
 
-    mac_address_ascii = mac_address.replace(':', '').encode('ascii', 'strict')
-    mac_address_b = bytearray(binascii.unhexlify(mac_address_ascii))
-
+    mac_address_b = bytearray.fromhex(mac_address.replace(':', ''))
     # See: http://www.ietf.org/rfc/rfc2131.txt
     data = b'\x01'
     data += b'\x01'

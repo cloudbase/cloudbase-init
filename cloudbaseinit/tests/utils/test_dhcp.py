@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import binascii
 import mock
 import netifaces
 import struct
@@ -30,8 +29,7 @@ class DHCPUtilsTests(unittest.TestCase):
     def test_get_dhcp_request_data(self):
 
         fake_mac_address = '010203040506'
-        fake_mac_address_a = fake_mac_address.encode('ascii', 'strict')
-        fake_mac_address_b = bytearray(binascii.unhexlify(fake_mac_address_a))
+        fake_mac_address_b = bytearray.fromhex(fake_mac_address)
 
         data = b'\x01'
         data += b'\x01'
