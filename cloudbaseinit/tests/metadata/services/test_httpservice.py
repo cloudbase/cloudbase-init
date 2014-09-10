@@ -21,8 +21,8 @@ import unittest
 from oslo.config import cfg
 from six.moves.urllib import error
 
-from cloudbaseinit.metadata.services import httpservice
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import httpservice
 
 CONF = cfg.CONF
 

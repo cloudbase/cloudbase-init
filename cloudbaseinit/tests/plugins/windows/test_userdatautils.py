@@ -14,7 +14,6 @@
 
 import mock
 import os
-import uuid
 import unittest
 
 from oslo.config import cfg
