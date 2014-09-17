@@ -20,6 +20,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import sshpublickeys
 from cloudbaseinit.tests.metadata import fake_json_response
@@ -49,7 +50,8 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
         mock_os_path.exists.return_value = False
 
         if user_home is None:
-            self.assertRaises(Exception, self._set_ssh_keys_plugin,
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._set_ssh_keys_plugin.execute,
                               mock_service, fake_shared_data)
         else:
             with mock.patch('cloudbaseinit.plugins.windows.sshpublickeys'

@@ -20,6 +20,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import licensing
 
@@ -48,7 +49,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                                                      exit_code)
 
         if exit_code:
-            self.assertRaises(Exception, self._licensing._run_slmgr,
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._licensing._run_slmgr,
                               mock_osutils, ['fake args'])
         else:
             response = self._licensing._run_slmgr(osutils=mock_osutils,

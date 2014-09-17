@@ -17,6 +17,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import ntpclient
 from cloudbaseinit.utils import dhcp
@@ -42,7 +43,7 @@ class NTPClientPluginTests(unittest.TestCase):
 
         if fail_service_start:
             mock_osutils.get_service_status.return_value = "stopped"
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._ntpclient._check_w32time_svc_status,
                               mock_osutils)
 

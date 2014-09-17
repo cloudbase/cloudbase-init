@@ -18,6 +18,7 @@ import os
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
@@ -40,7 +41,7 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
         user_home = osutils.get_user_home(username)
 
         if not user_home:
-            raise Exception("User profile not found!")
+            raise exception.CloudbaseInitException("User profile not found!")
 
         LOG.debug("User home: %s" % user_home)
 

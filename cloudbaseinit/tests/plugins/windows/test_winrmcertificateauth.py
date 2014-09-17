@@ -18,6 +18,7 @@ import importlib
 import mock
 import unittest
 
+from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
 
@@ -50,7 +51,7 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
         mock_shared_data = mock.MagicMock()
         mock_shared_data.get.side_effect = [fake_user, fake_password]
         if fake_user is None or fake_password is None:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._certif_auth._get_credentials,
                               mock_shared_data)
         else:

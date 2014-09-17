@@ -17,6 +17,7 @@
 import mock
 import unittest
 
+from cloudbaseinit import exception
 from cloudbaseinit.metadata import factory
 
 
@@ -25,8 +26,9 @@ class MetadataServiceFactoryTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
     def _test_get_metadata_service(self, mock_load_class, ret_value):
         mock_load_class.side_effect = ret_value
-        if ret_value is Exception:
-            self.assertRaises(Exception, factory.get_metadata_service)
+        if ret_value is exception.CloudbaseInitException:
+            self.assertRaises(exception.CloudbaseInitException,
+                              factory.get_metadata_service)
         else:
             response = factory.get_metadata_service()
             self.assertEqual(mock_load_class()(), response)
@@ -36,4 +38,5 @@ class MetadataServiceFactoryTests(unittest.TestCase):
         self._test_get_metadata_service(ret_value=m)
 
     def test_get_metadata_service_exception(self):
-        self._test_get_metadata_service(ret_value=Exception)
+        self._test_get_metadata_service(
+            ret_value=exception.CloudbaseInitException)

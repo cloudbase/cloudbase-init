@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
@@ -27,13 +28,15 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
     def _get_credentials(self, shared_data):
         user_name = shared_data.get(constants.SHARED_DATA_USERNAME)
         if not user_name:
-            raise Exception("Cannot execute plugin as the username has "
-                            "not been set in the plugins shared data")
+            raise exception.CloudbaseInitException(
+                "Cannot execute plugin as the username has not been set in "
+                "the plugins shared data")
 
         password = shared_data.get(constants.SHARED_DATA_PASSWORD)
         if not password:
-            raise Exception("Cannot execute plugin as the password has "
-                            "not been set in the plugins shared data")
+            raise exception.CloudbaseInitException(
+                "Cannot execute plugin as the password has not been set in the"
+                " plugins shared data")
 
         # For security reasons unset the password in the shared_data
         # as it is currently not needed by other plugins

@@ -18,6 +18,7 @@ import re
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
@@ -58,7 +59,8 @@ class NetworkConfigPlugin(base.BasePlugin):
                       r'dns\-nameservers\s+(?P<dnsnameservers>[^\r\n]+)\s+',
                       debian_network_conf)
         if not m:
-            raise Exception("network_config format not recognized")
+            raise exception.CloudbaseInitException(
+                "network_config format not recognized")
 
         address = m.group('address')
         netmask = m.group('netmask')
@@ -73,7 +75,8 @@ class NetworkConfigPlugin(base.BasePlugin):
             # Get the first available one
             available_adapters = osutils.get_network_adapters()
             if not len(available_adapters):
-                raise Exception("No network adapter available")
+                raise exception.CloudbaseInitException(
+                    "No network adapter available")
             network_adapter_name = available_adapters[0]
 
         LOG.info('Configuring network adapter: \'%s\'' % network_adapter_name)

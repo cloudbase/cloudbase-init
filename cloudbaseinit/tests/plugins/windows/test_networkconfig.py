@@ -20,6 +20,7 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import networkconfig
 from cloudbaseinit.tests.metadata import fake_json_response
@@ -47,12 +48,14 @@ class NetworkConfigPluginPluginTests(unittest.TestCase):
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.set_static_network_config.return_value = False
         if search_result is None:
-            self.assertRaises(Exception, self._network_plugin.execute,
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._network_plugin.execute,
                               mock_service, fake_shared_data)
         elif no_adapters:
             CONF.set_override('network_adapter', None)
-            mock_osutils.get_network_adapters.return_value = None
-            self.assertRaises(Exception, self._network_plugin.execute,
+            mock_osutils.get_network_adapters.return_value = []
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._network_plugin.execute,
                               mock_service, fake_shared_data)
 
         else:

@@ -17,6 +17,7 @@ import time
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
@@ -55,8 +56,8 @@ class NTPClientPlugin(base.BasePlugin):
             max_retries = 30
             while svc_status != osutils.SERVICE_STATUS_RUNNING:
                 if i >= max_retries:
-                    raise Exception('Service %s did not start' %
-                                    _W32TIME_SERVICE)
+                    raise exception.CloudbaseInitException(
+                        'Service %s did not start' % _W32TIME_SERVICE)
                 time.sleep(1)
                 svc_status = osutils.get_service_status(_W32TIME_SERVICE)
                 i += 1
