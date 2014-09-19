@@ -38,14 +38,15 @@ class HeatPlugin(base.BaseUserDataPlugin):
     def __init__(self):
         super(HeatPlugin, self).__init__("text/x-cfninitdata")
 
-    def _check_heat_config_dir(self):
-        if not os.path.exists(CONF.heat_config_dir):
-            os.makedirs(CONF.heat_config_dir)
+    def _check_dir(self, file_name):
+        dir_name = os.path.dirname(file_name)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
 
     def process(self, part):
-        self._check_heat_config_dir()
-
         file_name = os.path.join(CONF.heat_config_dir, part.get_filename())
+        self._check_dir(file_name)
+
         with open(file_name, 'wb') as f:
             f.write(part.get_payload())
 
