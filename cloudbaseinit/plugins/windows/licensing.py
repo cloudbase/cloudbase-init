@@ -16,6 +16,7 @@ import os
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
@@ -48,9 +49,10 @@ class WindowsLicensingPlugin(base.BasePlugin):
             [cscript_path, slmgr_path] + args, False)
 
         if exit_code:
-            raise Exception('slmgr.vbs failed with error code %(exit_code)s.\n'
-                            'Output: %(out)s\nError: %(err)s' %
-                            {'exit_code': exit_code, 'out': out, 'err': err})
+            raise exception.CloudbaseInitException(
+                'slmgr.vbs failed with error code %(exit_code)s.\n'
+                'Output: %(out)s\nError: %(err)s' % {'exit_code': exit_code,
+                                                     'out': out, 'err': err})
         return out
 
     def execute(self, service, shared_data):

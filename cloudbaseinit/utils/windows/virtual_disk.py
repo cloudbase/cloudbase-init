@@ -19,6 +19,8 @@ import ctypes
 from ctypes import windll
 from ctypes import wintypes
 
+from cloudbaseinit import exception
+
 kernel32 = windll.kernel32
 # VirtDisk.dll is available starting from Windows Server 2008 R2 / Windows7
 virtdisk = None
@@ -84,20 +86,22 @@ class VirtualDisk(object):
                                            self.OPEN_VIRTUAL_DISK_FLAG_NONE, 0,
                                            ctypes.byref(handle))
         if ret_val:
-            raise Exception("Cannot open virtual disk")
+            raise exception.CloudbaseInitException("Cannot open virtual disk")
         self._handle = handle
 
     def attach(self):
         ret_val = virtdisk.AttachVirtualDisk(
             self._handle, 0, self.ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY, 0, 0, 0)
         if ret_val:
-            raise Exception("Cannot attach virtual disk")
+            raise exception.CloudbaseInitException(
+                "Cannot attach virtual disk")
 
     def detach(self):
         ret_val = virtdisk.DetachVirtualDisk(
             self._handle, self.DETACH_VIRTUAL_DISK_FLAG_NONE, 0)
         if ret_val:
-            raise Exception("Cannot detach virtual disk")
+            raise exception.CloudbaseInitException(
+                "Cannot detach virtual disk")
 
     def get_physical_path(self):
         buf = ctypes.create_unicode_buffer(1024)
@@ -106,7 +110,8 @@ class VirtualDisk(object):
                                                       ctypes.byref(bufLen),
                                                       buf)
         if ret_val:
-            raise Exception("Cannot get virtual disk physical path")
+            raise exception.CloudbaseInitException(
+                "Cannot get virtual disk physical path")
         return buf.value
 
     def get_cdrom_drive_mount_point(self):
@@ -117,7 +122,8 @@ class VirtualDisk(object):
         buf_len = kernel32.GetLogicalDriveStringsW(
             ctypes.sizeof(buf) / ctypes.sizeof(wintypes.WCHAR), buf)
         if not buf_len:
-            raise Exception("Cannot enumerate logical devices")
+            raise exception.CloudbaseInitException(
+                "Cannot enumerate logical devices")
 
         cdrom_dev = self.get_physical_path().rsplit('\\')[-1].upper()
 
@@ -131,7 +137,8 @@ class VirtualDisk(object):
                                                ctypes.sizeof(dev) /
                                                ctypes.sizeof(wintypes.WCHAR))
             if not ret_val:
-                raise Exception("Cannot query NT device")
+                raise exception.CloudbaseInitException(
+                    "Cannot query NT device")
 
             if dev.value.rsplit('\\')[-1].upper() == cdrom_dev:
                 mount_point = curr_drive

@@ -17,6 +17,7 @@ import ctypes
 from ctypes import wintypes
 from six.moves import winreg
 
+from cloudbaseinit import exception
 from cloudbaseinit.utils.windows import iphlpapi
 from cloudbaseinit.utils.windows import kernel32
 from cloudbaseinit.utils.windows import ws2_32
@@ -41,8 +42,8 @@ def _socket_addr_to_str(socket_addr):
         socket_addr.iSockaddrLength,
         None, addr_str, ctypes.byref(addr_str_len))
     if ret_val:
-        raise Exception("WSAAddressToStringW failed: %s" %
-                        ws2_32.WSAGetLastError())
+        raise exception.CloudbaseInitException(
+            "WSAAddressToStringW failed: %s" % ws2_32.WSAGetLastError())
 
     return addr_str.value
 
@@ -80,7 +81,7 @@ def get_adapter_addresses():
         proc_heap = kernel32.GetProcessHeap()
         p = kernel32.HeapAlloc(proc_heap, 0, size.value)
         if not p:
-            raise Exception("Cannot allocate memory")
+            raise exception.CloudbaseInitException("Cannot allocate memory")
 
         ws2_32.init_wsa()
 
@@ -97,7 +98,8 @@ def get_adapter_addresses():
                 return net_adapters
 
             if ret_val:
-                raise Exception("GetAdaptersAddresses failed")
+                raise exception.CloudbaseInitException(
+                    "GetAdaptersAddresses failed")
 
             p_curr_addr = p_addr
             while p_curr_addr:

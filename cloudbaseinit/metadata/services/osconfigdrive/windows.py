@@ -23,6 +23,7 @@ import uuid
 from ctypes import wintypes
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
@@ -118,12 +119,12 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         (out, err, exit_code) = osutils.execute_process(args, False)
 
         if exit_code:
-            raise Exception('Failed to execute "bsdtar" from path '
-                            '"%(bsdtar_path)s" with exit code: %(exit_code)s\n'
-                            '%(out)s\n%(err)s' %
-                            {'bsdtar_path': CONF.bsdtar_path,
-                             'exit_code': exit_code,
-                             'out': out, 'err': err})
+            raise exception.CloudbaseInitException(
+                'Failed to execute "bsdtar" from path "%(bsdtar_path)s" with '
+                'exit code: %(exit_code)s\n%(out)s\n%(err)s' % {
+                    'bsdtar_path': CONF.bsdtar_path,
+                    'exit_code': exit_code,
+                    'out': out, 'err': err})
 
     def _extract_iso_disk_file(self, osutils, iso_file_path):
         iso_disk_found = False

@@ -22,6 +22,8 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
+
 CONF = cfg.CONF
 
 
@@ -101,7 +103,8 @@ class WindowsUtilsTest(unittest.TestCase):
             return_value=ret_value)
 
         if not ret_value:
-            self.assertRaises(Exception, self._winutils.reboot)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.reboot)
         else:
             self._winutils.reboot()
 
@@ -192,7 +195,8 @@ class WindowsUtilsTest(unittest.TestCase):
                 self._USERNAME, password_expires)
         else:
             self.assertRaises(
-                Exception, self._winutils._create_or_change_user,
+                exception.CloudbaseInitException,
+                self._winutils._create_or_change_user,
                 self._USERNAME, self._PASSWORD, create, password_expires)
 
         mock_execute_process.assert_called_with(args)
@@ -264,7 +268,8 @@ class WindowsUtilsTest(unittest.TestCase):
         advapi32.LookupAccountNameW.return_value = ret_val
         if ret_val is None:
             self.assertRaises(
-                Exception, self._winutils._get_user_sid_and_domain,
+                exception.CloudbaseInitException,
+                self._winutils._get_user_sid_and_domain,
                 self._USERNAME)
         else:
             response = self._winutils._get_user_sid_and_domain(self._USERNAME)
@@ -298,7 +303,8 @@ class WindowsUtilsTest(unittest.TestCase):
 
         if ret_value is not 0 and is_in_alias:
             self.assertRaises(
-                Exception, self._winutils.add_user_to_local_group,
+                exception.CloudbaseInitException,
+                self._winutils.add_user_to_local_group,
                 self._USERNAME, group_name)
         else:
             self._winutils.add_user_to_local_group(self._USERNAME,
@@ -373,7 +379,8 @@ class WindowsUtilsTest(unittest.TestCase):
 
         if not logon:
             self.assertRaises(
-                Exception, self._winutils.create_user_logon_session,
+                exception.CloudbaseInitException,
+                self._winutils.create_user_logon_session,
                 self._USERNAME, self._PASSWORD, domain='.',
                 load_profile=load_profile)
 
@@ -381,7 +388,7 @@ class WindowsUtilsTest(unittest.TestCase):
             userenv.LoadUserProfileW.return_value = None
             kernel32.CloseHandle.return_value = None
 
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._winutils.create_user_logon_session,
                               self._USERNAME, self._PASSWORD, domain='.',
                               load_profile=load_profile)
@@ -451,8 +458,8 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_SetComputerNameExW.return_value = ret_value
 
         if not ret_value:
-            self.assertRaises(Exception, self._winutils.set_host_name,
-                              'fake name')
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.set_host_name, 'fake name')
         else:
             self._winutils.set_host_name('fake name')
 
@@ -531,7 +538,8 @@ class WindowsUtilsTest(unittest.TestCase):
 
         if not adapter:
             self.assertRaises(
-                Exception, self._winutils.set_static_network_config,
+                exception.CloudbaseInitException,
+                self._winutils.set_static_network_config,
                 adapter_name, address, self._NETMASK,
                 broadcast, self._GATEWAY, dns_list)
         else:
@@ -545,19 +553,22 @@ class WindowsUtilsTest(unittest.TestCase):
 
             if ret_val1[0] > 1:
                 self.assertRaises(
-                    Exception, self._winutils.set_static_network_config,
+                    exception.CloudbaseInitException,
+                    self._winutils.set_static_network_config,
                     adapter_name, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
             elif ret_val2[0] > 1:
                 self.assertRaises(
-                    Exception, self._winutils.set_static_network_config,
+                    exception.CloudbaseInitException,
+                    self._winutils.set_static_network_config,
                     adapter_name, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
             elif ret_val3[0] > 1:
                 self.assertRaises(
-                    Exception, self._winutils.set_static_network_config,
+                    exception.CloudbaseInitException,
+                    self._winutils.set_static_network_config,
                     adapter_name, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
@@ -785,7 +796,7 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_service.ChangeStartMode.return_value = (ret_val,)
 
         if ret_val != 0:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._winutils.set_service_start_mode,
                               'fake name', 'fake mode')
         else:
@@ -807,7 +818,7 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_service.StartService.return_value = (ret_val,)
 
         if ret_val != 0:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._winutils.start_service,
                               'fake name')
         else:
@@ -829,7 +840,7 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_service.StopService.return_value = (ret_val,)
 
         if ret_val != 0:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._winutils.stop_service,
                               'fake name')
         else:
@@ -904,7 +915,8 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_execute_process.return_value = (None, err, None)
 
         if err:
-            self.assertRaises(Exception, self._winutils.add_static_route,
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.add_static_route,
                               self._DESTINATION, self._NETMASK, next_hop,
                               interface_index, metric)
 
@@ -927,8 +939,8 @@ class WindowsUtilsTest(unittest.TestCase):
         old_version = self._winutils.ERROR_OLD_WIN_VERSION
 
         if error_value and error_value is not old_version:
-            self.assertRaises(Exception, self._winutils.check_os_version, 3,
-                              1, 2)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.check_os_version, 3, 1, 2)
             self._windll_mock.kernel32.GetLastError.assert_called_once_with()
 
         else:
@@ -1007,7 +1019,8 @@ class WindowsUtilsTest(unittest.TestCase):
         mock_get_drives.return_value = buf_length
 
         if buf_length is None:
-            self.assertRaises(Exception, self._winutils._get_logical_drives)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils._get_logical_drives)
 
         else:
             response = self._winutils._get_logical_drives()
@@ -1074,7 +1087,8 @@ class WindowsUtilsTest(unittest.TestCase):
                     disk_handle == self._winutils.INVALID_HANDLE_VALUE) or (
                         not io_control):
 
-            self.assertRaises(Exception, self._winutils.get_physical_disks)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.get_physical_disks)
 
         else:
             response = self._winutils.get_physical_disks()
@@ -1195,7 +1209,8 @@ class WindowsUtilsTest(unittest.TestCase):
         self._wintypes_mock.BOOL.return_value.value = ret_val
 
         if ret_val is False:
-            self.assertRaises(Exception, self._winutils.is_wow64)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.is_wow64)
 
         else:
             response = self._winutils.is_wow64()
@@ -1317,8 +1332,9 @@ class WindowsUtilsTest(unittest.TestCase):
                 '/syncfromflags:manual', '/update']
 
         if ret_val:
-            self.assertRaises(Exception, self._winutils.set_ntp_client_config,
-                              args, False)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.set_ntp_client_config,
+                              'fake ntp host')
 
         else:
             self._winutils.set_ntp_client_config(ntp_host='fake ntp host')

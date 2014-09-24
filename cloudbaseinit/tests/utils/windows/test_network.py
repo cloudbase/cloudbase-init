@@ -16,6 +16,8 @@ import importlib
 import mock
 import unittest
 
+from cloudbaseinit import exception as cbinit_exception
+
 
 class WindowsNetworkUtilsTests(unittest.TestCase):
 
@@ -55,7 +57,8 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
         self.network.ws2_32.WSAAddressToStringW.return_value = ret_val
 
         if ret_val:
-            self.assertRaises(Exception, self.network._socket_addr_to_str,
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self.network._socket_addr_to_str,
                               mock_socket_addr)
             self.network.ws2_32.WSAGetLastError.assert_called_once_with()
         else:
@@ -88,7 +91,7 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
             self._moves_mock.winreg.QueryValueEx.side_effect = [exception]
 
             if exception.errno != 2:
-                self.assertRaises(Exception,
+                self.assertRaises(cbinit_exception.CloudbaseInitException,
                                   self.network._get_registry_dhcp_server,
                                   fake_adapter)
         else:
@@ -116,12 +119,12 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
         self._test_get_registry_dhcp_server(dhcp_server="255.255.255.255")
 
     def test_get_registry_dhcp_server_expeption_not_found(self):
-        ex = Exception()
+        ex = cbinit_exception.CloudbaseInitException()
         ex.errno = 2
         self._test_get_registry_dhcp_server(dhcp_server="", exception=ex)
 
     def test_get_registry_dhcp_server_expeption_other(self):
-        ex = Exception()
+        ex = cbinit_exception.CloudbaseInitException()
         ex.errno = 3
         self._test_get_registry_dhcp_server(dhcp_server="", exception=ex)
 
@@ -170,10 +173,12 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
             None, None, mock_byref.return_value)]
 
         if not p:
-            self.assertRaises(Exception, self.network.get_adapter_addresses)
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self.network.get_adapter_addresses)
 
         if ret_val2 and ret_val2 != self.network.kernel32.ERROR_NO_DATA:
-            self.assertRaises(Exception, self.network.get_adapter_addresses)
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self.network.get_adapter_addresses)
             compare_cast.append(mock.call(p, mock_POINTER.return_value))
 
             compare_GetAdaptersAddresses.append(mock.call(

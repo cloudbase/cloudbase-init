@@ -63,8 +63,12 @@ class HttpServiceTest(unittest.TestCase):
                               mock_req)
         elif side_effect and side_effect.code:
             mock_urlopen.side_effect = [side_effect]
-            self.assertRaises(Exception, self._httpservice._get_response,
-                              mock_req)
+            if side_effect.code == 404:
+                self.assertRaises(base.NotExistingMetadataException,
+                                  self._httpservice._get_response,
+                                  mock_req)
+            else:
+                self.assertRaises(error.HTTPError)
         else:
             mock_urlopen.return_value = 'fake url'
             response = self._httpservice._get_response(mock_req)

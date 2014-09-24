@@ -16,6 +16,8 @@ import importlib
 import mock
 import unittest
 
+from cloudbaseinit import exception as cbinit_exception
+
 
 class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
 
@@ -49,7 +51,8 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
             self.physical_disk.kernel32.CreateFileW.return_value = \
                 self._phys_disk_class.INVALID_HANDLE_VALUE
 
-            self.assertRaises(Exception, self._phys_disk_class.open)
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self._phys_disk_class.open)
 
         else:
             self._phys_disk_class.open()
@@ -103,7 +106,8 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
         self.physical_disk.kernel32.DeviceIoControl.return_value = ret_val
 
         if not ret_val:
-            self.assertRaises(Exception, self._phys_disk_class.get_geometry)
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self._phys_disk_class.get_geometry)
         elif _geom:
             response = self._phys_disk_class.get_geometry()
             self.assertEqual(_geom, response)
@@ -145,7 +149,8 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
             self.physical_disk.kernel32.SetFilePointer.return_value = \
                 self._phys_disk_class.INVALID_SET_FILE_POINTER
 
-            self.assertRaises(Exception, self._phys_disk_class.seek, 1)
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self._phys_disk_class.seek, 1)
         else:
             self._phys_disk_class.seek(1)
             self.physical_disk.kernel32.SetFilePointer.assert_called_once_with(
@@ -170,8 +175,8 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
         self.physical_disk.kernel32.ReadFile.return_value = ret_val
 
         if not ret_val:
-            self.assertRaises(Exception, self._phys_disk_class.read,
-                              bytes_to_read)
+            self.assertRaises(cbinit_exception.CloudbaseInitException,
+                              self._phys_disk_class.read, bytes_to_read)
         else:
             response = self._phys_disk_class.read(bytes_to_read)
 

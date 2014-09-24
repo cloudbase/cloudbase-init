@@ -16,6 +16,8 @@ import importlib
 import mock
 import unittest
 
+from cloudbaseinit import exception
+
 
 class WindowsVirtualDiskUtilsTests(unittest.TestCase):
 
@@ -67,7 +69,8 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
             self._vdisk_class._handle = handle
 
         if ret_val:
-            self.assertRaises(Exception, self._vdisk_class.open)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._vdisk_class.open)
 
         else:
             self._vdisk_class.open()
@@ -99,7 +102,8 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         virtdisk.AttachVirtualDisk.return_value = ret_val
 
         if ret_val:
-            self.assertRaises(Exception, self._vdisk_class.attach)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._vdisk_class.attach)
         else:
             self._vdisk_class.attach()
 
@@ -119,7 +123,8 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         virtdisk.DetachVirtualDisk.return_value = ret_val
 
         if ret_val:
-            self.assertRaises(Exception, self._vdisk_class.detach)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._vdisk_class.detach)
         else:
             self._vdisk_class.detach()
 
@@ -141,7 +146,8 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         buf = self._ctypes_mock.create_unicode_buffer.return_value
 
         if ret_val:
-            self.assertRaises(Exception, self._vdisk_class.get_physical_path)
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._vdisk_class.get_physical_path)
         else:
             response = self._vdisk_class.get_physical_path()
             self.assertEqual(buf.value, response)
@@ -176,10 +182,10 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         expected_create_unicode_buffer = [mock.call(2048)]
 
         if not buf_len:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._vdisk_class.get_cdrom_drive_mount_point)
         elif not ret_val:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._vdisk_class.get_cdrom_drive_mount_point)
 
             expected_create_unicode_buffer.append(mock.call(2048))

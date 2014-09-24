@@ -21,6 +21,8 @@ import unittest
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
+
 CONF = cfg.CONF
 
 
@@ -197,7 +199,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         mock_os_utils.execute_process.return_value = ('fake out', 'fake err',
                                                       exit_code)
         if exit_code:
-            self.assertRaises(Exception,
+            self.assertRaises(exception.CloudbaseInitException,
                               self._config_manager._extract_iso_files,
                               mock_os_utils, fake_path, fake_target_path)
         else:

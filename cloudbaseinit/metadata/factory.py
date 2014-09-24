@@ -16,6 +16,7 @@
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import classloader
 
@@ -50,4 +51,4 @@ def get_metadata_service():
         except Exception as ex:
             LOG.error("Failed to load metadata service '%s'" % class_path)
             LOG.exception(ex)
-    raise Exception("No available service found")
+    raise exception.CloudbaseInitException("No available service found")

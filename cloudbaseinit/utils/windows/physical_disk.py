@@ -19,6 +19,8 @@ import ctypes
 from ctypes import windll
 from ctypes import wintypes
 
+from cloudbaseinit import exception
+
 kernel32 = windll.kernel32
 
 
@@ -62,7 +64,7 @@ class PhysicalDisk(object):
             self.FILE_ATTRIBUTE_READONLY,
             0)
         if handle == self.INVALID_HANDLE_VALUE:
-            raise Exception('Cannot open file')
+            raise exception.CloudbaseInitException('Cannot open file')
         self._handle = handle
 
     def close(self):
@@ -84,7 +86,8 @@ class PhysicalDisk(object):
                 ctypes.byref(bytes_returned),
                 0)
             if not ret_val:
-                raise Exception("Cannot get disk geometry")
+                raise exception.CloudbaseInitException(
+                    "Cannot get disk geometry")
             self._geom = geom
         return self._geom
 
@@ -96,7 +99,7 @@ class PhysicalDisk(object):
                                           ctypes.byref(high),
                                           self.FILE_BEGIN)
         if ret_val == self.INVALID_SET_FILE_POINTER:
-            raise Exception("Seek error")
+            raise exception.CloudbaseInitException("Seek error")
 
     def read(self, bytes_to_read):
         buf = ctypes.create_string_buffer(bytes_to_read)
@@ -104,5 +107,5 @@ class PhysicalDisk(object):
         ret_val = kernel32.ReadFile(self._handle, buf, bytes_to_read,
                                     ctypes.byref(bytes_read), 0)
         if not ret_val:
-            raise Exception("Read exception")
+            raise exception.CloudbaseInitException("Read exception")
         return (buf, bytes_read.value)

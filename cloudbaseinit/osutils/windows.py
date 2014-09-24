@@ -28,6 +28,7 @@ from ctypes import wintypes
 from six.moves import winreg
 from win32com import client
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
 from cloudbaseinit.utils.windows import network
@@ -311,7 +312,7 @@ class WindowsUtils(base.BaseOSUtils):
         ret_val = advapi32.InitiateSystemShutdownW(0, "Cloudbase-Init reboot",
                                                    0, True, True)
         if not ret_val:
-            raise Exception("Reboot failed")
+            raise exception.CloudbaseInitException("Reboot failed")
 
     def _get_user_wmi_object(self, username):
         conn = wmi.WMI(moniker='//./root/cimv2')
@@ -342,7 +343,7 @@ class WindowsUtils(base.BaseOSUtils):
                 msg = "Create user failed: %s"
             else:
                 msg = "Set user password failed: %s"
-            raise Exception(msg % err)
+            raise exception.CloudbaseInitException(msg % err)
 
     def _sanitize_wmi_input(self, value):
         return value.replace('\'', '\'\'')
@@ -375,7 +376,7 @@ class WindowsUtils(base.BaseOSUtils):
             0, six.text_type(username), sid, ctypes.byref(cbSid), domainName,
             ctypes.byref(cchReferencedDomainName), ctypes.byref(sidNameUse))
         if not ret_val:
-            raise Exception("Cannot get user SID")
+            raise exception.CloudbaseInitException("Cannot get user SID")
 
         return (sid, domainName.value)
 
@@ -388,18 +389,18 @@ class WindowsUtils(base.BaseOSUtils):
                                                    3, ctypes.addressof(lmi), 1)
 
         if ret_val == self.NERR_GroupNotFound:
-            raise Exception('Group not found')
+            raise exception.CloudbaseInitException('Group not found')
         elif ret_val == self.ERROR_ACCESS_DENIED:
-            raise Exception('Access denied')
+            raise exception.CloudbaseInitException('Access denied')
         elif ret_val == self.ERROR_NO_SUCH_MEMBER:
-            raise Exception('Username not found')
+            raise exception.CloudbaseInitException('Username not found')
         elif ret_val == self.ERROR_MEMBER_IN_ALIAS:
             # The user is already a member of the group
             pass
         elif ret_val == self.ERROR_INVALID_MEMBER:
-            raise Exception('Invalid user')
+            raise exception.CloudbaseInitException('Invalid user')
         elif ret_val != 0:
-            raise Exception('Unknown error')
+            raise exception.CloudbaseInitException('Unknown error')
 
     def get_user_sid(self, username):
         r = self._get_user_wmi_object(username)
@@ -415,7 +416,7 @@ class WindowsUtils(base.BaseOSUtils):
                                       six.text_type(password), 2, 0,
                                       ctypes.byref(token))
         if not ret_val:
-            raise Exception("User logon failed")
+            raise exception.CloudbaseInitException("User logon failed")
 
         if load_profile:
             pi = Win32_PROFILEINFO()
@@ -424,7 +425,8 @@ class WindowsUtils(base.BaseOSUtils):
             ret_val = userenv.LoadUserProfileW(token, ctypes.byref(pi))
             if not ret_val:
                 kernel32.CloseHandle(token)
-                raise Exception("Cannot load user profile")
+                raise exception.CloudbaseInitException(
+                    "Cannot load user profile")
 
         return token
 
@@ -449,7 +451,7 @@ class WindowsUtils(base.BaseOSUtils):
             self.ComputerNamePhysicalDnsHostname,
             six.text_type(new_host_name))
         if not ret_val:
-            raise Exception("Cannot set host name")
+            raise exception.CloudbaseInitException("Cannot set host name")
 
     def get_network_adapters(self):
         l = []
@@ -483,14 +485,15 @@ class WindowsUtils(base.BaseOSUtils):
 
         (out, err, ret_val) = self.execute_process(args, False)
         if ret_val:
-            raise Exception('w32tm failed to configure NTP.\n'
-                            'Output: %(out)s\nError: %(err)s' %
-                            {'out': out, 'err': err})
+            raise exception.CloudbaseInitException(
+                'w32tm failed to configure NTP.\nOutput: %(out)s\nError:'
+                ' %(err)s' % {'out': out, 'err': err})
 
     def set_network_adapter_mtu(self, mac_address, mtu):
         if not self.check_os_version(6, 0):
-            raise Exception('Setting the MTU is currently not supported on '
-                            'Windows XP and Windows Server 2003')
+            raise exception.CloudbaseInitException(
+                'Setting the MTU is currently not supported on Windows XP '
+                'and Windows Server 2003')
 
         iface_index_list = [
             net_addr["interface_index"] for net_addr
@@ -498,8 +501,9 @@ class WindowsUtils(base.BaseOSUtils):
             if net_addr["mac_address"] == mac_address]
 
         if not iface_index_list:
-            raise Exception('Network interface with MAC address "%s" '
-                            'not found' % mac_address)
+            raise exception.CloudbaseInitException(
+                'Network interface with MAC address "%s" not found' %
+                mac_address)
         else:
             iface_index = iface_index_list[0]
 
@@ -515,10 +519,10 @@ class WindowsUtils(base.BaseOSUtils):
                     "store=persistent"]
             (out, err, ret_val) = self.execute_process(args, False)
             if ret_val:
-                raise Exception('Setting MTU for interface '
-                                '"%(mac_address)s" with '
-                                'value "%(mtu)s" failed' %
-                                {'mac_address': mac_address, 'mtu': mtu})
+                raise exception.CloudbaseInitException(
+                    'Setting MTU for interface "%(mac_address)s" with '
+                    'value "%(mtu)s" failed' % {'mac_address': mac_address,
+                                                'mtu': mtu})
 
     def set_static_network_config(self, adapter_name, address, netmask,
                                   broadcast, gateway, dnsnameservers):
@@ -529,7 +533,8 @@ class WindowsUtils(base.BaseOSUtils):
                        'MACAddress IS NOT NULL AND '
                        'Name = \'%s\'' % adapter_name_san)
         if not len(q):
-            raise Exception("Network adapter not found")
+            raise exception.CloudbaseInitException(
+                "Network adapter not found")
 
         adapter_config = q[0].associators(
             wmi_result_class='Win32_NetworkAdapterConfiguration')[0]
@@ -537,19 +542,22 @@ class WindowsUtils(base.BaseOSUtils):
         LOG.debug("Setting static IP address")
         (ret_val,) = adapter_config.EnableStatic([address], [netmask])
         if ret_val > 1:
-            raise Exception("Cannot set static IP address on network adapter")
+            raise exception.CloudbaseInitException(
+                "Cannot set static IP address on network adapter")
         reboot_required = (ret_val == 1)
 
         LOG.debug("Setting static gateways")
         (ret_val,) = adapter_config.SetGateways([gateway], [1])
         if ret_val > 1:
-            raise Exception("Cannot set gateway on network adapter")
+            raise exception.CloudbaseInitException(
+                "Cannot set gateway on network adapter")
         reboot_required = reboot_required or ret_val == 1
 
         LOG.debug("Setting static DNS servers")
         (ret_val,) = adapter_config.SetDNSServerSearchOrder(dnsnameservers)
         if ret_val > 1:
-            raise Exception("Cannot set DNS on network adapter")
+            raise exception.CloudbaseInitException(
+                "Cannot set DNS on network adapter")
         reboot_required = reboot_required or ret_val == 1
 
         return reboot_required
@@ -624,27 +632,30 @@ class WindowsUtils(base.BaseOSUtils):
         service = self._get_service(service_name)
         (ret_val,) = service.ChangeStartMode(start_mode)
         if ret_val != 0:
-            raise Exception('Setting service %(service_name)s start mode '
-                            'failed with return value: %(ret_val)d' %
-                            {'service_name': service_name, 'ret_val': ret_val})
+            raise exception.CloudbaseInitException(
+                'Setting service %(service_name)s start mode failed with '
+                'return value: %(ret_val)d' % {'service_name': service_name,
+                                               'ret_val': ret_val})
 
     def start_service(self, service_name):
         LOG.debug('Starting service %s' % service_name)
         service = self._get_service(service_name)
         (ret_val,) = service.StartService()
         if ret_val != 0:
-            raise Exception('Starting service %(service_name)s failed with '
-                            'return value: %(ret_val)d' %
-                            {'service_name': service_name, 'ret_val': ret_val})
+            raise exception.CloudbaseInitException(
+                'Starting service %(service_name)s failed with return value: '
+                '%(ret_val)d' % {'service_name': service_name,
+                                 'ret_val': ret_val})
 
     def stop_service(self, service_name):
         LOG.debug('Stopping service %s' % service_name)
         service = self._get_service(service_name)
         (ret_val,) = service.StopService()
         if ret_val != 0:
-            raise Exception('Stopping service %(service_name)s failed with '
-                            'return value: %(ret_val)d' %
-                            {'service_name': service_name, 'ret_val': ret_val})
+            raise exception.CloudbaseInitException(
+                'Stopping service %(service_name)s failed with return value:'
+                ' %(ret_val)d' % {'service_name': service_name,
+                                  'ret_val': ret_val})
 
     def terminate(self):
         # Wait for the service to start. Polling the service "Started" property
@@ -668,8 +679,8 @@ class WindowsUtils(base.BaseOSUtils):
         size = wintypes.ULONG(ctypes.sizeof(Win32_MIB_IPFORWARDTABLE))
         p = kernel32.HeapAlloc(heap, 0, size)
         if not p:
-            raise Exception('Unable to allocate memory for the IP forward '
-                            'table')
+            raise exception.CloudbaseInitException(
+                'Unable to allocate memory for the IP forward table')
         p_forward_table = ctypes.cast(
             p, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
 
@@ -680,8 +691,8 @@ class WindowsUtils(base.BaseOSUtils):
                 kernel32.HeapFree(heap, 0, p_forward_table)
                 p = kernel32.HeapAlloc(heap, 0, size)
                 if not p:
-                    raise Exception('Unable to allocate memory for the IP '
-                                    'forward table')
+                    raise exception.CloudbaseInitException(
+                        'Unable to allocate memory for the IP forward table')
                 p_forward_table = ctypes.cast(
                     p, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
 
@@ -689,8 +700,8 @@ class WindowsUtils(base.BaseOSUtils):
                                              ctypes.byref(size), 0)
             if err != self.ERROR_NO_DATA:
                 if err:
-                    raise Exception('Unable to get IP forward table. '
-                                    'Error: %s' % err)
+                    raise exception.CloudbaseInitException(
+                        'Unable to get IP forward table. Error: %s' % err)
 
                 forward_table = p_forward_table.contents
                 table = ctypes.cast(
@@ -723,7 +734,8 @@ class WindowsUtils(base.BaseOSUtils):
         (out, err, ret_val) = self.execute_process(args)
         # Cannot use the return value to determine the outcome
         if ret_val or err:
-            raise Exception('Unable to add route: %s' % err)
+            raise exception.CloudbaseInitException(
+                'Unable to add route: %s' % err)
 
     def check_os_version(self, major, minor, build=0):
         vi = Win32_OSVERSIONINFOEX_W()
@@ -748,8 +760,8 @@ class WindowsUtils(base.BaseOSUtils):
             if err == self.ERROR_OLD_WIN_VERSION:
                 return False
             else:
-                raise Exception("VerifyVersionInfo failed with error: %s" %
-                                err)
+                raise exception.CloudbaseInitException(
+                    "VerifyVersionInfo failed with error: %s" % err)
 
     def get_volume_label(self, drive):
         max_label_size = 261
@@ -791,7 +803,8 @@ class WindowsUtils(base.BaseOSUtils):
         buf = ctypes.create_unicode_buffer(buf_size + 1)
         buf_len = kernel32.GetLogicalDriveStringsW(buf_size, buf)
         if not buf_len:
-            raise Exception("GetLogicalDriveStringsW failed")
+            raise exception.CloudbaseInitException(
+                "GetLogicalDriveStringsW failed")
 
         return self._split_str_buf_list(buf, buf_len)
 
@@ -808,7 +821,8 @@ class WindowsUtils(base.BaseOSUtils):
             ctypes.byref(disk_guid), None, None,
             self.DIGCF_PRESENT | self.DIGCF_DEVICEINTERFACE)
         if handle_disks == self.INVALID_HANDLE_VALUE:
-            raise Exception("SetupDiGetClassDevs failed")
+            raise exception.CloudbaseInitException(
+                "SetupDiGetClassDevs failed")
 
         try:
             did = Win32_SP_DEVICE_INTERFACE_DATA()
@@ -827,8 +841,8 @@ class WindowsUtils(base.BaseOSUtils):
                         ctypes.byref(required_size), None):
                     if (kernel32.GetLastError() !=
                             self.ERROR_INSUFFICIENT_BUFFER):
-                        raise Exception("SetupDiGetDeviceInterfaceDetailW "
-                                        "failed")
+                        raise exception.CloudbaseInitException(
+                            "SetupDiGetDeviceInterfaceDetailW failed")
 
                 pdidd = ctypes.cast(
                     msvcrt.malloc(required_size),
@@ -844,8 +858,8 @@ class WindowsUtils(base.BaseOSUtils):
                     if not setupapi.SetupDiGetDeviceInterfaceDetailW(
                             handle_disks, ctypes.byref(did), pdidd,
                             required_size, None, None):
-                        raise Exception("SetupDiGetDeviceInterfaceDetailW "
-                                        "failed")
+                        raise exception.CloudbaseInitException(
+                            "SetupDiGetDeviceInterfaceDetailW failed")
 
                     device_path = ctypes.cast(
                         pdidd.contents.DevicePath, wintypes.LPWSTR).value
@@ -854,7 +868,8 @@ class WindowsUtils(base.BaseOSUtils):
                         device_path, 0, self.FILE_SHARE_READ,
                         None, self.OPEN_EXISTING, 0, 0)
                     if handle_disk == self.INVALID_HANDLE_VALUE:
-                        raise Exception('CreateFileW failed')
+                        raise exception.CloudbaseInitException(
+                            'CreateFileW failed')
 
                     sdn = Win32_STORAGE_DEVICE_NUMBER()
 
@@ -863,7 +878,8 @@ class WindowsUtils(base.BaseOSUtils):
                             handle_disk, self.IOCTL_STORAGE_GET_DEVICE_NUMBER,
                             None, 0, ctypes.byref(sdn), ctypes.sizeof(sdn),
                             ctypes.byref(b), None):
-                        raise Exception('DeviceIoControl failed')
+                        raise exception.CloudbaseInitException(
+                            'DeviceIoControl failed')
 
                     physical_disks.append(
                         r"\\.\PHYSICALDRIVE%d" % sdn.DeviceNumber)
@@ -914,7 +930,7 @@ class WindowsUtils(base.BaseOSUtils):
         ret_val = wintypes.BOOL()
         if not kernel32.IsWow64Process(kernel32.GetCurrentProcess(),
                                        ctypes.byref(ret_val)):
-            raise Exception("IsWow64Process failed")
+            raise exception.CloudbaseInitException("IsWow64Process failed")
         return bool(ret_val.value)
 
     def get_system32_dir(self):
