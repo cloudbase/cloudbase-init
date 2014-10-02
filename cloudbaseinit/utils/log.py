@@ -40,6 +40,9 @@ class SerialPortHandler(logging.StreamHandler):
             self._stream = stream
 
         def write(self, data):
+            if self._stream and not self._stream.isOpen():
+                    self._stream.open()
+
             if isinstance(data, six.text_type):
                 self._stream.write(data.encode("utf-8"))
             else:
