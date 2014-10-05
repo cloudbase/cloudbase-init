@@ -16,6 +16,7 @@
 
 import importlib
 import mock
+import six
 import unittest
 
 from oslo.config import cfg
@@ -26,6 +27,7 @@ CONF = cfg.CONF
 class SerialPortHandlerTests(unittest.TestCase):
     def setUp(self):
         self._serial = mock.MagicMock()
+        self._stream = mock.MagicMock()
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'serial': self._serial})
@@ -36,6 +38,8 @@ class SerialPortHandlerTests(unittest.TestCase):
 
         CONF.set_override('logging_serial_port_settings', "COM1,115200,N,8")
         self._serial_port_handler = self.log.SerialPortHandler()
+        self._unicode_stream = self._serial_port_handler._UnicodeToBytesStream(
+            self._stream)
         self._serial_port_handler._port = mock.MagicMock()
 
     def tearDown(self):
@@ -79,3 +83,28 @@ class SerialPortHandlerTests(unittest.TestCase):
 
         mock_SerialPortHandler().setFormatter.assert_called_once_with(
             mock_ContextFormatter())
+
+    def _test_unicode_write(self, is_six_instance=False):
+        self._stream.isOpen.return_value = False
+        if is_six_instance:
+            fake_data = mock.MagicMock(spec=six.text_type)
+            fake_data.encode = mock.MagicMock()
+        else:
+            fake_data = mock.MagicMock()
+
+        self._unicode_stream.write(fake_data)
+
+        self._stream.isOpen.assert_called_once_with()
+        self._stream.open.assert_called_once_with()
+        if is_six_instance:
+            self._stream.write.assert_called_once_with(
+                fake_data.encode.return_value)
+            fake_data.encode.assert_called_once_with('utf-8')
+        else:
+            self._stream.write.assert_called_once_with(fake_data)
+
+    def test_unicode_write(self):
+        self._test_unicode_write()
+
+    def test_unicode_write_with_encode(self):
+        self._test_unicode_write(is_six_instance=True)
