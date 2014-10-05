@@ -50,7 +50,7 @@ class NetworkConfigPlugin(base.BasePlugin):
 
         LOG.debug('network config content:\n%s' % debian_network_conf)
 
-        # TODO (alexpilotti): implement a proper grammar
+        # TODO(alexpilotti): implement a proper grammar
         m = re.search(r'iface eth0 inet static\s+'
                       r'address\s+(?P<address>[^\s]+)\s+'
                       r'netmask\s+(?P<netmask>[^\s]+)\s+'

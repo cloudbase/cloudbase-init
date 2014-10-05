@@ -62,7 +62,7 @@ class BaseMetadataService(object):
                 return action()
             except NotExistingMetadataException:
                 raise
-            except:
+            except Exception:
                 if self._enable_retry and i < CONF.retry_count:
                     i += 1
                     time.sleep(CONF.retry_count_interval)

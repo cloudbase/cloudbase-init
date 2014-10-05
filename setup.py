@@ -15,7 +15,13 @@
 #    under the License.
 
 import setuptools
+import sys
+
+if sys.platform == 'win32':
+    platform_requirements = ['pywin32', 'comtypes', 'wmi']
+else:
+    platform_requirements = []
 
 setuptools.setup(
-    setup_requires=['pbr>=0.5.22,!=0.5.23'],
+    setup_requires=['pbr>=0.5.22,!=0.5.23'] + platform_requirements,
     pbr=True)

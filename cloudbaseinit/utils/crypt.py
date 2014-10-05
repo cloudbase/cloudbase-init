@@ -193,6 +193,6 @@ class CryptManager(object):
                 raise OpenSSLException()
 
             return RSAWrapper(rsa_p)
-        except:
+        except Exception:
             openssl.RSA_free(rsa_p)
             raise

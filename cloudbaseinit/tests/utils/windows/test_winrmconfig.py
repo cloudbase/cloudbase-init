@@ -18,11 +18,19 @@ import importlib
 import mock
 import unittest
 
+from cloudbaseinit import exception
+
+
+class FakeComError(Exception):
+    def __init__(self):
+        super(FakeComError, self).__init__()
+        self.excepinfo = [None, None, None, None, None, -2144108544]
+
 
 class WinRMConfigTests(unittest.TestCase):
-
     def setUp(self):
         self._pywintypes_mock = mock.MagicMock()
+        self._pywintypes_mock.com_error = FakeComError
         self._win32com_mock = mock.MagicMock()
         self._module_patcher = mock.patch.dict(
             'sys.modules',
@@ -179,8 +187,9 @@ class WinRMConfigTests(unittest.TestCase):
         fake_session.Get.side_effect = [resource]
         mock_get_wsman_session.return_value = fake_session
 
-        if resource is Exception:
-            self.assertRaises(Exception, self._winrmconfig._get_resource,
+        if resource is exception.CloudbaseInitException:
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winrmconfig._get_resource,
                               fake_uri)
         else:
             response = self._winrmconfig._get_resource(fake_uri)
@@ -193,7 +202,7 @@ class WinRMConfigTests(unittest.TestCase):
         self._test_get_resource(resource='fake resource')
 
     def test_get_resource_exception(self):
-        self._test_get_resource(resource=Exception)
+        self._test_get_resource(resource=exception.CloudbaseInitException)
 
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_wsman_session')

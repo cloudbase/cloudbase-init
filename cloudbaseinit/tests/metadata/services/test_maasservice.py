@@ -17,23 +17,30 @@
 import mock
 import os
 import posixpath
+import sys
 import unittest
 
 from oslo.config import cfg
 from six.moves.urllib import error
 
 from cloudbaseinit.metadata.services import base
-from cloudbaseinit.metadata.services import maasservice
 from cloudbaseinit.utils import x509constants
+
+if sys.version_info < (3, 0):
+    # TODO(alexpilotti) replace oauth with a Python 3 compatible module
+    from cloudbaseinit.metadata.services import maasservice
 
 CONF = cfg.CONF
 
 
 class MaaSHttpServiceTest(unittest.TestCase):
     def setUp(self):
-        self.mock_oauth = mock.MagicMock()
-        maasservice.oauth = self.mock_oauth
-        self._maasservice = maasservice.MaaSHttpService()
+        if sys.version_info < (3, 0):
+            self.mock_oauth = mock.MagicMock()
+            maasservice.oauth = self.mock_oauth
+            self._maasservice = maasservice.MaaSHttpService()
+        else:
+            self.skipTest("Python 3 is not yet supported for maasservice")
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_data")
