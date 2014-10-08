@@ -12,7 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import os
+import textwrap
 import unittest
 
 import mock
@@ -22,6 +24,8 @@ from cloudbaseinit.tests import testutils
 
 
 def _remove_file(filepath):
+    if not filepath:
+        return
     try:
         os.remove(filepath)
     except OSError:
@@ -29,7 +33,7 @@ def _remove_file(filepath):
 
 
 @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-class execcmdTest(unittest.TestCase):
+class TestExecCmd(unittest.TestCase):
 
     def test_from_data(self, _):
         command = execcmd.BaseCommand.from_data(b"test")
@@ -108,3 +112,51 @@ class execcmdTest(unittest.TestCase):
             command.execute()
 
             cleanup.assert_called_once_with()
+
+    @mock.patch("cloudbaseinit.plugins.common.execcmd.PowershellSysnative")
+    @mock.patch("cloudbaseinit.plugins.common.execcmd.Shell")
+    def _test_process_ec2(self, mock_shell, mock_psnative, tag=None):
+        if tag:
+            content = textwrap.dedent("""
+            <{0}>mocked</{0}>
+
+            <{0}>second</{0}>
+            <abc>1</abc>
+            <{0}>third
+            </{0}>
+            <{0}></{0}> # empty
+            <{0}></{0} # invalid
+            """.format(tag)).encode()
+        else:
+            content = textwrap.dedent("""
+            <powershell>p1</powershell>
+            <script>s1</script>
+            <script>s2</script>
+            <powershell>p2</powershell>
+            <script>s3</script>
+            """).encode()
+
+        def ident(value):
+            ident_func = mock.MagicMock()
+            ident_func.return_value = (value, b"", 0)
+            return ident_func
+
+        mock_shell.from_data = ident
+        mock_psnative.from_data = ident
+
+        ec2conf = execcmd.EC2Config.from_data(content)
+        out, _, _ = ec2conf()
+
+        if tag:
+            self.assertEqual(b"mocked\nsecond\nthird", out)
+        else:
+            self.assertEqual(b"s1\ns2\ns3\np1\np2", out)
+
+    def test_process_ec2_script(self, _):
+        self._test_process_ec2(tag="script")
+
+    def test_process_ec2_powershell(self, _):
+        self._test_process_ec2(tag="powershell")
+
+    def test_process_ec2_order(self, _):
+        self._test_process_ec2()

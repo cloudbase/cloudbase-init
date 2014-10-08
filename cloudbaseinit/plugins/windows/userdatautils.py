@@ -12,11 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import functools
 import re
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common import execcmd
+
 
 LOG = logging.getLogger(__name__)
 
@@ -24,11 +26,12 @@ LOG = logging.getLogger(__name__)
 # is deleted afterwards.
 _compile = functools.partial(re.compile, flags=re.I)
 FORMATS = (
-    (_compile(br'^rem cmd\s'), execcmd.Shell),
-    (_compile(br'^#!/usr/bin/env\spython\s'), execcmd.Python),
+    (_compile(br'^rem\s+cmd\s'), execcmd.Shell),
+    (_compile(br'^#!\s*/usr/bin/env\s+python\s'), execcmd.Python),
     (_compile(br'^#!'), execcmd.Bash),
     (_compile(br'^#(ps1|ps1_sysnative)\s'), execcmd.PowershellSysnative),
     (_compile(br'^#ps1_x86\s'), execcmd.Powershell),
+    (_compile(br'</?(script|powershell)>'), execcmd.EC2Config),
 )
 del _compile
 
@@ -45,15 +48,14 @@ def execute_user_data_script(user_data):
     out = err = None
     command = _get_command(user_data)
     if not command:
-        # Unsupported
         LOG.warning('Unsupported user_data format')
         return ret_val
 
     try:
         out, err, ret_val = command()
-    except Exception as ex:
+    except Exception as exc:
         LOG.warning('An error occurred during user_data execution: \'%s\'',
-                    ex)
+                    exc)
     else:
         LOG.debug('User_data stdout:\n%s', out)
         LOG.debug('User_data stderr:\n%s', err)

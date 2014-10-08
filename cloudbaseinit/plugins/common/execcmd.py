@@ -12,11 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import functools
 import os
+import re
 import tempfile
 import uuid
 
+from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 
 
@@ -27,7 +30,59 @@ __all__ = (
     'Bash',
     'Powershell',
     'PowershellSysnative',
+    'CommandExecutor',
+    'EC2Config',
 )
+
+LOG = logging.getLogger(__name__)
+
+# used with ec2 config files (xmls)
+SCRIPT_TAG = 1
+POWERSHELL_TAG = 2
+# regexp and temporary file extension for each tag
+TAG_REGEX = {
+    SCRIPT_TAG: (
+        re.compile(br"<script>([\s\S]+?)</script>"),
+        "cmd"
+    ),
+    POWERSHELL_TAG: (
+        re.compile(br"<powershell>([\s\S]+?)</powershell>"),
+        "ps1"
+    )
+}
+
+
+def _ec2_find_sections(data):
+    """An intuitive script generator.
+
+    Is able to detect and extract code between:
+        - <script>...</script>
+        - <powershell>...</powershell>
+    tags. Yields data with each specific block of code.
+    Note that, regardless of data structure, all cmd scripts are
+    yielded before the rest of powershell scripts.
+    """
+    # extract code blocks between the tags
+    blocks = {
+        SCRIPT_TAG: TAG_REGEX[SCRIPT_TAG][0].findall(data),
+        POWERSHELL_TAG: TAG_REGEX[POWERSHELL_TAG][0].findall(data)
+    }
+    # build and yield blocks (preserve order)
+    for script_type in (SCRIPT_TAG, POWERSHELL_TAG):
+        for code in blocks[script_type]:
+            code = code.strip()
+            if not code:
+                continue    # skip the empty ones
+            yield code, script_type
+
+
+def _split_sections(multicmd):
+    for code, stype in _ec2_find_sections(multicmd):
+        if stype == SCRIPT_TAG:
+            command = Shell.from_data(code)
+        else:
+            command = PowershellSysnative.from_data(code)
+        yield command
 
 
 class BaseCommand(object):
@@ -143,3 +198,51 @@ class PowershellSysnative(BaseCommand):
 
 class Powershell(PowershellSysnative):
     sysnative = False
+
+
+class CommandExecutor(object):
+
+    """Execute multiple commands and gather outputs."""
+
+    SEP = b"\n"            # multistring separator
+
+    def __init__(self, commands):
+        self._commands = commands
+
+    def execute(self):
+        out_total = []
+        err_total = []
+        ret_total = 0
+        for command in self._commands:
+            out = err = b""
+            ret_val = 0
+            try:
+                out, err, ret_val = command()
+            except Exception as exc:
+                LOG.exception(
+                    "An error occurred during part execution: %s",
+                    exc
+                )
+            else:
+                out_total.append(out)
+                err_total.append(err)
+                ret_total += ret_val
+        return (
+            self.SEP.join(out_total),
+            self.SEP.join(err_total),
+            ret_total
+        )
+
+    __call__ = execute
+
+
+class EC2Config(object):
+
+    @classmethod
+    def from_data(cls, multicmd):
+        """Create multiple `CommandExecutor` objects.
+
+        These are created using data chunks
+        parsed from the given command data.
+        """
+        return CommandExecutor(_split_sections(multicmd))

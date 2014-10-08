@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import os
 import unittest
 
@@ -22,6 +23,8 @@ from cloudbaseinit.plugins.windows import userdatautils
 
 
 def _safe_remove(filepath):
+    if not filepath:
+        return
     try:
         os.remove(filepath)
     except OSError:
@@ -38,7 +41,7 @@ class UserDataUtilsTest(unittest.TestCase):
         to remove the underlying target path of the command.
         """
         command = userdatautils._get_command(data)
-        if command:
+        if command and not isinstance(command, execcmd.CommandExecutor):
             self.addCleanup(_safe_remove, command._target_path)
         return command
 
@@ -57,6 +60,9 @@ class UserDataUtilsTest(unittest.TestCase):
 
         command = self._get_command(b'#ps1_x86\n')
         self.assertIsInstance(command, execcmd.Powershell)
+
+        command = self._get_command(b'<script>echo test</script>')
+        self.assertIsInstance(command, execcmd.CommandExecutor)
 
         command = self._get_command(b'unknown')
         self.assertIsNone(command)

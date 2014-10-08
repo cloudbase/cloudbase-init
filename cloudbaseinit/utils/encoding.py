@@ -33,3 +33,13 @@ def write_file(target_path, data, mode='wb'):
 
     with open(target_path, mode) as f:
         f.write(data)
+
+
+def read_file(target_path, mode='rb'):
+    with open(target_path, mode) as f:
+        data = f.read()
+
+    if 'b' in mode:
+        data = data.decode()
+
+    return data
