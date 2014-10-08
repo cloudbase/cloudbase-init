@@ -64,7 +64,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
             get_system32_dir_calls.append(mock.call())
 
         mock_osutils.execute_process.assert_called_once_with(
-            [cscript_path, slmgr_path, 'fake args'], False, True)
+            [cscript_path, slmgr_path, 'fake args'],
+            shell=False, decode_output=True)
         self.assertEqual(get_system32_dir_calls,
                          mock_osutils.get_system32_dir.call_args_list)
 

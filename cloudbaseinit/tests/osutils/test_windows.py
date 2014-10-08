@@ -1283,7 +1283,7 @@ class WindowsUtilsTest(unittest.TestCase):
         else:
             mock_get_system32_dir.assert_called_once_with()
 
-        mock_execute_process.assert_called_with(args, False)
+        mock_execute_process.assert_called_with(args, shell=False)
         self.assertEqual(mock_execute_process.return_value, response)
 
     def test_execute_powershell_script_sysnative(self):
@@ -1342,7 +1342,7 @@ class WindowsUtilsTest(unittest.TestCase):
             else:
                 mock_get_system32_dir.assert_called_once_with()
 
-            mock_execute_process.assert_called_once_with(args, False)
+            mock_execute_process.assert_called_once_with(args, shell=False)
 
     def test_set_ntp_client_config_sysnative_true(self):
         self._test_set_ntp_client_config(sysnative=True, ret_val=None)

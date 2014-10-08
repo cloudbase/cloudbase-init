@@ -70,5 +70,5 @@ class ConfigDriveService(baseopenstackservice.BaseOpenStackService):
     def cleanup(self):
         if self._metadata_path:
             LOG.debug('Deleting metadata folder: \'%s\'' % self._metadata_path)
-            shutil.rmtree(self._metadata_path, True)
+            shutil.rmtree(self._metadata_path, ignore_errors=True)
             self._metadata_path = None
