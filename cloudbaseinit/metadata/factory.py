@@ -27,7 +27,8 @@ opts = [
             'cloudbaseinit.metadata.services.httpservice.HttpService',
             'cloudbaseinit.metadata.services.configdrive.ConfigDriveService',
             'cloudbaseinit.metadata.services.ec2service.EC2Service',
-            'cloudbaseinit.metadata.services.maasservice.MaaSHttpService'
+            'cloudbaseinit.metadata.services.maasservice.MaaSHttpService',
+            'cloudbaseinit.metadata.services.cloudstack.CloudStack',
         ],
         help='List of enabled metadata service classes, '
         'to be tested fro availability in the provided order. '
