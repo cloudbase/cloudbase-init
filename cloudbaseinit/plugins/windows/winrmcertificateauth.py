@@ -16,8 +16,10 @@
 
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
+from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
+from cloudbaseinit.utils.windows import security
 from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
@@ -53,28 +55,52 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
                      "as a certificate has not been provided in the metadata")
             return (base.PLUGIN_EXECUTION_DONE, False)
 
-        winrm_config = winrmconfig.WinRMConfig()
-        winrm_config.set_auth_config(certificate=True)
+        osutils = osutils_factory.get_os_utils()
+        security_utils = security.WindowsSecurityUtils()
 
-        for cert_data in certs_data:
-            cert_manager = x509.CryptoAPICertManager()
-            cert_thumprint, cert_upn = cert_manager.import_cert(
-                cert_data, store_name=x509.STORE_NAME_ROOT)
+        # On Windows Vista, 2008, 2008 R2 and 7, changing the configuration of
+        # the winrm service will fail with an "Access is denied" error if the
+        # User Account Control remote restrictions are enabled.
+        # The solution to this issue is to temporarily disable the User Account
+        # Control remote restrictions.
+        # https://support.microsoft.com/kb/951016
+        disable_uac_remote_restrictions = (osutils.check_os_version(6, 0) and
+                                           not osutils.check_os_version(6, 2)
+                                           and security_utils
+                                           .get_uac_remote_restrictions())
 
-            if not cert_upn:
-                LOG.error("WinRM certificate authentication cannot be "
-                          "configured as the provided certificate lacks a "
-                          "subject alt name containing an UPN (OID "
-                          "1.3.6.1.4.1.311.20.2.3)")
-                continue
+        try:
+            if disable_uac_remote_restrictions:
+                LOG.debug("Disabling UAC remote restrictions")
+                security_utils.set_uac_remote_restrictions(enable=False)
 
-            if winrm_config.get_cert_mapping(cert_thumprint, cert_upn):
-                winrm_config.delete_cert_mapping(cert_thumprint, cert_upn)
+            winrm_config = winrmconfig.WinRMConfig()
+            winrm_config.set_auth_config(certificate=True)
 
-            LOG.info("Creating WinRM certificate mapping for user "
-                     "%(user_name)s with UPN %(cert_upn)s",
-                     {'user_name': user_name, 'cert_upn': cert_upn})
-            winrm_config.create_cert_mapping(cert_thumprint, cert_upn,
-                                             user_name, password)
+            for cert_data in certs_data:
+                cert_manager = x509.CryptoAPICertManager()
+                cert_thumprint, cert_upn = cert_manager.import_cert(
+                    cert_data, store_name=x509.STORE_NAME_ROOT)
+
+                if not cert_upn:
+                    LOG.error("WinRM certificate authentication cannot be "
+                              "configured as the provided certificate lacks a "
+                              "subject alt name containing an UPN (OID "
+                              "1.3.6.1.4.1.311.20.2.3)")
+                    continue
+
+                if winrm_config.get_cert_mapping(cert_thumprint, cert_upn):
+                    winrm_config.delete_cert_mapping(cert_thumprint, cert_upn)
+
+                LOG.info("Creating WinRM certificate mapping for user "
+                         "%(user_name)s with UPN %(cert_upn)s",
+                         {'user_name': user_name, 'cert_upn': cert_upn})
+                winrm_config.create_cert_mapping(cert_thumprint, cert_upn,
+                                                 user_name, password)
+
+        finally:
+            if disable_uac_remote_restrictions:
+                LOG.debug("Enabling UAC remote restrictions")
+                security_utils.set_uac_remote_restrictions(enable=True)
 
         return (base.PLUGIN_EXECUTION_DONE, False)

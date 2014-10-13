@@ -32,13 +32,18 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
         self._ctypes_mock = mock.MagicMock()
         self._win32com_mock = mock.MagicMock()
         self._pywintypes_mock = mock.MagicMock()
+        self._moves_mock = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'ctypes': self._ctypes_mock,
              'win32com': self._win32com_mock,
-             'pywintypes': self._pywintypes_mock})
+             'pywintypes': self._pywintypes_mock,
+             'six.moves': self._moves_mock})
+
         self._module_patcher.start()
+
+        self._winreg_mock = self._moves_mock.winreg
 
         self.winrmcert = importlib.import_module(
             'cloudbaseinit.plugins.windows.winrmcertificateauth')
@@ -82,22 +87,47 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig')
     @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager.'
                 'import_cert')
-    def _test_execute(self, mock_import_cert, mock_WinRMConfig,
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch('cloudbaseinit.utils.windows.security.WindowsSecurityUtils'
+                '.set_uac_remote_restrictions')
+    @mock.patch('cloudbaseinit.utils.windows.security.WindowsSecurityUtils'
+                '.get_uac_remote_restrictions')
+    def _test_execute(self, get_uac_rs, set_uac_rs, mock_get_os_utils,
+                      mock_import_cert, mock_WinRMConfig,
                       mock_get_credentials, cert_data, cert_upn):
+        mock_osutils = mock.MagicMock()
         mock_service = mock.MagicMock()
         mock_cert_thumprint = mock.MagicMock()
         fake_credentials = ('fake user', 'fake password')
         mock_get_credentials.return_value = fake_credentials
+
         mock_import_cert.return_value = (mock_cert_thumprint, cert_upn)
         mock_WinRMConfig.get_cert_mapping.return_value = True
         mock_service.get_client_auth_certs.return_value = [cert_data]
 
+        mock_get_os_utils.return_value = mock_osutils
+
+        expected_set_token_calls = [mock.call(enable=False),
+                                    mock.call(enable=True)]
+
+        mock_osutils.check_os_version.side_effect = [True, False]
+        get_uac_rs.return_value = True
+
+        expected_check_version_calls = [mock.call(6, 0), mock.call(6, 2)]
+
         response = self._certif_auth.execute(mock_service,
                                              shared_data='fake data')
-        mock_service.get_client_auth_certs.assert_called_once_with()
+
         if not cert_data:
             self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
         else:
+            mock_service.get_client_auth_certs.assert_called_once_with()
+            self.assertEqual(expected_check_version_calls,
+                             mock_osutils.check_os_version.call_args_list)
+            mock_get_os_utils.assert_called_once_with()
+            self.assertEqual(expected_set_token_calls,
+                             set_uac_rs.call_args_list)
+
             mock_get_credentials.assert_called_once_with('fake data')
             mock_import_cert.assert_called_once_with(
                 cert_data, store_name=self.winrmcert.x509.STORE_NAME_ROOT)

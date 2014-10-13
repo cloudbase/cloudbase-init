@@ -19,6 +19,7 @@ from oslo.config import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base
+from cloudbaseinit.utils.windows import security
 from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
@@ -62,31 +63,52 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
 
     def execute(self, service, shared_data):
         osutils = osutils_factory.get_os_utils()
+        security_utils = security.WindowsSecurityUtils()
 
         if not self._check_winrm_service(osutils):
             return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
 
-        winrm_config = winrmconfig.WinRMConfig()
-        winrm_config.set_auth_config(basic=CONF.winrm_enable_basic_auth)
+        # On Windows Vista, 2008, 2008 R2 and 7, changing the configuration of
+        # the winrm service will fail with an "Access is denied" error if the
+        # User Account Control remote restrictions are enabled.
+        # The solution to this issue is to temporarily disable the User Account
+        # Control remote restrictions.
+        # https://support.microsoft.com/kb/951016
+        disable_uac_remote_restrictions = (osutils.check_os_version(6, 0) and
+                                           not osutils.check_os_version(6, 2)
+                                           and security_utils
+                                           .get_uac_remote_restrictions())
 
-        cert_manager = x509.CryptoAPICertManager()
-        cert_thumbprint = cert_manager.create_self_signed_cert(
-            self._cert_subject)
+        try:
+            if disable_uac_remote_restrictions:
+                LOG.debug("Disabling UAC remote restrictions")
+                security_utils.set_uac_remote_restrictions(enable=False)
 
-        protocol = winrmconfig.LISTENER_PROTOCOL_HTTPS
+            winrm_config = winrmconfig.WinRMConfig()
+            winrm_config.set_auth_config(basic=CONF.winrm_enable_basic_auth)
 
-        if winrm_config.get_listener(protocol=protocol):
-            winrm_config.delete_listener(protocol=protocol)
+            cert_manager = x509.CryptoAPICertManager()
+            cert_thumbprint = cert_manager.create_self_signed_cert(
+                self._cert_subject)
 
-        winrm_config.create_listener(
-            cert_thumbprint=cert_thumbprint,
-            protocol=protocol)
+            protocol = winrmconfig.LISTENER_PROTOCOL_HTTPS
 
-        listener_config = winrm_config.get_listener(protocol=protocol)
-        listener_port = listener_config.get("Port")
+            if winrm_config.get_listener(protocol=protocol):
+                winrm_config.delete_listener(protocol=protocol)
 
-        rule_name = "WinRM %s" % protocol
-        osutils.firewall_create_rule(rule_name, listener_port,
-                                     osutils.PROTOCOL_TCP)
+            winrm_config.create_listener(cert_thumbprint=cert_thumbprint,
+                                         protocol=protocol)
+
+            listener_config = winrm_config.get_listener(protocol=protocol)
+            listener_port = listener_config.get("Port")
+
+            rule_name = "WinRM %s" % protocol
+            osutils.firewall_create_rule(rule_name, listener_port,
+                                         osutils.PROTOCOL_TCP)
+
+        finally:
+            if disable_uac_remote_restrictions:
+                LOG.debug("Enabling UAC remote restrictions")
+                security_utils.set_uac_remote_restrictions(enable=True)
 
         return (base.PLUGIN_EXECUTION_DONE, False)

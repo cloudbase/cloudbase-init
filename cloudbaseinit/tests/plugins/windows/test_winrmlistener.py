@@ -29,14 +29,17 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
         self._mock_wintypes = mock.MagicMock()
         self._mock_pywintypes = mock.MagicMock()
         self._mock_win32 = mock.MagicMock()
+        self._moves_mock = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'ctypes': self._mock_wintypes,
              'ctypes.wintypes': self._mock_wintypes,
              'pywintypes': self._mock_pywintypes,
-             'win32com': self._mock_win32})
+             'win32com': self._mock_win32,
+             'six.moves': self._moves_mock})
         self._module_patcher.start()
+        self._winreg_mock = self._moves_mock.winreg
 
         winrmlistener = importlib.import_module('cloudbaseinit.plugins.'
                                                 'windows.winrmlistener')
@@ -84,7 +87,12 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig')
     @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '.create_self_signed_cert')
-    def _test_execute(self, mock_create_cert, mock_WinRMConfig,
+    @mock.patch('cloudbaseinit.utils.windows.security.WindowsSecurityUtils'
+                '.set_uac_remote_restrictions')
+    @mock.patch('cloudbaseinit.utils.windows.security.WindowsSecurityUtils'
+                '.get_uac_remote_restrictions')
+    def _test_execute(self, get_uac_rs, set_uac_rs, mock_create_cert,
+                      mock_WinRMConfig,
                       mock_check_winrm_service, mock_get_os_utils,
                       service_status):
         mock_service = mock.MagicMock()
@@ -98,6 +106,13 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
         mock_WinRMConfig().get_listener.return_value = mock_listener_config
         mock_listener_config.get.return_value = 9999
 
+        mock_osutils.check_os_version.side_effect = [True, False]
+        get_uac_rs.return_value = True
+
+        expected_check_version_calls = [mock.call(6, 0), mock.call(6, 2)]
+        expected_set_token_calls = [mock.call(enable=False),
+                                    mock.call(enable=True)]
+
         response = self._winrmlistener.execute(mock_service, shared_data)
 
         mock_get_os_utils.assert_called_once_with()
@@ -107,6 +122,10 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
             self.assertEqual((base.PLUGIN_EXECUTE_ON_NEXT_BOOT,
                               service_status), response)
         else:
+            self.assertEqual(expected_check_version_calls,
+                             mock_osutils.check_os_version.call_args_list)
+            self.assertEqual(expected_set_token_calls,
+                             set_uac_rs.call_args_list)
             mock_WinRMConfig().set_auth_config.assert_called_once_with(
                 basic=CONF.winrm_enable_basic_auth)
             mock_create_cert.assert_called_once_with(
