@@ -145,6 +145,11 @@ class UserDataPlugin(base.BasePlugin):
         plugin_status = base.PLUGIN_EXECUTION_DONE
         reboot = False
 
+        try:
+            ret_val = int(ret_val)
+        except (ValueError, TypeError):
+            ret_val = 0
+
         if ret_val >= 1001 and ret_val <= 1003:
             reboot = bool(ret_val & 1)
             if ret_val & 2:
@@ -153,5 +158,11 @@ class UserDataPlugin(base.BasePlugin):
         return (plugin_status, reboot)
 
     def _process_non_multi_part(self, user_data):
-        ret_val = userdatautils.execute_user_data_script(user_data)
+        if user_data.startswith('#cloud-config'):
+            user_data_plugins = factory.load_plugins()
+            cloud_config_plugin = user_data_plugins.get('text/cloud-config')
+            ret_val = cloud_config_plugin.process(user_data)
+        else:
+            ret_val = userdatautils.execute_user_data_script(user_data)
+
         return self._get_plugin_return_value(ret_val)
