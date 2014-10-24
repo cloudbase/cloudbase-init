@@ -23,6 +23,7 @@ from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows.userdataplugins import factory
 from cloudbaseinit.plugins.windows import userdatautils
+from cloudbaseinit.utils import encoding
 
 LOG = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class UserDataPlugin(base.BasePlugin):
         if not user_data:
             return (base.PLUGIN_EXECUTION_DONE, False)
 
+        LOG.debug('User data content length: %d' % len(user_data))
         user_data = self._check_gzip_compression(user_data)
 
         return self._process_user_data(user_data)
@@ -53,14 +55,16 @@ class UserDataPlugin(base.BasePlugin):
         return user_data
 
     def _parse_mime(self, user_data):
-        return email.message_from_string(user_data).walk()
+        user_data_str = encoding.get_as_string(user_data)
+        LOG.debug('User data content:\n%s' % user_data_str)
+
+        return email.message_from_string(user_data_str).walk()
 
     def _process_user_data(self, user_data):
         plugin_status = base.PLUGIN_EXECUTION_DONE
         reboot = False
 
-        LOG.debug('User data content:\n%s' % user_data)
-        if user_data.startswith('Content-Type: multipart'):
+        if user_data.startswith(b'Content-Type: multipart'):
             user_data_plugins = factory.load_plugins()
             user_handlers = {}
 
@@ -158,7 +162,7 @@ class UserDataPlugin(base.BasePlugin):
         return (plugin_status, reboot)
 
     def _process_non_multi_part(self, user_data):
-        if user_data.startswith('#cloud-config'):
+        if user_data.startswith(b'#cloud-config'):
             user_data_plugins = factory.load_plugins()
             cloud_config_plugin = user_data_plugins.get('text/cloud-config')
             ret_val = cloud_config_plugin.process(user_data)

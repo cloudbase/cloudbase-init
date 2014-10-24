@@ -27,8 +27,9 @@ class ShellScriptPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('tempfile.gettempdir')
     @mock.patch('cloudbaseinit.plugins.windows.fileexecutils.exec_file')
-    def _test_process(self, mock_exec_file, mock_gettempdir, mock_get_os_utils,
-                      exception=False):
+    @mock.patch('cloudbaseinit.utils.encoding.write_file')
+    def _test_process(self, mock_write_file, mock_exec_file, mock_gettempdir,
+                      mock_get_os_utils, exception=False):
         fake_dir_path = os.path.join("fake", "dir")
         mock_osutils = mock.MagicMock()
         mock_part = mock.MagicMock()
@@ -45,6 +46,8 @@ class ShellScriptPluginTests(unittest.TestCase):
             response = self._shellscript.process(mock_part)
 
         mock_part.get_filename.assert_called_once_with()
+        mock_write_file.assert_called_once_with(
+            fake_target, mock_part.get_payload.return_value)
         mock_exec_file.assert_called_once_with(fake_target)
         mock_part.get_payload.assert_called_once_with()
         mock_gettempdir.assert_called_once_with()

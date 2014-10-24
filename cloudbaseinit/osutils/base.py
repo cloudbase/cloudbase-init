@@ -19,6 +19,8 @@ import os
 import subprocess
 import sys
 
+from cloudbaseinit.utils import encoding
+
 
 class BaseOSUtils(object):
     PROTOCOL_TCP = "TCP"
@@ -34,7 +36,9 @@ class BaseOSUtils(object):
         # On Windows os.urandom() uses CryptGenRandom, which is a
         # cryptographically secure pseudorandom number generator
         b64_password = base64.b64encode(os.urandom(256))
-        return b64_password.replace('/', '').replace('+', '')[:length]
+        b64_password = encoding.get_as_string(b64_password).replace(
+            '/', '').replace('+', '')[:length]
+        return b64_password
 
     def execute_process(self, args, shell=True, decode_output=False):
         p = subprocess.Popen(args,

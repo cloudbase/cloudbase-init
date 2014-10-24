@@ -28,6 +28,7 @@ import wmi
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
+from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import network
 
 
@@ -707,9 +708,12 @@ class WindowsUtils(base.BaseOSUtils):
                 while i < forward_table.dwNumEntries:
                     row = table[i]
                     routing_table.append((
-                        Ws2_32.inet_ntoa(row.dwForwardDest),
-                        Ws2_32.inet_ntoa(row.dwForwardMask),
-                        Ws2_32.inet_ntoa(row.dwForwardNextHop),
+                        encoding.get_as_string(Ws2_32.inet_ntoa(
+                            row.dwForwardDest)),
+                        encoding.get_as_string(Ws2_32.inet_ntoa(
+                            row.dwForwardMask)),
+                        encoding.get_as_string(Ws2_32.inet_ntoa(
+                            row.dwForwardNextHop)),
                         row.dwForwardIfIndex,
                         row.dwForwardMetric1))
                     i += 1

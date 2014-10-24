@@ -45,9 +45,8 @@ class DHCPUtilsTests(unittest.TestCase):
         data += b'\x00' * 128
         data += dhcp._DHCP_COOKIE
         data += b'\x35\x01\x01'
-        data += b'\x3c' + struct.pack('b',
-                                      len('fake id')) + 'fake id'.encode(
-                                          'ascii')
+        data += b'\x3c' + struct.pack('b', len('fake id')) + 'fake id'.encode(
+            'ascii')
         data += b'\x3d\x07\x01'
         data += fake_mac_address_b
         data += b'\x37' + struct.pack('b', len([100]))

@@ -22,6 +22,7 @@ from cloudbaseinit.metadata.services import base as service_base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins import base as plugin_base
+from cloudbaseinit.utils import encoding
 
 
 LOG = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
             content_path = network_config['content_path']
             content_name = content_path.rsplit('/', 1)[-1]
             debian_network_conf = service.get_content(content_name)
+            debian_network_conf = encoding.get_as_string(debian_network_conf)
 
             LOG.debug('network config content:\n%s' % debian_network_conf)
 

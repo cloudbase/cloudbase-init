@@ -37,8 +37,9 @@ class UserDataUtilsTest(unittest.TestCase):
     @mock.patch('os.path.expandvars')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('uuid.uuid4')
-    def _test_execute_user_data_script(self, mock_uuid4, mock_get_os_utils,
-                                       mock_path_expandvars,
+    @mock.patch('cloudbaseinit.utils.encoding.write_file')
+    def _test_execute_user_data_script(self, mock_write_file, mock_uuid4,
+                                       mock_get_os_utils, mock_path_expandvars,
                                        mock_path_exists, mock_os_remove,
                                        mock_gettempdir, mock_re_search,
                                        fake_user_data):
@@ -51,6 +52,8 @@ class UserDataUtilsTest(unittest.TestCase):
         powershell = False
         mock_get_os_utils.return_value = mock_osutils
         mock_path_exists.return_value = True
+        extension = ''
+
         if fake_user_data == '^rem cmd\s':
             side_effect = [match_instance]
             number_of_calls = 1
@@ -88,12 +91,14 @@ class UserDataUtilsTest(unittest.TestCase):
 
         mock_re_search.side_effect = side_effect
 
-        with mock.patch('cloudbaseinit.plugins.windows.userdatautils.open',
-                        mock.mock_open(), create=True):
-            response = userdatautils.execute_user_data_script(fake_user_data)
+        response = userdatautils.execute_user_data_script(fake_user_data)
+
         mock_gettempdir.assert_called_once_with()
+
         self.assertEqual(number_of_calls, mock_re_search.call_count)
         if args:
+            mock_write_file.assert_called_once_with(path + extension,
+                                                    fake_user_data)
             mock_osutils.execute_process.assert_called_with(args, shell)
             mock_os_remove.assert_called_once_with(path + extension)
             self.assertEqual(None, response)
@@ -106,24 +111,24 @@ class UserDataUtilsTest(unittest.TestCase):
             self.assertEqual(0, response)
 
     def test_handle_batch(self):
-        fake_user_data = '^rem cmd\s'
+        fake_user_data = b'^rem cmd\s'
         self._test_execute_user_data_script(fake_user_data=fake_user_data)
 
     def test_handle_python(self):
-        self._test_execute_user_data_script(fake_user_data='^#!/usr/bin/env'
-                                                           '\spython\s')
+        self._test_execute_user_data_script(
+            fake_user_data=b'^#!/usr/bin/env\spython\s')
 
     def test_handle_shell(self):
-        self._test_execute_user_data_script(fake_user_data='^#!')
+        self._test_execute_user_data_script(fake_user_data=b'^#!')
 
     def test_handle_powershell(self):
-        self._test_execute_user_data_script(fake_user_data='^#ps1\s')
+        self._test_execute_user_data_script(fake_user_data=b'^#ps1\s')
 
     def test_handle_powershell_sysnative(self):
-        self._test_execute_user_data_script(fake_user_data='#ps1_sysnative\s')
+        self._test_execute_user_data_script(fake_user_data=b'#ps1_sysnative\s')
 
     def test_handle_powershell_sysnative_no_sysnative(self):
-        self._test_execute_user_data_script(fake_user_data='#ps1_x86\s')
+        self._test_execute_user_data_script(fake_user_data=b'#ps1_x86\s')
 
     def test_handle_unsupported_format(self):
-        self._test_execute_user_data_script(fake_user_data='unsupported')
+        self._test_execute_user_data_script(fake_user_data=b'unsupported')

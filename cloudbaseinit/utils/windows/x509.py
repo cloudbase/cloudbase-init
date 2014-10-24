@@ -21,6 +21,7 @@ import uuid
 
 from ctypes import wintypes
 
+from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import cryptoapi
 from cloudbaseinit.utils import x509constants
 
@@ -202,7 +203,7 @@ class CryptoAPICertManager(object):
                 free(subject_encoded)
 
     def _get_cert_base64(self, cert_data):
-        base64_cert_data = cert_data
+        base64_cert_data = encoding.get_as_string(cert_data)
         if base64_cert_data.startswith(x509constants.PEM_HEADER):
             base64_cert_data = base64_cert_data[len(x509constants.PEM_HEADER):]
         if base64_cert_data.endswith(x509constants.PEM_FOOTER):

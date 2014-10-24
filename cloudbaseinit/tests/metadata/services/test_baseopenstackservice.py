@@ -126,7 +126,7 @@ class BaseOpenStackServiceTest(unittest.TestCase):
         response = self._service.get_client_auth_certs()
         mock_get_meta_data.assert_called_once_with()
         if 'meta' in meta_data:
-            self.assertEqual(['fake cert'], response)
+            self.assertEqual([b'fake cert'], response)
         elif type(ret_value) is str and ret_value.startswith(
                 x509constants.PEM_HEADER):
             mock_get_user_data.assert_called_once_with()
@@ -136,11 +136,11 @@ class BaseOpenStackServiceTest(unittest.TestCase):
 
     def test_get_client_auth_certs(self):
         self._test_get_client_auth_certs(
-            meta_data={'meta': {'admin_cert0': 'fake cert'}})
+            meta_data={'meta': {'admin_cert0': b'fake cert'}})
 
     def test_get_client_auth_certs_no_cert_data(self):
         self._test_get_client_auth_certs(
-            meta_data={}, ret_value=x509constants.PEM_HEADER)
+            meta_data={}, ret_value=x509constants.PEM_HEADER.encode())
 
     def test_get_client_auth_certs_no_cert_data_exception(self):
         self._test_get_client_auth_certs(

@@ -19,6 +19,7 @@ import uuid
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils import encoding
 
 LOG = logging.getLogger(__name__)
 
@@ -54,8 +55,7 @@ def execute_user_data_script(user_data):
         return 0
 
     try:
-        with open(target_path, 'wb') as f:
-            f.write(user_data)
+        encoding.write_file(target_path, user_data)
 
         if powershell:
             (out, err,

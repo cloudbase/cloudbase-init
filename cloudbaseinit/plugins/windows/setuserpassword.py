@@ -47,7 +47,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
     def _get_ssh_public_key(self, service):
         public_keys = service.get_public_keys()
         if public_keys:
-            return public_keys[0]
+            return list(public_keys)[0]
 
     def _get_password(self, service, osutils):
         if CONF.inject_user_password:

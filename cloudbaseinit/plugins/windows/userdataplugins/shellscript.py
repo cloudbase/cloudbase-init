@@ -19,6 +19,7 @@ import tempfile
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.windows import fileexecutils
 from cloudbaseinit.plugins.windows.userdataplugins import base
+from cloudbaseinit.utils import encoding
 
 LOG = logging.getLogger(__name__)
 
@@ -32,8 +33,7 @@ class ShellScriptPlugin(base.BaseUserDataPlugin):
         target_path = os.path.join(tempfile.gettempdir(), file_name)
 
         try:
-            with open(target_path, 'wb') as f:
-                f.write(part.get_payload())
+            encoding.write_file(target_path, part.get_payload())
 
             return fileexecutils.exec_file(target_path)
         except Exception as ex:

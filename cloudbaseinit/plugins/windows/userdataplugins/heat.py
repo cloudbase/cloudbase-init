@@ -20,6 +20,7 @@ from oslo.config import cfg
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.windows.userdataplugins import base
 from cloudbaseinit.plugins.windows import userdatautils
+from cloudbaseinit.utils import encoding
 
 opts = [
     cfg.StrOpt('heat_config_dir', default='C:\\cfn', help='The directory '
@@ -47,8 +48,7 @@ class HeatPlugin(base.BaseUserDataPlugin):
         file_name = os.path.join(CONF.heat_config_dir, part.get_filename())
         self._check_dir(file_name)
 
-        with open(file_name, 'wb') as f:
-            f.write(part.get_payload())
+        encoding.write_file(file_name, part.get_payload())
 
         if part.get_filename() == self._heat_user_data_filename:
             return userdatautils.execute_user_data_script(part.get_payload())

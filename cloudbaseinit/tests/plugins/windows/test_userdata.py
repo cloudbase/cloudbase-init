@@ -58,7 +58,7 @@ class UserDataPluginTest(unittest.TestCase):
             self.assertEqual(response, mock_process_user_data.return_value)
 
     def test_execute(self):
-        self._test_execute(ret_val=mock.sentinel.fake_data)
+        self._test_execute(ret_val='fake_data')
 
     def test_execute_no_data(self):
         self._test_execute(ret_val=None)
@@ -85,10 +85,15 @@ class UserDataPluginTest(unittest.TestCase):
         self.assertEqual(data, response)
 
     @mock.patch('email.message_from_string')
-    def test_parse_mime(self, mock_message_from_string):
+    @mock.patch('cloudbaseinit.utils.encoding.get_as_string')
+    def test_parse_mime(self, mock_get_as_string, mock_message_from_string):
         fake_user_data = 'fake data'
+
         response = self._userdata._parse_mime(user_data=fake_user_data)
-        mock_message_from_string.assert_called_once_with(fake_user_data)
+
+        mock_get_as_string.assert_called_once_with(fake_user_data)
+        mock_message_from_string.assert_called_once_with(
+            mock_get_as_string.return_value)
         self.assertEqual(response, mock_message_from_string().walk())
 
     @mock.patch('cloudbaseinit.plugins.windows.userdataplugins.factory.'
@@ -110,7 +115,8 @@ class UserDataPluginTest(unittest.TestCase):
         mock_process_part.return_value = (base.PLUGIN_EXECUTION_DONE, reboot)
 
         response = self._userdata._process_user_data(user_data=user_data)
-        if user_data.startswith('Content-Type: multipart'):
+
+        if user_data.startswith(b'Content-Type: multipart'):
             mock_load_plugins.assert_called_once_with()
             mock_parse_mime.assert_called_once_with(user_data)
             mock_process_part.assert_called_once_with(mock_part,
@@ -122,15 +128,15 @@ class UserDataPluginTest(unittest.TestCase):
                              response)
 
     def test_process_user_data_multipart_reboot_true(self):
-        self._test_process_user_data(user_data='Content-Type: multipart',
+        self._test_process_user_data(user_data=b'Content-Type: multipart',
                                      reboot=True)
 
     def test_process_user_data_multipart_reboot_false(self):
-        self._test_process_user_data(user_data='Content-Type: multipart',
+        self._test_process_user_data(user_data=b'Content-Type: multipart',
                                      reboot=False)
 
     def test_process_user_data_non_multipart(self):
-        self._test_process_user_data(user_data='Content-Type: non-multipart',
+        self._test_process_user_data(user_data=b'Content-Type: non-multipart',
                                      reboot=False)
 
     @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
@@ -250,7 +256,7 @@ class UserDataPluginTest(unittest.TestCase):
                 '._get_plugin_return_value')
     def test_process_non_multi_part(self, mock_get_plugin_return_value,
                                     mock_execute_user_data_script):
-        user_data = 'fake'
+        user_data = b'fake'
         response = self._userdata._process_non_multi_part(user_data=user_data)
         mock_execute_user_data_script.assert_called_once_with(user_data)
         mock_get_plugin_return_value.assert_called_once_with(
@@ -263,7 +269,7 @@ class UserDataPluginTest(unittest.TestCase):
                 '._get_plugin_return_value')
     def test_process_non_multi_part_cloud_config(
             self, mock_get_plugin_return_value, mock_load_plugins):
-        user_data = '#cloud-config'
+        user_data = b'#cloud-config'
         mock_return_value = mock.sentinel.return_value
         mock_cloud_config_plugin = mock.Mock()
         mock_cloud_config_plugin.process.return_value = mock_return_value

@@ -158,7 +158,7 @@ class CryptManager(object):
         key_type_len = struct.unpack('>I', pub_key[offset:offset + 4])[0]
         offset += 4
 
-        key_type = pub_key[offset:offset + key_type_len]
+        key_type = pub_key[offset:offset + key_type_len].decode('utf-8')
         offset += key_type_len
 
         if key_type not in ['ssh-rsa', 'rsa', 'rsa1']:

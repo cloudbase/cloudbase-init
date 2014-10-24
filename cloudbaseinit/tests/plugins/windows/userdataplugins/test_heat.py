@@ -50,19 +50,19 @@ class HeatUserDataHandlerTests(unittest.TestCase):
                 '.execute_user_data_script')
     @mock.patch('cloudbaseinit.plugins.windows.userdataplugins.heat'
                 '.HeatPlugin._check_dir')
-    def _test_process(self, mock_check_dir, mock_execute_user_data_script,
-                      filename):
+    @mock.patch('cloudbaseinit.utils.encoding.write_file')
+    def _test_process(self, mock_write_file, mock_check_dir,
+                      mock_execute_user_data_script, filename):
         mock_part = mock.MagicMock()
         mock_part.get_filename.return_value = filename
-        with mock.patch('six.moves.builtins.open', mock.mock_open(),
-                        create=True) as handle:
-            response = self._heat.process(mock_part)
-
-            handle().write.assert_called_once_with(mock_part.get_payload())
+        response = self._heat.process(mock_part)
 
         path = os.path.join(CONF.heat_config_dir, filename)
         mock_check_dir.assert_called_once_with(path)
         mock_part.get_filename.assert_called_with()
+        mock_write_file.assert_called_once_with(
+            path, mock_part.get_payload.return_value)
+
         if filename == self._heat._heat_user_data_filename:
             mock_execute_user_data_script.assert_called_with(
                 mock_part.get_payload())

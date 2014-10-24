@@ -55,10 +55,12 @@ class SetUserPasswordPluginTests(unittest.TestCase):
     def _test_get_ssh_public_key(self, data_exists):
         mock_service = mock.MagicMock()
         public_keys = self.fake_data['public_keys']
-        mock_service.get_public_keys.return_value = public_keys
+        mock_service.get_public_keys.return_value = public_keys.values()
+
         response = self._setpassword_plugin._get_ssh_public_key(mock_service)
+
         mock_service.get_public_keys.assert_called_with()
-        self.assertEqual(public_keys[0], response)
+        self.assertEqual(list(public_keys.values())[0], response)
 
     def test_get_ssh_plublic_key(self):
         self._test_get_ssh_public_key(data_exists=True)
