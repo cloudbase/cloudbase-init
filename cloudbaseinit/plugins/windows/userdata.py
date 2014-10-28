@@ -150,7 +150,7 @@ class UserDataPlugin(base.BasePlugin):
         except (ValueError, TypeError):
             ret_val = 0
 
-        if ret_val >= 1001 and ret_val <= 1003:
+        if ret_val and 1001 <= ret_val <= 1003:
             reboot = bool(ret_val & 1)
             if ret_val & 2:
                 plugin_status = base.PLUGIN_EXECUTE_ON_NEXT_BOOT
