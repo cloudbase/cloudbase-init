@@ -71,11 +71,11 @@ class VDS_DISK_PROP(ctypes.Structure):
         ("BusType", ctypes.c_int),
         ("PartitionStyle", ctypes.c_int),
         ("switch_type", VDS_DISK_PROP_SWITCH_TYPE),
-        ("pwszDiskAddress", wintypes.c_void_p),
-        ("pwszName", wintypes.c_void_p),
-        ("pwszFriendlyName", wintypes.c_void_p),
-        ("pwszAdaptorName", wintypes.c_void_p),
-        ("pwszDevicePath", wintypes.c_void_p),
+        ("pwszDiskAddress", ctypes.c_void_p),
+        ("pwszName", ctypes.c_void_p),
+        ("pwszFriendlyName", ctypes.c_void_p),
+        ("pwszAdaptorName", ctypes.c_void_p),
+        ("pwszDevicePath", ctypes.c_void_p),
     ]
 
 
@@ -101,7 +101,7 @@ class VDS_VOLUME_PROP(ctypes.Structure):
         ("ullSize", wintypes.ULARGE_INTEGER),
         ("ulFlags", wintypes.ULONG),
         ("RecommendedFileSystemType", ctypes.c_int),
-        ("pwszName", wintypes.c_void_p),
+        ("pwszName", ctypes.c_void_p),
     ]
 
 
@@ -278,12 +278,12 @@ class IVdsAsync(comtypes.IUnknown):
         comtypes.COMMETHOD([], comtypes.HRESULT, 'Cancel'),
         comtypes.COMMETHOD([], comtypes.HRESULT, 'Wait',
                            (['out'], ctypes.POINTER(
-                            wintypes.HRESULT), 'pHrResult'),
+                               ctypes.HRESULT), 'pHrResult'),
                            (['out'], ctypes.POINTER(VDS_ASYNC_OUTPUT),
                             'pAsyncOut')),
         comtypes.COMMETHOD([], comtypes.HRESULT, 'QueryStatus',
                            (['out'], ctypes.POINTER(
-                            wintypes.HRESULT), 'pHrResult'),
+                            ctypes.HRESULT), 'pHrResult'),
                            (['out'], ctypes.POINTER(wintypes.ULONG),
                             'pulPercentCompleted')),
     ]
