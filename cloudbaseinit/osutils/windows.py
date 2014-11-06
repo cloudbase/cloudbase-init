@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,33 +13,33 @@
 #    under the License.
 
 import ctypes
+from ctypes import wintypes
 import os
 import re
-import six
 import time
+
+import six
+from six.moves import winreg
+from win32com import client
 import win32process
 import win32security
 import wmi
-
-from ctypes import windll
-from ctypes import wintypes
-from six.moves import winreg
-from win32com import client
 
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
 from cloudbaseinit.utils.windows import network
 
+
 LOG = logging.getLogger(__name__)
 
-advapi32 = windll.advapi32
-kernel32 = windll.kernel32
-netapi32 = windll.netapi32
-userenv = windll.userenv
-iphlpapi = windll.iphlpapi
-Ws2_32 = windll.Ws2_32
-setupapi = windll.setupapi
+advapi32 = ctypes.windll.advapi32
+kernel32 = ctypes.windll.kernel32
+netapi32 = ctypes.windll.netapi32
+userenv = ctypes.windll.userenv
+iphlpapi = ctypes.windll.iphlpapi
+Ws2_32 = ctypes.windll.Ws2_32
+setupapi = ctypes.windll.setupapi
 msvcrt = ctypes.cdll.msvcrt
 
 
@@ -454,7 +452,7 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException("Cannot set host name")
 
     def get_network_adapters(self):
-        l = []
+        """Return available adapters as a list of tuples of (name, mac)."""
         conn = wmi.WMI(moniker='//./root/cimv2')
         # Get Ethernet adapters only
         wql = ('SELECT * FROM Win32_NetworkAdapter WHERE '
@@ -464,9 +462,7 @@ class WindowsUtils(base.BaseOSUtils):
             wql += ' AND PhysicalAdapter = True'
 
         q = conn.query(wql)
-        for r in q:
-            l.append(r.Name)
-        return l
+        return [(r.Name, r.MACAddress) for r in q]
 
     def get_dhcp_hosts_in_use(self):
         dhcp_hosts = []
@@ -524,14 +520,12 @@ class WindowsUtils(base.BaseOSUtils):
                     'value "%(mtu)s" failed' % {'mac_address': mac_address,
                                                 'mtu': mtu})
 
-    def set_static_network_config(self, adapter_name, address, netmask,
+    def set_static_network_config(self, mac_address, address, netmask,
                                   broadcast, gateway, dnsnameservers):
         conn = wmi.WMI(moniker='//./root/cimv2')
 
-        adapter_name_san = self._sanitize_wmi_input(adapter_name)
-        q = conn.query('SELECT * FROM Win32_NetworkAdapter WHERE '
-                       'MACAddress IS NOT NULL AND '
-                       'Name = \'%s\'' % adapter_name_san)
+        q = conn.query("SELECT * FROM Win32_NetworkAdapter WHERE "
+                       "MACAddress = '{}'".format(mac_address))
         if not len(q):
             raise exception.CloudbaseInitException(
                 "Network adapter not found")

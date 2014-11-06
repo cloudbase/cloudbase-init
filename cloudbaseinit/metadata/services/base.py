@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,12 +12,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import abc
+import collections
 import time
+import warnings
 
 from oslo.config import cfg
 
 from cloudbaseinit.openstack.common import log as logging
+
 
 opts = [
     cfg.IntOpt('retry_count', default=5,
@@ -34,6 +36,20 @@ CONF = cfg.CONF
 CONF.register_opts(opts)
 
 LOG = logging.getLogger(__name__)
+
+# Both the custom service(s) and the networking plugin
+# should know about the entries of these kind of objects.
+NetworkDetails = collections.namedtuple(
+    "NetworkDetails",
+    [
+        "mac",
+        "address",
+        "netmask",
+        "broadcast",
+        "gateway",
+        "dnsnameservers",
+    ]
+)
 
 
 class NotExistingMetadataException(Exception):
@@ -82,6 +98,7 @@ class BaseMetadataService(object):
         pass
 
     def get_content(self, name):
+        # this will also be deprecated due to `get_network_config`
         pass
 
     def get_user_data(self):
@@ -94,7 +111,17 @@ class BaseMetadataService(object):
         pass
 
     def get_network_config(self):
-        pass
+        """Deprecated, use `get_network_details` instead."""
+        warnings.warn("deprecated method, use `get_network_details`",
+                      DeprecationWarning)
+
+    def get_network_details(self):
+        """Return a list of `NetworkDetails` objects.
+
+        These objects provide details regarding static
+        network configuration, details which can be found
+        in the namedtuple defined above.
+        """
 
     def get_admin_password(self):
         pass

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,15 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import importlib
-import mock
 import os
-import six
 import unittest
 
+import mock
 from oslo.config import cfg
+import six
 
 from cloudbaseinit import exception
+
 
 CONF = cfg.CONF
 
@@ -517,7 +517,8 @@ class WindowsUtilsTest(unittest.TestCase):
 
         response = self._winutils.get_network_adapters()
         conn.return_value.query.assert_called_with(wql)
-        self.assertEqual([mock_response.Name], response)
+        self.assertEqual([(mock_response.Name, mock_response.MACAddress)],
+                         response)
 
     def test_get_network_adapters(self):
         self._test_get_network_adapters(False)
@@ -532,7 +533,7 @@ class WindowsUtilsTest(unittest.TestCase):
                                         ret_val2=None, ret_val3=None):
         conn = self._wmi_mock.WMI
         address = '10.10.10.10'
-        adapter_name = 'adapter_name'
+        mac_address = '54:EE:75:19:F4:61'
         broadcast = '0.0.0.0'
         dns_list = ['8.8.8.8']
 
@@ -540,10 +541,9 @@ class WindowsUtilsTest(unittest.TestCase):
             self.assertRaises(
                 exception.CloudbaseInitException,
                 self._winutils.set_static_network_config,
-                adapter_name, address, self._NETMASK,
+                mac_address, address, self._NETMASK,
                 broadcast, self._GATEWAY, dns_list)
         else:
-            mock_sanitize_wmi_input.return_value = adapter_name
             conn.return_value.query.return_value = adapter
             adapter_config = adapter[0].associators()[0]
             adapter_config.EnableStatic.return_value = ret_val1
@@ -555,26 +555,26 @@ class WindowsUtilsTest(unittest.TestCase):
                 self.assertRaises(
                     exception.CloudbaseInitException,
                     self._winutils.set_static_network_config,
-                    adapter_name, address, self._NETMASK,
+                    mac_address, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
             elif ret_val2[0] > 1:
                 self.assertRaises(
                     exception.CloudbaseInitException,
                     self._winutils.set_static_network_config,
-                    adapter_name, address, self._NETMASK,
+                    mac_address, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
             elif ret_val3[0] > 1:
                 self.assertRaises(
                     exception.CloudbaseInitException,
                     self._winutils.set_static_network_config,
-                    adapter_name, address, self._NETMASK,
+                    mac_address, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
             else:
                 response = self._winutils.set_static_network_config(
-                    adapter_name, address, self._NETMASK,
+                    mac_address, address, self._NETMASK,
                     broadcast, self._GATEWAY, dns_list)
 
                 if ret_val1[0] or ret_val2[0] or ret_val3[0] == 1:
@@ -588,14 +588,12 @@ class WindowsUtilsTest(unittest.TestCase):
                 adapter_config.SetDNSServerSearchOrder.assert_called_with(
                     dns_list)
 
-                self._winutils._sanitize_wmi_input.assert_called_with(
-                    adapter_name)
                 adapter[0].associators.assert_called_with(
                     wmi_result_class='Win32_NetworkAdapterConfiguration')
                 conn.return_value.query.assert_called_with(
-                    'SELECT * FROM Win32_NetworkAdapter WHERE MACAddress IS '
-                    'NOT NULL AND Name = \'%(adapter_name_san)s\'' %
-                    {'adapter_name_san': adapter_name})
+                    "SELECT * FROM Win32_NetworkAdapter WHERE "
+                    "MACAddress = '{}'".format(mac_address)
+                )
 
     def test_set_static_network_config(self):
         adapter = mock.MagicMock()
