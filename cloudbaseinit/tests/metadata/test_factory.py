@@ -14,8 +14,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import unittest
+
+try:
+    import mock
+except ImportError:
+    import unittest.mock as mock
 
 from cloudbaseinit import exception
 from cloudbaseinit.metadata import factory
@@ -24,8 +28,15 @@ from cloudbaseinit.metadata import factory
 class MetadataServiceFactoryTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
-    def _test_get_metadata_service(self, mock_load_class, ret_value):
+    def _test_get_metadata_service(self, mock_load_class,
+                                   ret_value=mock.MagicMock(),
+                                   load_exception=False):
         mock_load_class.side_effect = ret_value
+        if load_exception:
+            mock_load_class()().load.side_effect = Exception
+            with self.assertRaises(exception.CloudbaseInitException):
+                factory.get_metadata_service()
+            return
         if ret_value is exception.CloudbaseInitException:
             self.assertRaises(exception.CloudbaseInitException,
                               factory.get_metadata_service)
@@ -34,9 +45,11 @@ class MetadataServiceFactoryTests(unittest.TestCase):
             self.assertEqual(mock_load_class()(), response)
 
     def test_get_metadata_service(self):
-        m = mock.MagicMock()
-        self._test_get_metadata_service(ret_value=m)
+        self._test_get_metadata_service()
 
     def test_get_metadata_service_exception(self):
         self._test_get_metadata_service(
             ret_value=exception.CloudbaseInitException)
+
+    def test_get_metadata_service_load_exception(self):
+        self._test_get_metadata_service(load_exception=True)

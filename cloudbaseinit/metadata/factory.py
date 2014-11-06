@@ -29,9 +29,11 @@ opts = [
             'cloudbaseinit.metadata.services.ec2service.EC2Service',
             'cloudbaseinit.metadata.services.maasservice.MaaSHttpService',
             'cloudbaseinit.metadata.services.cloudstack.CloudStack',
+            'cloudbaseinit.metadata.services'
+            '.opennebulaservice.OpenNebulaService',
         ],
         help='List of enabled metadata service classes, '
-        'to be tested fro availability in the provided order. '
+        'to be tested for availability in the provided order. '
         'The first available service will be used to retrieve '
         'metadata')
 ]
