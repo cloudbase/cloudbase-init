@@ -307,7 +307,11 @@ class ContextAdapter(BaseLoggerAdapter):
         #                before it can get to the python logging and
         #                possibly cause string encoding trouble
         if not isinstance(msg, six.text_type):
-            msg = six.text_type(msg)
+            try:
+                msg = six.text_type(msg)
+            except UnicodeDecodeError:
+                # Unknown encoding. Let the Python logging module handle it
+                pass
 
         if 'extra' not in kwargs:
             kwargs['extra'] = {}
