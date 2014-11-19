@@ -12,123 +12,74 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import os
 import unittest
 
-from oslo.config import cfg
+import mock
 
+from cloudbaseinit.plugins.common import executil
 from cloudbaseinit.plugins.windows import userdatautils
-from cloudbaseinit.tests.metadata import fake_json_response
-
-CONF = cfg.CONF
 
 
+def _safe_remove(filepath):
+    try:
+        os.remove(filepath)
+    except OSError:
+        pass
+
+
+@mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
 class UserDataUtilsTest(unittest.TestCase):
 
-    def setUp(self):
-        self.fake_data = fake_json_response.get_fake_metadata_json(
-            '2013-04-04')
+    def _get_command(self, data):
+        """Get a command from the given data.
 
-    @mock.patch('re.search')
-    @mock.patch('tempfile.gettempdir')
-    @mock.patch('os.remove')
-    @mock.patch('os.path.exists')
-    @mock.patch('os.path.expandvars')
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    @mock.patch('uuid.uuid4')
-    @mock.patch('cloudbaseinit.utils.encoding.write_file')
-    def _test_execute_user_data_script(self, mock_write_file, mock_uuid4,
-                                       mock_get_os_utils, mock_path_expandvars,
-                                       mock_path_exists, mock_os_remove,
-                                       mock_gettempdir, mock_re_search,
-                                       fake_user_data):
-        mock_osutils = mock.MagicMock()
-        mock_gettempdir.return_value = 'fake_temp'
-        mock_uuid4.return_value = 'randomID'
-        match_instance = mock.MagicMock()
-        path = os.path.join('fake_temp', 'randomID')
-        args = None
-        powershell = False
-        mock_get_os_utils.return_value = mock_osutils
-        mock_path_exists.return_value = True
-        extension = ''
+        If a command was obtained, then a cleanup will be added in order
+        to remove the underlying target path of the command.
+        """
+        command = userdatautils._get_command(data)
+        if command:
+            self.addCleanup(_safe_remove, command._target_path)
+        return command
 
-        if fake_user_data == '^rem cmd\s':
-            side_effect = [match_instance]
-            number_of_calls = 1
-            extension = '.cmd'
-            args = [path + extension]
-            shell = True
-        elif fake_user_data == '^#!/usr/bin/env\spython\s':
-            side_effect = [None, match_instance]
-            number_of_calls = 2
-            extension = '.py'
-            args = ['python.exe', path + extension]
-            shell = False
-        elif fake_user_data == '#!':
-            side_effect = [None, None, match_instance]
-            number_of_calls = 3
-            extension = '.sh'
-            args = ['bash.exe', path + extension]
-            shell = False
-        elif fake_user_data == '#ps1_sysnative\s':
-            side_effect = [None, None, None, match_instance]
-            number_of_calls = 4
-            extension = '.ps1'
-            sysnative = True
-            powershell = True
-        elif fake_user_data == '#ps1_x86\s':
-            side_effect = [None, None, None, None, match_instance]
-            number_of_calls = 5
-            extension = '.ps1'
-            shell = False
-            sysnative = False
-            powershell = True
-        else:
-            side_effect = [None, None, None, None, None]
-            number_of_calls = 5
+    def test__get_command(self, _):
+        command = self._get_command(b'rem cmd test')
+        self.assertIsInstance(command, executil.Shell)
 
-        mock_re_search.side_effect = side_effect
+        command = self._get_command(b'#!/usr/bin/env python\ntest')
+        self.assertIsInstance(command, executil.Python)
 
-        response = userdatautils.execute_user_data_script(fake_user_data)
+        command = self._get_command(b'#!/bin/bash')
+        self.assertIsInstance(command, executil.Bash)
 
-        mock_gettempdir.assert_called_once_with()
+        command = self._get_command(b'#ps1_sysnative\n')
+        self.assertIsInstance(command, executil.PowershellSysnative)
 
-        self.assertEqual(number_of_calls, mock_re_search.call_count)
-        if args:
-            mock_write_file.assert_called_once_with(path + extension,
-                                                    fake_user_data)
-            mock_osutils.execute_process.assert_called_with(args, shell)
-            mock_os_remove.assert_called_once_with(path + extension)
-            self.assertEqual(None, response)
-        elif powershell:
-            mock_osutils.execute_powershell_script.assert_called_with(
-                path + extension, sysnative)
-            mock_os_remove.assert_called_once_with(path + extension)
-            self.assertEqual(None, response)
-        else:
-            self.assertEqual(0, response)
+        command = self._get_command(b'#ps1_x86\n')
+        self.assertIsInstance(command, executil.Powershell)
 
-    def test_handle_batch(self):
-        fake_user_data = b'^rem cmd\s'
-        self._test_execute_user_data_script(fake_user_data=fake_user_data)
+        command = self._get_command(b'unknown')
+        self.assertIsNone(command)
 
-    def test_handle_python(self):
-        self._test_execute_user_data_script(
-            fake_user_data=b'^#!/usr/bin/env\spython\s')
+    def test_execute_user_data_script_no_commands(self, _):
+        retval = userdatautils.execute_user_data_script(b"unknown")
+        self.assertEqual(0, retval)
 
-    def test_handle_shell(self):
-        self._test_execute_user_data_script(fake_user_data=b'^#!')
+    @mock.patch('cloudbaseinit.plugins.windows.userdatautils.'
+                '_get_command')
+    def test_execute_user_data_script_fails(self, mock_get_command, _):
+        mock_get_command.return_value.side_effect = ValueError
+        retval = userdatautils.execute_user_data_script(
+            mock.sentinel.user_data)
 
-    def test_handle_powershell(self):
-        self._test_execute_user_data_script(fake_user_data=b'^#ps1\s')
+        self.assertEqual(0, retval)
 
-    def test_handle_powershell_sysnative(self):
-        self._test_execute_user_data_script(fake_user_data=b'#ps1_sysnative\s')
-
-    def test_handle_powershell_sysnative_no_sysnative(self):
-        self._test_execute_user_data_script(fake_user_data=b'#ps1_x86\s')
-
-    def test_handle_unsupported_format(self):
-        self._test_execute_user_data_script(fake_user_data=b'unsupported')
+    @mock.patch('cloudbaseinit.plugins.windows.userdatautils.'
+                '_get_command')
+    def test_execute_user_data_script(self, mock_get_command, _):
+        mock_get_command.return_value.return_value = (
+            mock.sentinel.output, mock.sentinel.error, -1
+        )
+        retval = userdatautils.execute_user_data_script(
+            mock.sentinel.user_data)
+        self.assertEqual(-1, retval)
