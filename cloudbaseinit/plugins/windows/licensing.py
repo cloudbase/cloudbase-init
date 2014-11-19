@@ -46,7 +46,7 @@ class WindowsLicensingPlugin(base.BasePlugin):
         slmgr_path = os.path.join(slmgr_dir, "slmgr.vbs")
 
         (out, err, exit_code) = osutils.execute_process(
-            [cscript_path, slmgr_path] + args, False)
+            [cscript_path, slmgr_path] + args, False, True)
 
         if exit_code:
             raise exception.CloudbaseInitException(
