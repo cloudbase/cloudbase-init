@@ -256,3 +256,23 @@ class UserDataPluginTest(unittest.TestCase):
         mock_get_plugin_return_value.assert_called_once_with(
             mock_execute_user_data_script())
         self.assertEqual(mock_get_plugin_return_value.return_value, response)
+
+    @mock.patch('cloudbaseinit.plugins.windows.userdataplugins.factory.'
+                'load_plugins')
+    @mock.patch('cloudbaseinit.plugins.windows.userdata.UserDataPlugin'
+                '._get_plugin_return_value')
+    def test_process_non_multi_part_cloud_config(
+            self, mock_get_plugin_return_value, mock_load_plugins):
+        user_data = '#cloud-config'
+        mock_return_value = mock.sentinel.return_value
+        mock_cloud_config_plugin = mock.Mock()
+        mock_cloud_config_plugin.process.return_value = mock_return_value
+        mock_get_plugin_return_value.return_value = mock_return_value
+        mock_load_plugins.return_value = {
+            'text/cloud-config': mock_cloud_config_plugin}
+        return_value = self._userdata._process_non_multi_part(
+            user_data=user_data)
+
+        mock_load_plugins.assert_called_once_with()
+        mock_cloud_config_plugin.process.assert_called_once_with(user_data)
+        self.assertEqual(mock_return_value, return_value)
