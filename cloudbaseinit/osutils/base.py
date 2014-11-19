@@ -17,6 +17,7 @@
 import base64
 import os
 import subprocess
+import sys
 
 
 class BaseOSUtils(object):
@@ -35,12 +36,17 @@ class BaseOSUtils(object):
         b64_password = base64.b64encode(os.urandom(256))
         return b64_password.replace('/', '').replace('+', '')[:length]
 
-    def execute_process(self, args, shell=True):
+    def execute_process(self, args, shell=True, decode_output=False):
         p = subprocess.Popen(args,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              shell=shell)
         (out, err) = p.communicate()
+
+        if decode_output and sys.version_info < (3, 0):
+            out = out.decode(sys.stdout.encoding)
+            err = err.decode(sys.stdout.encoding)
+
         return (out, err, p.returncode)
 
     def sanitize_shell_input(self, value):
