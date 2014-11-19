@@ -19,13 +19,11 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
 from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import licensing
-
-CONF = cfg.CONF
+from cloudbaseinit.tests import testutils
 
 
 class WindowsLicensingPluginTests(unittest.TestCase):
@@ -86,10 +84,10 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                       activate_windows):
         mock_osutils = mock.MagicMock()
         run_slmgr_calls = [mock.call(mock_osutils, ['/dlv'])]
-        CONF.set_override('activate_windows', activate_windows)
         mock_get_os_utils.return_value = mock_osutils
 
-        response = self._licensing.execute(service=None, shared_data=None)
+        with testutils.ConfPatcher('activate_windows', activate_windows):
+            response = self._licensing.execute(service=None, shared_data=None)
 
         mock_get_os_utils.assert_called_once_with()
         if activate_windows:

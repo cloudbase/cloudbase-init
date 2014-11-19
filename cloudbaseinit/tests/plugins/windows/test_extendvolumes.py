@@ -20,9 +20,8 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
-CONF = cfg.CONF
+from cloudbaseinit.tests import testutils
 
 
 class ExtendVolumesPluginTests(unittest.TestCase):
@@ -187,9 +186,9 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         self.assertEqual(['fake packs'], response)
 
     def test_get_volumes_to_extend(self):
-        CONF.set_override('volumes_to_extend', '1')
-        response = self._extend_volumes._get_volumes_to_extend()
-        self.assertEqual([1], response)
+        with testutils.ConfPatcher('volumes_to_extend', '1'):
+            response = self._extend_volumes._get_volumes_to_extend()
+            self.assertEqual([1], response)
 
     @mock.patch('cloudbaseinit.utils.windows.vds.load_vds_service')
     @mock.patch('cloudbaseinit.plugins.windows.extendvolumes.'
@@ -200,7 +199,6 @@ class ExtendVolumesPluginTests(unittest.TestCase):
                 'ExtendVolumesPlugin._extend_volumes')
     def test_execute(self, mock_extend_volumes, mock_query_packs,
                      mock_query_providers, mock_load_vds_service):
-        CONF.set_override('volumes_to_extend', '1')
         mock_svc = mock.MagicMock()
         fake_providers = ['fake providers']
         fake_packs = ['fake packs']
@@ -210,7 +208,8 @@ class ExtendVolumesPluginTests(unittest.TestCase):
         mock_query_providers.return_value = fake_providers
         mock_query_packs.return_value = fake_packs
 
-        self._extend_volumes.execute(mock_service, fake_data)
+        with testutils.ConfPatcher('volumes_to_extend', '1'):
+            self._extend_volumes.execute(mock_service, fake_data)
 
         mock_query_providers.assert_called_once_with(mock_svc)
         mock_query_packs.assert_called_once_with('fake providers')

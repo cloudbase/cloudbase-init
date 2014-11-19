@@ -18,13 +18,11 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import sethostname
 from cloudbaseinit.tests.metadata import fake_json_response
-
-CONF = cfg.CONF
+from cloudbaseinit.tests import testutils
 
 
 class SetHostNamePluginPluginTests(unittest.TestCase):
@@ -34,6 +32,7 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
+    @testutils.ConfPatcher('netbios_host_name_compatibility', True)
     @mock.patch('platform.node')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     def _test_execute(self, mock_get_os_utils, mock_node, hostname_exists=True,
@@ -52,7 +51,6 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
         else:
             mock_service.get_host_name.return_value = None
 
-        CONF.set_override('netbios_host_name_compatibility', True)
         mock_get_os_utils.return_value = mock_osutils
 
         if hostname_exists is True:

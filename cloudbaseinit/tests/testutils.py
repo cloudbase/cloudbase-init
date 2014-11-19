@@ -13,18 +13,24 @@
 #    under the License.
 
 import contextlib
+import functools
 import logging as base_logging
 import os
 import shutil
 import tempfile
 
+from oslo.config import cfg
+
 from cloudbaseinit.openstack.common import log as logging
 
+
+CONF = cfg.CONF
 
 __all__ = (
     'create_tempfile',
     'create_tempdir',
     'LogSnatcher',
+    'ConfPatcher',
 )
 
 
@@ -108,3 +114,34 @@ class LogSnatcher(object):
     def __exit__(self, *args):
         self._logger.handlers.remove(self._snatch_handler)
         self._logger.logger.setLevel(self._previous_level)
+
+
+class ConfPatcher(object):
+    """Override the configuration for the given key, with the given value.
+
+    This class can be used both as a context manager and as a decorator.
+    """
+    # TODO(cpopa): mock.patch.dict would have been a better solution
+    #              but oslo.config.cfg doesn't support item
+    #              assignment.
+
+    def __init__(self, key, value, conf=CONF):
+        self._original_value = conf.get(key)
+        self._key = key
+        self._value = value
+        self._conf = conf
+
+    def __call__(self, func, *args, **kwargs):
+        def _wrapped_f(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+
+        functools.update_wrapper(_wrapped_f, func)
+        return _wrapped_f
+
+    def __enter__(self):
+        self._conf.set_override(self._key, self._value)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._conf.set_override(self._key, self._original_value)

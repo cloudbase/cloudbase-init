@@ -38,6 +38,7 @@ class SerialPortHandlerTests(unittest.TestCase):
 
         self.log = importlib.import_module("cloudbaseinit.utils.log")
 
+        self._old_value = CONF.get('logging_serial_port_settings')
         CONF.set_override('logging_serial_port_settings', "COM1,115200,N,8")
         self._serial_port_handler = self.log.SerialPortHandler()
         self._unicode_stream = self._serial_port_handler._UnicodeToBytesStream(
@@ -46,6 +47,7 @@ class SerialPortHandlerTests(unittest.TestCase):
 
     def tearDown(self):
         self._module_patcher.stop()
+        CONF.set_override('logging_serial_port_settings', self._old_value)
 
     def test_init(self):
         mock_Serial = self._serial.Serial

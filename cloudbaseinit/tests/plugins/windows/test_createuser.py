@@ -22,6 +22,7 @@ from oslo.config import cfg
 
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import createuser
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
@@ -38,12 +39,12 @@ class CreateUserPluginTests(unittest.TestCase):
         mock_osutils.generate_random_password.assert_called_once_with(14)
         self.assertEqual('fake password', response)
 
+    @testutils.ConfPatcher('groups', ['Admins'])
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.plugins.windows.createuser.CreateUserPlugin'
                 '._get_password')
     def _test_execute(self, mock_get_password, mock_get_os_utils,
                       user_exists=True):
-        CONF.set_override('groups', ['Admins'])
         shared_data = {}
         mock_token = mock.MagicMock()
         mock_osutils = mock.MagicMock()

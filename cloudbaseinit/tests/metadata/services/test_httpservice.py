@@ -31,7 +31,6 @@ CONF = cfg.CONF
 class HttpServiceTest(unittest.TestCase):
 
     def setUp(self):
-        CONF.set_override('retry_count_interval', 0)
         self._httpservice = httpservice.HttpService()
 
     @mock.patch('cloudbaseinit.utils.network.check_metadata_ip_route')

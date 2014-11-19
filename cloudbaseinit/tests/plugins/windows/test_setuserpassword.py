@@ -23,6 +23,7 @@ from oslo.config import cfg
 from cloudbaseinit.plugins import constants
 from cloudbaseinit.plugins.windows import setuserpassword
 from cloudbaseinit.tests.metadata import fake_json_response
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
@@ -74,7 +75,6 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         mock_service.get_admin_password.return_value = 'Passw0rd'
-        CONF.set_override('inject_user_password', inject_password)
         mock_osutils.generate_random_password.return_value = 'Passw0rd'
         response = self._setpassword_plugin._get_password(mock_service,
                                                           mock_osutils)
@@ -85,10 +85,12 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self.assertEqual('Passw0rd', response)
 
     def test_get_password_inject_true(self):
-        self._test_get_password(inject_password=True)
+        with testutils.ConfPatcher('inject_user_password', True):
+            self._test_get_password(inject_password=True)
 
     def test_get_password_inject_false(self):
-        self._test_get_password(inject_password=False)
+        with testutils.ConfPatcher('inject_user_password', False):
+            self._test_get_password(inject_password=False)
 
     @mock.patch('cloudbaseinit.plugins.windows.setuserpassword.'
                 'SetUserPasswordPlugin._get_ssh_public_key')

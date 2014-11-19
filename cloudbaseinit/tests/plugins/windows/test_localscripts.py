@@ -22,9 +22,7 @@ except ImportError:
 
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import localscripts
-from oslo.config import cfg
-
-CONF = cfg.CONF
+from cloudbaseinit.tests import testutils
 
 
 class LocalScriptsPluginTests(unittest.TestCase):
@@ -45,18 +43,20 @@ class LocalScriptsPluginTests(unittest.TestCase):
             sorted(os.path.join(fake_path, f) for f in fake_file_list),
             response)
 
+    @testutils.ConfPatcher('local_scripts_path',
+                           mock.sentinel.mock_local_scripts_path)
     @mock.patch('cloudbaseinit.plugins.windows.localscripts'
                 '.LocalScriptsPlugin._get_files_in_dir')
     @mock.patch('cloudbaseinit.plugins.windows.fileexecutils.exec_file')
     def test_execute(self, mock_exec_file, mock_get_files_in_dir):
         mock_service = mock.MagicMock()
         fake_path = os.path.join('fake', 'path')
-        CONF.set_override('local_scripts_path', True)
 
         mock_get_files_in_dir.return_value = [fake_path]
 
         response = self._localscripts.execute(mock_service, shared_data=None)
 
-        mock_get_files_in_dir.assert_called_once_with(CONF.local_scripts_path)
+        mock_get_files_in_dir.assert_called_once_with(
+            mock.sentinel.mock_local_scripts_path)
         mock_exec_file.assert_called_once_with(fake_path)
         self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)

@@ -25,6 +25,7 @@ from oslo.config import cfg
 from six.moves.urllib import error
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import x509constants
 
 if sys.version_info < (3, 0):
@@ -47,14 +48,14 @@ class MaaSHttpServiceTest(unittest.TestCase):
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_data")
     def _test_load(self, mock_get_data, ip):
-        CONF.set_override('maas_metadata_url', ip)
-        response = self._maasservice.load()
-        if ip is not None:
-            mock_get_data.assert_called_once_with(
-                '%s/meta-data/' % self._maasservice._metadata_version)
-            self.assertTrue(response)
-        else:
-            self.assertFalse(response)
+        with testutils.ConfPatcher('maas_metadata_url', ip):
+            response = self._maasservice.load()
+            if ip is not None:
+                mock_get_data.assert_called_once_with(
+                    '%s/meta-data/' % self._maasservice._metadata_version)
+                self.assertTrue(response)
+            else:
+                self.assertFalse(response)
 
     def test_load(self):
         self._test_load(ip='196.254.196.254')
@@ -124,17 +125,17 @@ class MaaSHttpServiceTest(unittest.TestCase):
                 "._get_response")
     def test_get_data(self, mock_get_response, mock_Request,
                       mock_get_oauth_headers):
-        CONF.set_override('maas_metadata_url', '196.254.196.254')
-        fake_path = os.path.join('fake', 'path')
-        mock_get_oauth_headers.return_value = 'fake headers'
-        response = self._maasservice._get_data(path=fake_path)
-        norm_path = posixpath.join(CONF.maas_metadata_url, fake_path)
-        mock_get_oauth_headers.assert_called_once_with(norm_path)
-        mock_Request.assert_called_once_with(norm_path,
-                                             headers='fake headers')
-        mock_get_response.assert_called_once_with(mock_Request())
-        self.assertEqual(mock_get_response.return_value.read.return_value,
-                         response)
+        with testutils.ConfPatcher('maas_metadata_url', '196.254.196.254'):
+            fake_path = os.path.join('fake', 'path')
+            mock_get_oauth_headers.return_value = 'fake headers'
+            response = self._maasservice._get_data(path=fake_path)
+            norm_path = posixpath.join(CONF.maas_metadata_url, fake_path)
+            mock_get_oauth_headers.assert_called_once_with(norm_path)
+            mock_Request.assert_called_once_with(norm_path,
+                                                 headers='fake headers')
+            mock_get_response.assert_called_once_with(mock_Request())
+            self.assertEqual(mock_get_response.return_value.read.return_value,
+                             response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")

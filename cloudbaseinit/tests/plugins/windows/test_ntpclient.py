@@ -18,14 +18,12 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
 from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import ntpclient
+from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import dhcp
-
-CONF = cfg.CONF
 
 
 class NTPClientPluginTests(unittest.TestCase):
@@ -105,6 +103,7 @@ class NTPClientPluginTests(unittest.TestCase):
                                             fail_service_start=False,
                                             patch_check_os_version=False)
 
+    @testutils.ConfPatcher('ntp_use_dhcp_config', True)
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.utils.dhcp.get_dhcp_options')
     @mock.patch('cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin.'
@@ -119,7 +118,6 @@ class NTPClientPluginTests(unittest.TestCase):
         # see the expected result.
         mock_unpack_ntp_hosts.side_effect = original_unpack_hosts
 
-        CONF.set_override('ntp_use_dhcp_config', True)
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         mock_options_data = mock.MagicMock()

@@ -19,14 +19,12 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
 from cloudbaseinit import exception
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import sshpublickeys
 from cloudbaseinit.tests.metadata import fake_json_response
-
-CONF = cfg.CONF
+from cloudbaseinit.tests import testutils
 
 
 class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
@@ -36,6 +34,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
+    @testutils.ConfPatcher('username', mock.sentinel.username)
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('os.path')
     @mock.patch('os.makedirs')
@@ -45,7 +44,6 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
         mock_osutils = mock.MagicMock()
         fake_shared_data = 'fake data'
         mock_service.get_public_keys.return_value = self.fake_data
-        CONF.set_override('username', 'fake user')
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.get_user_home.return_value = user_home
         mock_os_path.exists.return_value = False
@@ -61,7 +59,8 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
                 response = self._set_ssh_keys_plugin.execute(mock_service,
                                                              fake_shared_data)
                 mock_service.get_public_keys.assert_called_with()
-                mock_osutils.get_user_home.assert_called_with('fake user')
+                mock_osutils.get_user_home.assert_called_with(
+                    mock.sentinel.username)
                 self.assertEqual(2, mock_os_path.join.call_count)
                 mock_os_makedirs.assert_called_once_with(mock_os_path.join())
 
