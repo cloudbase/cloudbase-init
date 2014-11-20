@@ -21,8 +21,7 @@ except ImportError:
     import mock
 from oslo.config import cfg
 
-from cloudbaseinit.plugins import base
-
+from cloudbaseinit.plugins.common import base
 
 CONF = cfg.CONF
 

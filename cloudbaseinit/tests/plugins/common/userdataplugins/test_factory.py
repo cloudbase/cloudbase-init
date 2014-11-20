@@ -1,4 +1,4 @@
-# Copyright 2013 Cloudbase Solutions Srl
+# Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,20 +18,13 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
-from cloudbaseinit.plugins.common import factory
-
-CONF = cfg.CONF
+from cloudbaseinit.plugins.common.userdataplugins import factory
 
 
-class PluginFactoryTests(unittest.TestCase):
+class UserDataPluginsFactoryTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
-    def test_load_plugins(self, mock_load_class):
-        expected = []
-        for path in CONF.plugins:
-            expected.append(mock.call(path))
+    def test_process(self, mock_load_class):
         response = factory.load_plugins()
-        self.assertEqual(expected, mock_load_class.call_args_list)
         self.assertTrue(response is not None)

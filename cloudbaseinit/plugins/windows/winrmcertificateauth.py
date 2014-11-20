@@ -15,8 +15,8 @@
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
-from cloudbaseinit.plugins import base
-from cloudbaseinit.plugins import constants
+from cloudbaseinit.plugins.common import base
+from cloudbaseinit.plugins.common import constants
 from cloudbaseinit.utils.windows import security
 from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509

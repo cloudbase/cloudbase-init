@@ -1,4 +1,4 @@
-# Copyright 2013 Cloudbase Solutions Srl
+# Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,20 +18,18 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
-from cloudbaseinit.plugins.common import factory
-
-CONF = cfg.CONF
+from cloudbaseinit.plugins.common.userdataplugins import cloudboothook
 
 
-class PluginFactoryTests(unittest.TestCase):
+class CloudBootHookPluginTests(unittest.TestCase):
 
-    @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
-    def test_load_plugins(self, mock_load_class):
-        expected = []
-        for path in CONF.plugins:
-            expected.append(mock.call(path))
-        response = factory.load_plugins()
-        self.assertEqual(expected, mock_load_class.call_args_list)
-        self.assertTrue(response is not None)
+    def setUp(self):
+        self._cloud_hook = cloudboothook.CloudBootHookPlugin()
+
+    @mock.patch('cloudbaseinit.plugins.common.userdataplugins.base'
+                '.BaseUserDataPlugin.get_mime_type')
+    def test_process(self, mock_get_mime_type):
+        mock_part = mock.MagicMock()
+        self._cloud_hook.process(mock_part)
+        mock_get_mime_type.assert_called_once_with()

@@ -22,7 +22,7 @@ except ImportError:
 from oslo.config import cfg
 
 from cloudbaseinit import init
-from cloudbaseinit.plugins import base
+from cloudbaseinit.plugins.common import base
 
 CONF = cfg.CONF
 
@@ -138,7 +138,7 @@ class InitManagerTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.init.InitManager'
                 '._check_plugin_os_requirements')
     @mock.patch('cloudbaseinit.init.InitManager._exec_plugin')
-    @mock.patch('cloudbaseinit.plugins.factory.load_plugins')
+    @mock.patch('cloudbaseinit.plugins.common.factory.load_plugins')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.metadata.factory.get_metadata_service')
     def test_configure_host(self, mock_get_metadata_service,

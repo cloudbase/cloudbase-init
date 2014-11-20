@@ -19,14 +19,10 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
 from cloudbaseinit import exception
-from cloudbaseinit.plugins import base
-from cloudbaseinit.plugins import constants
-
-
-CONF = cfg.CONF
+from cloudbaseinit.plugins.common import base
+from cloudbaseinit.plugins.common import constants
 
 
 class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):

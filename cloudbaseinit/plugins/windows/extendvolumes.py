@@ -18,7 +18,7 @@ import re
 from oslo.config import cfg
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.plugins import base
+from cloudbaseinit.plugins.common import base
 from cloudbaseinit.utils.windows import vds
 
 ole32 = ctypes.windll.ole32

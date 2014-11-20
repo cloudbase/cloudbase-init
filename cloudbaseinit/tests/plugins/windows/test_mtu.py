@@ -20,8 +20,8 @@ except ImportError:
     import mock
 import six
 
-from cloudbaseinit.plugins import base
-from cloudbaseinit.plugins.windows import mtu
+from cloudbaseinit.plugins.common import base
+from cloudbaseinit.plugins.common import mtu
 from cloudbaseinit.utils import dhcp
 
 
@@ -56,7 +56,7 @@ class MTUPluginTests(unittest.TestCase):
                          return_value)
 
     def test_disabled_use_dhcp(self, mock_get_os_utils):
-        with mock.patch('cloudbaseinit.plugins.windows.'
+        with mock.patch('cloudbaseinit.plugins.common.'
                         'mtu.CONF') as mock_conf:
             mock_conf.mtu_use_dhcp_config = False
 

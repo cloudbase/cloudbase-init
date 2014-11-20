@@ -21,7 +21,7 @@ except ImportError:
     import mock
 
 from cloudbaseinit import exception
-from cloudbaseinit.plugins import base
+from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.windows import licensing
 from cloudbaseinit.tests import testutils
 
