@@ -109,45 +109,10 @@ class CloudStack(base.BaseMetadataService):
 
     def get_public_keys(self):
         """Available ssh public keys."""
-        return self._get_cache_data('public-keys')
-
-    def get_admin_password(self):
-        """Administrator password."""
-        url = "http://%s:8080" % self._router_ip
-        headers = urllib.parse.urlencode({'DomU_Request': 'send_my_password'})
-        LOG.debug('Getting Administrator password from %s', url)
-        for _ in range(CONF.retry_count):
-            try:
-                password = self._http_request(url, headers=headers)
-            except urllib.error.HTTPError:
+        ssh_keys = []
+        for ssh_key in self._get_cache_data('public-keys').split():
+            ssh_key = ssh_key.strip()
+            if not ssh_key:
                 continue
-
-            if not password:
-                LOG.debug("Web service did not have any password for the VM.")
-                continue
-
-            elif password == "bad_request":
-                LOG.debug("VM sent an invalid request to the web service.")
-                continue
-
-            elif password == "saved_password":
-                LOG.debug("The VM already saved a password from web service.")
-                break
-
-            else:
-                return password.strip()
-
-        LOG.debug('Administrator password not found.')
-        return None
-
-    def get_service_offering(self):
-        """A description of the virtual machine's service offering."""
-        return self._get_cache_data('service-offering')
-
-    def get_availability_zone(self):
-        """The zone name."""
-        return self._get_cache_data('availability-zone')
-
-    def get_local_ipv4(self):
-        """The guest IP of the virtual machine."""
-        return self._get_cache_data('local-ipv4')
+            ssh_keys.append(ssh_key)
+        return ssh_keys

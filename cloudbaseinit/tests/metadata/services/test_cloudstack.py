@@ -125,35 +125,6 @@ class CloudStackTest(unittest.TestCase):
                                   self._service._get_data, metadata)
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
-                '._http_request')
-    def test_get_admin_password(self, mock_http_request):
-        mock_http_request.side_effect = [
-            "bad_request", "bad_request", "password",
-        ]
-        self.assertEqual("password", self._service.get_admin_password())
-
-    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
-                '._http_request')
-    def test_get_admin_password_fail(self, mock_http_request):
-        error_responses = [
-            urllib.error.HTTPError(url="127.0.0.1:8080", code=427, hdrs={},
-                                   fp=None, msg='429 Too Many Requests.'),
-            "bad_request", ""
-        ]
-        for response in error_responses:
-            mock_http_request.side_effect = [response] * CONF.retry_count
-            self.assertIsNone(self._service.get_admin_password())
-            self.assertEqual(CONF.retry_count, mock_http_request.call_count)
-            mock_http_request.reset_mock()
-
-    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
-                '._http_request')
-    def test_get_admin_password_saved(self, mock_http_request):
-        mock_http_request.side_effect = ["saved_password"]
-        self.assertIsNone(self._service.get_admin_password())
-        self.assertEqual(1, mock_http_request.call_count)
-
-    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._get_data')
     def test_get_cache_data(self, mock_get_data):
         side_effect = mock.sentinel.metadata
@@ -173,7 +144,6 @@ class CloudStackTest(unittest.TestCase):
                 '._get_cache_data')
     def _test_cache_response(self, mock_get_cache_data, method, metadata):
         mock_get_cache_data.side_effect = [mock.sentinel.response]
-        self._service._get_cache_data = mock_get_cache_data
         response = method()
 
         self.assertEqual(mock.sentinel.response, response)
@@ -191,18 +161,19 @@ class CloudStackTest(unittest.TestCase):
         self._test_cache_response(method=self._service.get_user_data,
                                   metadata='../user-data')
 
-    def test_get_public_keys(self):
-        self._test_cache_response(method=self._service.get_public_keys,
-                                  metadata='public-keys')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
+                '._get_cache_data')
+    def test_get_public_keys(self, mock_get_cache_data):
+        mock_get_cache_data.side_effect = [
+            "a\nb\nc",
+            "\n\na\n\nb\n\nc",
+            " \n \n a \n \n b \n \n c",
+            " ", "\n", " \n "
+        ]
+        for _ in range(3):
+            response = self._service.get_public_keys()
+            self.assertEqual(["a", "b", "c"], response)
 
-    def test_get_service_offering(self):
-        self._test_cache_response(method=self._service.get_service_offering,
-                                  metadata='service-offering')
-
-    def test_get_availability_zone(self):
-        self._test_cache_response(method=self._service.get_availability_zone,
-                                  metadata='availability-zone')
-
-    def test_get_local_ipv4(self):
-        self._test_cache_response(method=self._service.get_local_ipv4,
-                                  metadata='local-ipv4')
+        for _ in range(3):
+            response = self._service.get_public_keys()
+            self.assertEqual([], response)
