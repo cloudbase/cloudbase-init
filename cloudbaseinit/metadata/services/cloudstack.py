@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import socket
+
 from oslo.config import cfg
 from six.moves import urllib
 
@@ -29,6 +31,14 @@ CONF = cfg.CONF
 CONF.register_opts(OPTS)
 
 
+class BadPasswordRequestException(Exception):
+    pass
+
+
+class PasswordWasAlreadyRequestedException(Exception):
+    pass
+
+
 class CloudStack(base.BaseMetadataService):
 
     URI_TEMPLATE = 'http://%s/latest/meta-data/'
@@ -38,6 +48,7 @@ class CloudStack(base.BaseMetadataService):
         self.osutils = osutils_factory.get_os_utils()
         self._metadata_uri = None
         self._router_ip = None
+        self._password_server_port = 8080
 
     def _test_api(self, ip_address):
         """Test if the CloudStack API is responding properly."""
@@ -84,6 +95,18 @@ class CloudStack(base.BaseMetadataService):
         response = urllib.request.urlopen(request)
         return response.read()
 
+    def _password_server_command(self, command):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(3)
+        sock.connect((self._router_ip, self._password_server_port))
+        try:
+            sock.sendall('DomU_Request: %s\n' % command)
+            response = sock.recv(4096)
+            response = response.strip()
+            return response
+        finally:
+            sock.close()
+
     def _get_data(self, path):
         """Getting required metadata using CloudStack metadata API."""
         metadata_uri = urllib.parse.urljoin(self._metadata_uri, path)
@@ -116,3 +139,14 @@ class CloudStack(base.BaseMetadataService):
                 continue
             ssh_keys.append(ssh_key)
         return ssh_keys
+
+    def get_admin_password(self):
+        password = self._password_server_command('send_my_password')
+        if password == "bad_request":
+            raise BadPasswordRequestException()
+        elif password == "saved_password":
+            raise PasswordWasAlreadyRequestedException()
+        return password
+
+    def notify_saved_password(self):
+        self._password_server_command('saved_password')
