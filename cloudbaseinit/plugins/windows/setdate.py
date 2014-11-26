@@ -40,7 +40,8 @@ LOG = logging.getLogger(__name__)
 class SetDatePlugin(base.BasePlugin):
     def execute(self, service, shared_data):
         if CONF.set_date_url is None:
-            return
+            LOG.info('No date_url set, cannot set date')
+            return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
         url = CONF.set_date_url
         date_format = '%d %B %Y %H:%M:%S'
         LOG.info('Fetching date from: %s' % url)
