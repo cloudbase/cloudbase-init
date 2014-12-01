@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import json
 import posixpath
 
@@ -19,8 +20,10 @@ from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
+from cloudbaseinit.utils import debiface
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import x509constants
+
 
 opts = [
     cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
@@ -63,8 +66,19 @@ class BaseOpenStackService(base.BaseMetadataService):
         if public_keys:
             return public_keys.values()
 
-    def get_network_config(self):
-        return self._get_meta_data().get('network_config')
+    def get_network_details(self):
+        network_config = self._get_meta_data().get('network_config')
+        if not network_config:
+            return None
+        key = "content_path"
+        if key not in network_config:
+            return None
+
+        content_name = network_config[key].rsplit("/", 1)[-1]
+        content = self.get_content(content_name)
+        content = encoding.get_as_string(content)
+
+        return debiface.parse(content)
 
     def get_admin_password(self):
         meta_data = self._get_meta_data()

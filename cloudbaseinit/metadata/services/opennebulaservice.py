@@ -31,6 +31,8 @@ LOG = logging.getLogger(__name__)
 
 CONTEXT_FILE = "context.sh"
 INSTANCE_ID = "iid-dsopennebula"
+# interface name default template
+IF_FORMAT = "eth{iid}"
 
 # metadata identifiers
 HOST_NAME = ["SET_HOSTNAME", "HOSTNAME"]
@@ -211,15 +213,21 @@ class OpenNebulaService(base.BaseMetadataService):
                 # get existing values
                 mac = self._get_cache_data(MAC, iid=iid).upper()
                 address = self._get_cache_data(ADDRESS, iid=iid)
-                gateway = self._get_cache_data(GATEWAY, iid=iid)
                 # try to find/predict and compute the rest
+                try:
+                    gateway = self._get_cache_data(GATEWAY, iid=iid)
+                except base.NotExistingMetadataException:
+                    gateway = None
                 try:
                     netmask = self._get_cache_data(NETMASK, iid=iid)
                 except base.NotExistingMetadataException:
+                    if not gateway:
+                        raise
                     netmask = self._calculate_netmask(address, gateway)
                 broadcast = self._compute_broadcast(address, netmask)
                 # gather them as namedtuple objects
                 details = base.NetworkDetails(
+                    IF_FORMAT.format(iid=iid),
                     mac,
                     address,
                     netmask,
