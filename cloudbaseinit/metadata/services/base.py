@@ -98,7 +98,6 @@ class BaseMetadataService(object):
         pass
 
     def get_content(self, name):
-        # this will also be deprecated due to `get_network_config`
         pass
 
     def get_user_data(self):

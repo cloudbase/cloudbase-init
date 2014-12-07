@@ -29,8 +29,7 @@ LOG = logging.getLogger(__name__)
 opts = [
     cfg.StrOpt('network_adapter', default=None, help='Network adapter to '
                'configure. If not specified, the first available ethernet '
-               'adapter will be chosen.\n'
-               'WARNING: This option is deprecated and will be removed soon.'),
+               'adapter will be chosen.'),
 ]
 
 CONF = cfg.CONF
