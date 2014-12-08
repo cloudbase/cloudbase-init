@@ -153,7 +153,7 @@ class CloudConfigPlugin(base.BaseUserDataPlugin):
 
         try:
             content = yaml.load(part, Loader=loader)
-        except ValueError:
+        except (ValueError, AttributeError):
             LOG.error("Invalid yaml stream provided.")
             return False
 
