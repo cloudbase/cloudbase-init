@@ -18,6 +18,7 @@ import os
 import re
 import time
 
+import pywintypes
 import six
 from six.moves import winreg
 from win32com import client
@@ -325,24 +326,37 @@ class WindowsUtils(base.BaseOSUtils):
     def user_exists(self, username):
         return self._get_user_wmi_object(username) is not None
 
+    def _get_adsi_object(self, hostname='.', object_name=None,
+                         object_type='computer'):
+        adsi = client.Dispatch("ADsNameSpaces")
+        winnt = adsi.GetObject("", "WinNT:")
+        query = "WinNT://%s" % hostname
+        if object_name:
+            object_name_san = self.sanitize_shell_input(object_name)
+            query += "/%s" % object_name_san
+        query += ",%s" % object_type
+        return winnt.OpenDSObject(query, "", "", 0)
+
     def _create_or_change_user(self, username, password, create,
                                password_expires):
-        username_san = self.sanitize_shell_input(username)
-        password_san = self.sanitize_shell_input(password)
+        try:
+            if create:
+                host = self._get_adsi_object()
+                user = host.Create('user', username)
+            else:
+                user = self._get_adsi_object(object_name=username,
+                                             object_type='user')
 
-        args = ['NET', 'USER', username_san, password_san]
-        if create:
-            args.append('/ADD')
+            user.setpassword(password)
+            user.SetInfo()
 
-        (out, err, ret_val) = self.execute_process(args)
-        if not ret_val:
             self._set_user_password_expiration(username, password_expires)
-        else:
+        except pywintypes.com_error as ex:
             if create:
                 msg = "Create user failed: %s"
             else:
                 msg = "Set user password failed: %s"
-            raise exception.CloudbaseInitException(msg % err)
+            raise exception.CloudbaseInitException(msg % ex.excepinfo[2])
 
     def _sanitize_wmi_input(self, value):
         return value.replace('\'', '\'\'')

@@ -19,18 +19,13 @@ import mock
 import unittest
 
 from cloudbaseinit import exception
-
-
-class FakeComError(Exception):
-    def __init__(self):
-        super(FakeComError, self).__init__()
-        self.excepinfo = [None, None, None, None, None, -2144108544]
+from cloudbaseinit.tests import fake
 
 
 class WinRMConfigTests(unittest.TestCase):
     def setUp(self):
         self._pywintypes_mock = mock.MagicMock()
-        self._pywintypes_mock.com_error = FakeComError
+        self._pywintypes_mock.com_error = fake.FakeComError
         self._win32com_mock = mock.MagicMock()
         self._module_patcher = mock.patch.dict(
             'sys.modules',

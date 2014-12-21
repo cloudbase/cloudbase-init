@@ -22,7 +22,7 @@ from oslo.config import cfg
 import six
 
 from cloudbaseinit import exception
-
+from cloudbaseinit.tests import fake
 
 CONF = cfg.CONF
 
@@ -40,6 +40,7 @@ class WindowsUtilsTest(unittest.TestCase):
 
     def setUp(self):
         self._pywintypes_mock = mock.MagicMock()
+        self._pywintypes_mock.com_error = fake.FakeComError
         self._win32com_mock = mock.MagicMock()
         self._win32process_mock = mock.MagicMock()
         self._win32security_mock = mock.MagicMock()
@@ -177,15 +178,10 @@ class WindowsUtilsTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._set_user_password_expiration')
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '.execute_process')
-    def _test_create_or_change_user(self, mock_execute_process,
+                '._get_adsi_object')
+    def _test_create_or_change_user(self, mock_get_adsi_object,
                                     mock_set_user_password_expiration,
                                     create, password_expires, ret_value=0):
-        args = ['NET', 'USER', self._USERNAME, self._PASSWORD]
-        if create:
-            args.append('/ADD')
-
-        mock_execute_process.return_value = (None, None, ret_value)
 
         if not ret_value:
             self._winutils._create_or_change_user(self._USERNAME,
@@ -194,12 +190,18 @@ class WindowsUtilsTest(unittest.TestCase):
             mock_set_user_password_expiration.assert_called_with(
                 self._USERNAME, password_expires)
         else:
+            mock_get_adsi_object.side_effect = [
+                self._pywintypes_mock.com_error]
             self.assertRaises(
                 exception.CloudbaseInitException,
                 self._winutils._create_or_change_user,
                 self._USERNAME, self._PASSWORD, create, password_expires)
 
-        mock_execute_process.assert_called_with(args)
+        if create:
+            mock_get_adsi_object.assert_called_with()
+        else:
+            mock_get_adsi_object.assert_called_with(
+                object_name=self._USERNAME, object_type='user')
 
     def test_create_user_and_add_password_expire_true(self):
         self._test_create_or_change_user(create=True, password_expires=True)
