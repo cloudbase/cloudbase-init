@@ -1,4 +1,4 @@
-pbr>=0.5.22,!=0.5.23,<1.0
+pbr>=0.10
 iso8601
 eventlet
 netaddr>=0.7.6
