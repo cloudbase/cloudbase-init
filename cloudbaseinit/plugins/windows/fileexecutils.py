@@ -15,16 +15,16 @@
 import os
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.plugins.common import executil
+from cloudbaseinit.plugins.common import execcmd
 
 LOG = logging.getLogger(__name__)
 
 FORMATS = {
-    "cmd": executil.Shell,
-    "exe": executil.Shell,
-    "sh": executil.Bash,
-    "py": executil.Python,
-    "ps1": executil.PowershellSysnative,
+    "cmd": execcmd.Shell,
+    "exe": execcmd.Shell,
+    "sh": execcmd.Bash,
+    "py": execcmd.Python,
+    "ps1": execcmd.PowershellSysnative,
 }
 
 

@@ -16,7 +16,7 @@ import unittest
 
 import mock
 
-from cloudbaseinit.plugins.common import executil
+from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.windows import fileexecutils
 
 
@@ -29,17 +29,17 @@ class TestFileExecutilsPlugin(unittest.TestCase):
 
     def test_executors_mapping(self, _):
         self.assertEqual(fileexecutils.FORMATS["cmd"],
-                         executil.Shell)
+                         execcmd.Shell)
         self.assertEqual(fileexecutils.FORMATS["exe"],
-                         executil.Shell)
+                         execcmd.Shell)
         self.assertEqual(fileexecutils.FORMATS["sh"],
-                         executil.Bash)
+                         execcmd.Bash)
         self.assertEqual(fileexecutils.FORMATS["py"],
-                         executil.Python)
+                         execcmd.Python)
         self.assertEqual(fileexecutils.FORMATS["ps1"],
-                         executil.PowershellSysnative)
+                         execcmd.PowershellSysnative)
 
-    @mock.patch('cloudbaseinit.plugins.common.executil.'
+    @mock.patch('cloudbaseinit.plugins.common.execcmd.'
                 'BaseCommand.execute')
     def test_exec_file_fails(self, mock_execute, _):
         mock_execute.side_effect = ValueError
@@ -47,7 +47,7 @@ class TestFileExecutilsPlugin(unittest.TestCase):
         mock_execute.assert_called_once_with()
         self.assertEqual(0, retval)
 
-    @mock.patch('cloudbaseinit.plugins.common.executil.'
+    @mock.patch('cloudbaseinit.plugins.common.execcmd.'
                 'BaseCommand.execute')
     def test_exec_file_(self, mock_execute, _):
         mock_execute.return_value = (

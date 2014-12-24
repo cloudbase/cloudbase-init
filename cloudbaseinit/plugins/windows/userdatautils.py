@@ -16,7 +16,7 @@ import functools
 import re
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.plugins.common import executil
+from cloudbaseinit.plugins.common import execcmd
 
 LOG = logging.getLogger(__name__)
 
@@ -24,11 +24,11 @@ LOG = logging.getLogger(__name__)
 # is deleted afterwards.
 _compile = functools.partial(re.compile, flags=re.I)
 FORMATS = (
-    (_compile(br'^rem cmd\s'), executil.Shell),
-    (_compile(br'^#!/usr/bin/env\spython\s'), executil.Python),
-    (_compile(br'^#!'), executil.Bash),
-    (_compile(br'^#(ps1|ps1_sysnative)\s'), executil.PowershellSysnative),
-    (_compile(br'^#ps1_x86\s'), executil.Powershell),
+    (_compile(br'^rem cmd\s'), execcmd.Shell),
+    (_compile(br'^#!/usr/bin/env\spython\s'), execcmd.Python),
+    (_compile(br'^#!'), execcmd.Bash),
+    (_compile(br'^#(ps1|ps1_sysnative)\s'), execcmd.PowershellSysnative),
+    (_compile(br'^#ps1_x86\s'), execcmd.Powershell),
 )
 del _compile
 

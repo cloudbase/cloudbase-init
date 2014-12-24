@@ -17,7 +17,7 @@ import unittest
 
 import mock
 
-from cloudbaseinit.plugins.common import executil
+from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.windows import userdatautils
 
 
@@ -44,19 +44,19 @@ class UserDataUtilsTest(unittest.TestCase):
 
     def test__get_command(self, _):
         command = self._get_command(b'rem cmd test')
-        self.assertIsInstance(command, executil.Shell)
+        self.assertIsInstance(command, execcmd.Shell)
 
         command = self._get_command(b'#!/usr/bin/env python\ntest')
-        self.assertIsInstance(command, executil.Python)
+        self.assertIsInstance(command, execcmd.Python)
 
         command = self._get_command(b'#!/bin/bash')
-        self.assertIsInstance(command, executil.Bash)
+        self.assertIsInstance(command, execcmd.Bash)
 
         command = self._get_command(b'#ps1_sysnative\n')
-        self.assertIsInstance(command, executil.PowershellSysnative)
+        self.assertIsInstance(command, execcmd.PowershellSysnative)
 
         command = self._get_command(b'#ps1_x86\n')
-        self.assertIsInstance(command, executil.Powershell)
+        self.assertIsInstance(command, execcmd.Powershell)
 
         command = self._get_command(b'unknown')
         self.assertIsNone(command)

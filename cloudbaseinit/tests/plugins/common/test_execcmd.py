@@ -17,7 +17,7 @@ import unittest
 
 import mock
 
-from cloudbaseinit.plugins.common import executil
+from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.tests import testutils
 
 
@@ -29,12 +29,12 @@ def _remove_file(filepath):
 
 
 @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-class ExecUtilTest(unittest.TestCase):
+class execcmdTest(unittest.TestCase):
 
     def test_from_data(self, _):
-        command = executil.BaseCommand.from_data(b"test")
+        command = execcmd.BaseCommand.from_data(b"test")
 
-        self.assertIsInstance(command, executil.BaseCommand)
+        self.assertIsInstance(command, execcmd.BaseCommand)
 
         # Not public API, though.
         self.assertTrue(os.path.exists(command._target_path),
@@ -50,7 +50,7 @@ class ExecUtilTest(unittest.TestCase):
                          command._target_path)
 
     def test_args(self, _):
-        class FakeCommand(executil.BaseCommand):
+        class FakeCommand(execcmd.BaseCommand):
             command = mock.sentinel.command
 
         with testutils.create_tempfile() as tmp:
@@ -58,11 +58,11 @@ class ExecUtilTest(unittest.TestCase):
             self.assertEqual([mock.sentinel.command, tmp],
                              fake_command.args)
 
-            fake_command = executil.BaseCommand(tmp)
+            fake_command = execcmd.BaseCommand(tmp)
             self.assertEqual([tmp], fake_command.args)
 
     def test_from_data_extension(self, _):
-        class FakeCommand(executil.BaseCommand):
+        class FakeCommand(execcmd.BaseCommand):
             command = mock.sentinel.command
             extension = ".test"
 
@@ -76,7 +76,7 @@ class ExecUtilTest(unittest.TestCase):
         mock_osutils = mock_get_os_utils()
 
         with testutils.create_tempfile() as tmp:
-            command = executil.BaseCommand(tmp)
+            command = execcmd.BaseCommand(tmp)
             command.execute()
 
             mock_osutils.execute_process.assert_called_once_with(
@@ -95,7 +95,7 @@ class ExecUtilTest(unittest.TestCase):
         mock_osutils = mock_get_os_utils()
 
         with testutils.create_tempfile() as tmp:
-            command = executil.Powershell(tmp)
+            command = execcmd.Powershell(tmp)
             command.execute()
 
             mock_osutils.execute_powershell_script.assert_called_once_with(
@@ -104,7 +104,7 @@ class ExecUtilTest(unittest.TestCase):
     def test_execute_cleanup(self, _):
         with testutils.create_tempfile() as tmp:
             cleanup = mock.Mock()
-            command = executil.BaseCommand(tmp, cleanup=cleanup)
+            command = execcmd.BaseCommand(tmp, cleanup=cleanup)
             command.execute()
 
             cleanup.assert_called_once_with()
