@@ -97,8 +97,9 @@ ETH1_MAC='{mac}'
 )
 
 
-def _get_nic_details():
+def _get_nic_details(iid=0):
         details = base.NetworkDetails(
+            opennebulaservice.IF_FORMAT.format(iid=iid),
             MAC,
             ADDRESS,
             NETMASK,
@@ -302,8 +303,9 @@ class TestLoadedOpenNebulaService(_TestOpenNebulaService):
 
     def test_multiple_nics(self):
         self.load_context(context=CONTEXT2)
-        details = _get_nic_details()
-        network_details = [details] * 2
+        nic1 = _get_nic_details(iid=0)
+        nic2 = _get_nic_details(iid=1)
+        network_details = [nic1, nic2]
         self.assertEqual(
             network_details,
             self._service.get_network_details()

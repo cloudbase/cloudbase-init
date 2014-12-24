@@ -16,7 +16,6 @@
 import abc
 import collections
 import time
-import warnings
 
 from oslo.config import cfg
 
@@ -42,6 +41,7 @@ LOG = logging.getLogger(__name__)
 NetworkDetails = collections.namedtuple(
     "NetworkDetails",
     [
+        "name",
         "mac",
         "address",
         "netmask",
@@ -98,7 +98,7 @@ class BaseMetadataService(object):
         pass
 
     def get_content(self, name):
-        pass
+        """Get raw content within a service."""
 
     def get_user_data(self):
         pass
@@ -108,11 +108,6 @@ class BaseMetadataService(object):
 
     def get_public_keys(self):
         pass
-
-    def get_network_config(self):
-        """Deprecated, use `get_network_details` instead."""
-        warnings.warn("deprecated method, use `get_network_details`",
-                      DeprecationWarning)
 
     def get_network_details(self):
         """Return a list of `NetworkDetails` objects.

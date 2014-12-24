@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import ctypes
 from ctypes import wintypes
 import os
@@ -555,19 +556,21 @@ class WindowsUtils(base.BaseOSUtils):
                 "Cannot set static IP address on network adapter")
         reboot_required = (ret_val == 1)
 
-        LOG.debug("Setting static gateways")
-        (ret_val,) = adapter_config.SetGateways([gateway], [1])
-        if ret_val > 1:
-            raise exception.CloudbaseInitException(
-                "Cannot set gateway on network adapter")
-        reboot_required = reboot_required or ret_val == 1
+        if gateway:
+            LOG.debug("Setting static gateways")
+            (ret_val,) = adapter_config.SetGateways([gateway], [1])
+            if ret_val > 1:
+                raise exception.CloudbaseInitException(
+                    "Cannot set gateway on network adapter")
+            reboot_required = reboot_required or ret_val == 1
 
-        LOG.debug("Setting static DNS servers")
-        (ret_val,) = adapter_config.SetDNSServerSearchOrder(dnsnameservers)
-        if ret_val > 1:
-            raise exception.CloudbaseInitException(
-                "Cannot set DNS on network adapter")
-        reboot_required = reboot_required or ret_val == 1
+        if dnsnameservers:
+            LOG.debug("Setting static DNS servers")
+            (ret_val,) = adapter_config.SetDNSServerSearchOrder(dnsnameservers)
+            if ret_val > 1:
+                raise exception.CloudbaseInitException(
+                    "Cannot set DNS on network adapter")
+            reboot_required = reboot_required or ret_val == 1
 
         return reboot_required
 

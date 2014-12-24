@@ -13,163 +13,226 @@
 #    under the License.
 
 
-import re
+import functools
 import unittest
 
 import mock
-from oslo.config import cfg
 
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base as service_base
 from cloudbaseinit.plugins import base as plugin_base
 from cloudbaseinit.plugins.windows import networkconfig
-from cloudbaseinit.tests.metadata import fake_json_response
-
-
-CONF = cfg.CONF
 
 
 class TestNetworkConfigPlugin(unittest.TestCase):
 
     def setUp(self):
-        self._network_plugin = networkconfig.NetworkConfigPlugin()
-        self.fake_data = fake_json_response.get_fake_metadata_json(
-            '2013-04-04')
+        self._setUp()
 
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch("cloudbaseinit.osutils.factory.get_os_utils")
     def _test_execute(self, mock_get_os_utils,
-                      search_result=mock.MagicMock(),
-                      no_adapter_name=False, no_adapters=False,
-                      using_content=0, details_list=None,
-                      missing_content_path=False):
-        fake_adapter = ("fake_name_0", "fake_mac_0")
+                      network_adapters=None,
+                      network_details=None,
+                      invalid_details=False,
+                      missed_adapters=[],
+                      extra_network_details=[]):
+        # prepare mock environment
         mock_service = mock.MagicMock()
+        mock_shared_data = mock.Mock()
         mock_osutils = mock.MagicMock()
-        mock_ndetails = mock.Mock()
-        re.search = mock.MagicMock(return_value=search_result)
-        fake_shared_data = 'fake shared data'
-        network_config = self.fake_data['network_config']
-        if not details_list:
-            details_list = [None] * 6
-            details_list[0] = fake_adapter[1]    # set MAC for matching
-        if no_adapter_name:    # nothing provided in the config file
-            CONF.set_override("network_adapter", None)
-        else:
-            CONF.set_override("network_adapter", fake_adapter[0])
-        mock_osutils.get_network_adapters.return_value = [
-            fake_adapter,
-            # and other adapters
-            ("name1", "mac1"),
-            ("name2", "mac2")
-        ]
+        mock_service.get_network_details.return_value = network_details
         mock_get_os_utils.return_value = mock_osutils
-        mock_osutils.set_static_network_config.return_value = False
-        # service method setup
-        methods = ["get_network_config", "get_content", "get_network_details"]
-        for method in methods:
-            mock_method = getattr(mock_service, method)
-            mock_method.return_value = None
-        if using_content == 1:
-            mock_service.get_network_config.return_value = network_config
-            mock_service.get_content.return_value = search_result
-
-        elif using_content == 2:
-            mock_service.get_network_details.return_value = [mock_ndetails]
+        mock_osutils.get_network_adapters.return_value = network_adapters
+        mock_osutils.set_static_network_config.return_value = True
+        network_execute = functools.partial(
+            self._network_plugin.execute,
+            mock_service, mock_shared_data
+        )
         # actual tests
-        if search_result is None and using_content == 1:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._network_plugin.execute,
-                              mock_service, fake_shared_data)
+        if not network_details:
+            ret = network_execute()
+            self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, False), ret)
             return
-        if no_adapters:
-            mock_osutils.get_network_adapters.return_value = []
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._network_plugin.execute,
-                              mock_service, fake_shared_data)
-            return
-        attrs = [
-            "address",
-            "netmask",
-            "broadcast",
-            "gateway",
-            "dnsnameservers",
-        ]
-        if using_content == 0:
-            response = self._network_plugin.execute(mock_service,
-                                                    fake_shared_data)
-        elif using_content == 1:
-            if missing_content_path:
-                mock_service.get_network_config.return_value.pop(
-                    "content_path", None
-                )
-            response = self._network_plugin.execute(mock_service,
-                                                    fake_shared_data)
-            if not missing_content_path:
-                mock_service.get_network_config.assert_called_once_with()
-                mock_service.get_content.assert_called_once_with(
-                    network_config['content_path'])
-                adapters = mock_osutils.get_network_adapters()
-                if CONF.network_adapter:
-                    mac = [pair[1] for pair in adapters
-                           if pair == fake_adapter][0]
-                else:
-                    mac = adapters[0][1]
-                (
-                    address,
-                    netmask,
-                    broadcast,
-                    gateway,
-                    dnsnameserver
-                ) = map(search_result.group, attrs)
-                dnsnameservers = dnsnameserver.strip().split(" ")
-        elif using_content == 2:
+        if invalid_details:
             with self.assertRaises(exception.CloudbaseInitException):
-                self._network_plugin.execute(mock_service,
-                                             fake_shared_data)
-            mock_service.get_network_details.reset_mock()
-            mock_ndetails = service_base.NetworkDetails(*details_list)
-            mock_service.get_network_details.return_value = [mock_ndetails]
-            response = self._network_plugin.execute(mock_service,
-                                                    fake_shared_data)
-            mock_service.get_network_details.assert_called_once_with()
-            mac = mock_ndetails.mac
-            (
-                address,
-                netmask,
-                broadcast,
-                gateway,
-                dnsnameservers
-            ) = map(lambda attr: getattr(mock_ndetails, attr), attrs)
-        if using_content in (1, 2) and not missing_content_path:
-            mock_osutils.set_static_network_config.assert_called_once_with(
-                mac,
-                address,
-                netmask,
-                broadcast,
-                gateway,
-                dnsnameservers
+                network_execute()
+            return
+        if not network_adapters:
+            with self.assertRaises(exception.CloudbaseInitException):
+                network_execute()
+            return
+        # good to go for the configuration process
+        ret = network_execute()
+        calls = []
+        for adapter in set(network_adapters) - set(missed_adapters):
+            nics = [nic for nic in (network_details +
+                                    extra_network_details)
+                    if nic.mac == adapter[1]]
+            self.assertTrue(nics)    # missed_adapters should do the job
+            nic = nics[0]
+            call = mock.call(
+                nic.mac,
+                nic.address,
+                nic.netmask,
+                nic.broadcast,
+                nic.gateway,
+                nic.dnsnameservers
             )
-        self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, False),
-                         response)
+            calls.append(call)
+        mock_osutils.set_static_network_config.assert_has_calls(
+            calls, any_order=True)
+        reboot = len(missed_adapters) != self._count
+        self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, reboot), ret)
 
-    def test_execute(self):
-        self._test_execute(using_content=1)
+    def _setUp(self, same_names=True):
+        # Generate fake pairs of NetworkDetails objects and
+        # local ethernet network adapters.
+        self._count = 3
+        details_names = [
+            "eth0",
+            "eth1",
+            "eth2"
+        ]
+        if same_names:
+            adapters_names = details_names[:]
+        else:
+            adapters_names = ["vm " + name for name in details_names]
+        macs = [
+            "54:EE:75:19:F4:61",
+            "54:EE:75:19:F4:62",
+            "54:EE:75:19:F4:63"
+        ]
+        addresses = [
+            "192.168.122.101",
+            "192.168.103.104",
+            "192.168.122.105",
+        ]
+        netmasks = [
+            "255.255.255.0",
+            "255.255.0.0",
+            "255.255.255.128",
+        ]
+        broadcasts = [
+            "192.168.122.255",
+            "192.168.255.255",
+            "192.168.122.127",
+        ]
+        gateway = [
+            "192.168.122.1",
+            "192.168.122.16",
+            "192.168.122.32",
+        ]
+        dnsnses = [
+            "8.8.8.8",
+            "8.8.8.8 8.8.4.4",
+            "8.8.8.8 0.0.0.0",
+        ]
+        self._network_adapters = []
+        self._network_details = []
+        for ind in range(self._count):
+            adapter = (adapters_names[ind], macs[ind])
+            nic = service_base.NetworkDetails(
+                details_names[ind],
+                macs[ind],
+                addresses[ind],
+                netmasks[ind],
+                broadcasts[ind],
+                gateway[ind],
+                dnsnses[ind].split()
+            )
+            self._network_adapters.append(adapter)
+            self._network_details.append(nic)
+        # get the network config plugin
+        self._network_plugin = networkconfig.NetworkConfigPlugin()
+        # execution wrapper
+        self._partial_test_execute = functools.partial(
+            self._test_execute,
+            network_adapters=self._network_adapters,
+            network_details=self._network_details
+        )
 
-    def test_execute_missing_content_path(self):
-        self._test_execute(using_content=1, missing_content_path=True)
+    def test_execute_no_network_details(self):
+        self._network_details[:] = []
+        self._partial_test_execute()
 
-    def test_execute_no_debian(self):
-        self._test_execute(search_result=None, using_content=1)
+    def test_execute_no_network_adapters(self):
+        self._network_adapters[:] = []
+        self._partial_test_execute()
 
-    def test_execute_no_adapter_name(self):
-        self._test_execute(no_adapter_name=True, using_content=1)
+    def test_execute_invalid_network_details(self):
+        self._network_details.append([None] * 6)
+        self._partial_test_execute(invalid_details=True)
 
-    def test_execute_no_adapter_name_or_adapters(self):
-        self._test_execute(no_adapter_name=True, no_adapters=True,
-                           using_content=1)
+    def test_execute_single(self):
+        for _ in range(self._count - 1):
+            self._network_adapters.pop()
+            self._network_details.pop()
+        self._partial_test_execute()
 
-    def test_execute_network_details(self):
-        self._test_execute(using_content=2)
+    def test_execute_multiple(self):
+        self._partial_test_execute()
 
-    def test_execute_no_config_or_details(self):
-        self._test_execute(using_content=0)
+    def test_execute_missing_one(self):
+        self.assertGreater(self._count, 1)
+        self._network_details.pop(0)
+        adapter = self._network_adapters[0]
+        self._partial_test_execute(missed_adapters=[adapter])
+
+    def test_execute_missing_all(self):
+        nic = self._network_details[0]
+        nic = service_base.NetworkDetails(
+            nic.name,
+            "00" + nic.mac[2:],
+            nic.address,
+            nic.netmask,
+            nic.broadcast,
+            nic.gateway,
+            nic.dnsnameservers
+        )
+        self._network_details[:] = [nic]
+        self._partial_test_execute(missed_adapters=self._network_adapters)
+
+    def _test_execute_missing_smth(self, name=False, mac=False,
+                                   address=False, gateway=False,
+                                   fail=False):
+        ind = self._count - 1
+        nic = self._network_details[ind]
+        nic2 = service_base.NetworkDetails(
+            None if name else nic.name,
+            None if mac else nic.mac,
+            None if address else nic.address,
+            nic.netmask,
+            nic.broadcast,
+            None if gateway else nic.gateway,
+            nic.dnsnameservers
+        )
+        self._network_details[ind] = nic2
+        # excluding address and gateway switches...
+        if not fail:
+            # even this way, all adapters should be configured
+            missed_adapters = []
+            extra_network_details = [nic]
+        else:
+            # both name and MAC are missing, so we can't make the match
+            missed_adapters = [self._network_adapters[ind]]
+            extra_network_details = []
+        self._partial_test_execute(
+            missed_adapters=missed_adapters,
+            extra_network_details=extra_network_details
+        )
+
+    def test_execute_missing_mac(self):
+        self._test_execute_missing_smth(mac=True)
+
+    def test_execute_missing_mac2(self):
+        self._setUp(same_names=False)
+        self._test_execute_missing_smth(mac=True)
+
+    def test_execute_missing_name_mac(self):
+        self._test_execute_missing_smth(name=True, mac=True, fail=True)
+
+    def test_execute_missing_address(self):
+        self._test_execute_missing_smth(address=True, fail=True)
+
+    def test_execute_missing_gateway(self):
+        self._test_execute_missing_smth(gateway=True)
