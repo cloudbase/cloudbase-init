@@ -12,60 +12,49 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import unittest
 
+import mock
+
+from cloudbaseinit.plugins.common import executil
 from cloudbaseinit.plugins.windows import fileexecutils
 
 
+@mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
 class TestFileExecutilsPlugin(unittest.TestCase):
 
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    def _test_exec_file(self, mock_get_os_utils, filename, exception=False):
-        mock_osutils = mock.MagicMock()
-        mock_part = mock.MagicMock()
-        mock_part.get_filename.return_value = filename
-        mock_get_os_utils.return_value = mock_osutils
-        if exception:
-            mock_osutils.execute_process.side_effect = [Exception]
-        with mock.patch("cloudbaseinit.plugins.windows.userdataplugins."
-                        "shellscript.open", mock.mock_open(), create=True):
-            response = fileexecutils.exec_file(filename)
-        if filename.endswith(".cmd"):
-            mock_osutils.execute_process.assert_called_once_with(
-                [filename], True)
-        elif filename.endswith(".sh"):
-            mock_osutils.execute_process.assert_called_once_with(
-                ['bash.exe', filename], False)
-        elif filename.endswith(".py"):
-            mock_osutils.execute_process.assert_called_once_with(
-                ['python.exe', filename], False)
-        elif filename.endswith(".exe"):
-            mock_osutils.execute_process.assert_called_once_with(
-                [filename], False)
-        elif filename.endswith(".ps1"):
-            mock_osutils.execute_powershell_script.assert_called_once_with(
-                filename)
-        else:
-            self.assertEqual(0, response)
+    def test_exec_file_no_executor(self, _):
+        retval = fileexecutils.exec_file("fake.fake")
+        self.assertEqual(0, retval)
 
-    def test_process_cmd(self):
-        self._test_exec_file(filename='fake.cmd')
+    def test_executors_mapping(self, _):
+        self.assertEqual(fileexecutils.FORMATS["cmd"],
+                         executil.Shell)
+        self.assertEqual(fileexecutils.FORMATS["exe"],
+                         executil.Shell)
+        self.assertEqual(fileexecutils.FORMATS["sh"],
+                         executil.Bash)
+        self.assertEqual(fileexecutils.FORMATS["py"],
+                         executil.Python)
+        self.assertEqual(fileexecutils.FORMATS["ps1"],
+                         executil.PowershellSysnative)
 
-    def test_process_sh(self):
-        self._test_exec_file(filename='fake.sh')
+    @mock.patch('cloudbaseinit.plugins.common.executil.'
+                'BaseCommand.execute')
+    def test_exec_file_fails(self, mock_execute, _):
+        mock_execute.side_effect = ValueError
+        retval = fileexecutils.exec_file("fake.py")
+        mock_execute.assert_called_once_with()
+        self.assertEqual(0, retval)
 
-    def test_process_py(self):
-        self._test_exec_file(filename='fake.py')
-
-    def test_process_ps1(self):
-        self._test_exec_file(filename='fake.ps1')
-
-    def test_process_other(self):
-        self._test_exec_file(filename='fake.other')
-
-    def test_process_exe(self):
-        self._test_exec_file(filename='fake.exe')
-
-    def test_process_exception(self):
-        self._test_exec_file(filename='fake.exe', exception=True)
+    @mock.patch('cloudbaseinit.plugins.common.executil.'
+                'BaseCommand.execute')
+    def test_exec_file_(self, mock_execute, _):
+        mock_execute.return_value = (
+            mock.sentinel.out,
+            mock.sentinel.error,
+            0,
+        )
+        retval = fileexecutils.exec_file("fake.py")
+        mock_execute.assert_called_once_with()
+        self.assertEqual(0, retval)

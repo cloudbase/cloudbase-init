@@ -12,66 +12,51 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
+import functools
 import re
-import tempfile
-import uuid
 
 from cloudbaseinit.openstack.common import log as logging
-from cloudbaseinit.osutils import factory as osutils_factory
-from cloudbaseinit.utils import encoding
+from cloudbaseinit.plugins.common import executil
 
 LOG = logging.getLogger(__name__)
 
+# Avoid 80+ length by using a local variable, which
+# is deleted afterwards.
+_compile = functools.partial(re.compile, flags=re.I)
+FORMATS = (
+    (_compile(br'^rem cmd\s'), executil.Shell),
+    (_compile(br'^#!/usr/bin/env\spython\s'), executil.Python),
+    (_compile(br'^#!'), executil.Bash),
+    (_compile(br'^#(ps1|ps1_sysnative)\s'), executil.PowershellSysnative),
+    (_compile(br'^#ps1_x86\s'), executil.Powershell),
+)
+del _compile
+
+
+def _get_command(data):
+    # Get the command which should process the given data.
+    for pattern, command_class in FORMATS:
+        if pattern.search(data):
+            return command_class.from_data(data)
+
 
 def execute_user_data_script(user_data):
-    osutils = osutils_factory.get_os_utils()
-
-    shell = False
-    powershell = False
-    sysnative = True
-
-    target_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
-    if re.search(r'^rem cmd\s', user_data, re.I):
-        target_path += '.cmd'
-        args = [target_path]
-        shell = True
-    elif re.search(r'^#!/usr/bin/env\spython\s', user_data, re.I):
-        target_path += '.py'
-        args = ['python.exe', target_path]
-    elif re.search(r'^#!', user_data, re.I):
-        target_path += '.sh'
-        args = ['bash.exe', target_path]
-    elif re.search(r'^#(ps1|ps1_sysnative)\s', user_data, re.I):
-        target_path += '.ps1'
-        powershell = True
-    elif re.search(r'^#ps1_x86\s', user_data, re.I):
-        target_path += '.ps1'
-        powershell = True
-        sysnative = False
-    else:
+    ret_val = 0
+    out = err = None
+    command = _get_command(user_data)
+    if not command:
         # Unsupported
         LOG.warning('Unsupported user_data format')
-        return 0
+        return ret_val
 
     try:
-        encoding.write_file(target_path, user_data)
-
-        if powershell:
-            (out, err,
-             ret_val) = osutils.execute_powershell_script(target_path,
-                                                          sysnative)
-        else:
-            (out, err, ret_val) = osutils.execute_process(args, shell)
-
-        LOG.info('User_data script ended with return code: %d' % ret_val)
-        LOG.debug('User_data stdout:\n%s' % out)
-        LOG.debug('User_data stderr:\n%s' % err)
-
-        return ret_val
+        out, err, ret_val = command()
     except Exception as ex:
-        LOG.warning('An error occurred during user_data execution: \'%s\''
-                    % ex)
-    finally:
-        if os.path.exists(target_path):
-            os.remove(target_path)
+        LOG.warning('An error occurred during user_data execution: \'%s\'',
+                    ex)
+    else:
+        LOG.debug('User_data stdout:\n%s', out)
+        LOG.debug('User_data stderr:\n%s', err)
+
+    LOG.info('User_data script ended with return code: %d', ret_val)
+    return ret_val
