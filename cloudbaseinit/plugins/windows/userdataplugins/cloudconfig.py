@@ -13,16 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
-import gzip
-import io
-import os
-
 from oslo.config import cfg
 import yaml
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.windows.userdataplugins import base
+from cloudbaseinit.plugins.windows.userdataplugins.cloudconfigplugins import (
+    factory
+)
 
 
 LOG = logging.getLogger(__name__)
@@ -31,187 +29,79 @@ OPTS = [
         'cloud_config_plugins',
         default=[],
         help=(
-            'List which contains the name of the plugins ordered by priority.'
+            'List which contains the name of the cloud config plugins '
+            'ordered by priority.'
         ),
     )
 ]
 CONF = cfg.CONF
 CONF.register_opts(OPTS)
-
-DEFAULT_MIME_TYPE = 'text/plain'
-DEFAULT_PERMISSIONS = 0o644
-BASE64_MIME = 'application/base64'
-GZIP_MIME = 'application/x-gzip'
+DEFAULT_ORDER_VALUE = 999
 
 
-def decode_steps(encoding):
-    """Predict the decoding steps required to obtain the initial content."""
-    encoding = encoding.lower().strip() if encoding else ''
-    if encoding in ('gz', 'gzip'):
-        return [GZIP_MIME]
-
-    if encoding in ('gz+base64', 'gzip+base64', 'gz+b64', 'gzip+b64'):
-        return [BASE64_MIME, GZIP_MIME]
-
-    if encoding in ('b64', 'base64'):
-        return [BASE64_MIME]
-
-    if encoding:
-        LOG.warning("Unknown encoding type %s, assuming %s",
-                    encoding, DEFAULT_MIME_TYPE)
-
-    return [DEFAULT_MIME_TYPE]
+class CloudConfigError(Exception):
+    pass
 
 
-def process_permissions(permissions):
-    """Safe process the permissions value."""
-    if type(permissions) in (int, float):
-        permissions = int(permissions)
-    else:
-        try:
-            permissions = int(permissions, 8)
-        except (ValueError, TypeError):
-            LOG.warning("Fail to process permissions %s, assuming %s",
-                        permissions, DEFAULT_PERMISSIONS)
-            permissions = DEFAULT_PERMISSIONS
+class CloudConfigPluginExecutor(object):
+    """A simple executor class for processing cloud-config plugins.
 
-    return permissions
-
-
-def process_content(content, encoding):
-    """Decode the content taking into consideration the encoding."""
-    result = str(content)
-    for mime_type in decode_steps(encoding):
-        if mime_type == GZIP_MIME:
-            bufferio = io.BytesIO(content)
-            with gzip.GzipFile(fileobj=bufferio, mode='rb') as file_handle:
-                try:
-                    result = file_handle.read()
-                except (IOError, ValueError) as exc:
-                    LOG.exception(
-                        "Fail to decompress gzip content. Exception: %s", exc)
-        elif mime_type == BASE64_MIME:
-            try:
-                result = base64.b64decode(result)
-            except (ValueError, TypeError) as exc:
-                LOG.exception(
-                    "Fail to decode base64 content. Exception: %s", exc)
-    return result
-
-
-def write_file(path, content, permissions=DEFAULT_PERMISSIONS, open_mode="wb"):
-    """Writes a file with the given content
-
-    Also the function sets the file mode as specified.
-    The function arguments are the following:
-        path: The absolute path to the location on the filesystem where
-        the file should be written.
-        content: The content that should be placed in the file.
-        permissions:The octal permissions set that should be given for
-        this file.
-        open_mode: The open mode used when opening the file.
+    :kwarg plugins:
+        Pairs of plugin names and the values corresponding to that plugin.
     """
-    dirname = os.path.dirname(path)
-    if not os.path.isdir(dirname):
+
+    def __init__(self, **plugins):
+        def _lookup_priority(plugin):
+            try:
+                return CONF.cloud_config_plugins.index(plugin)
+            except ValueError:
+                # If the plugin was not specified in the order
+                # list, then default to a sane and unreachable value.
+                return DEFAULT_ORDER_VALUE
+
+        self._expected_plugins = sorted(
+            plugins.items(),
+            key=lambda item: _lookup_priority(item[0]))
+
+    @classmethod
+    def from_yaml(cls, stream):
+        """Initialize an executor from an yaml stream."""
+
+        loader = getattr(yaml, 'CLoader', yaml.Loader)
         try:
-            os.makedirs(dirname)
-        except OSError as exc:
-            LOG.exception(exc)
-            return False
+            content = yaml.load(stream, Loader=loader)
+        except (TypeError, ValueError, AttributeError):
+            msg = "Invalid yaml stream provided."
+            LOG.error(msg)
+            raise CloudConfigError(msg)
 
-    with open(path, open_mode) as file_handle:
-        file_handle.write(content)
-        file_handle.flush()
+        return cls(**content)
 
-    os.chmod(path, permissions)
-    return True
+    def execute(self):
+        """Call each plugin, in the order requested by the user."""
+
+        plugins = factory.load_plugins()
+        for plugin_name, value in self._expected_plugins:
+            method = plugins.get(plugin_name)
+            if not method:
+                LOG.error("Plugin %r is currently not supported", plugin_name)
+                continue
+
+            try:
+                method(value)
+            except Exception:
+                LOG.exception("Processing plugin %s failed", plugin_name)
 
 
 class CloudConfigPlugin(base.BaseUserDataPlugin):
 
     def __init__(self):
         super(CloudConfigPlugin, self).__init__("text/cloud-config")
-        self._plugins_order = CONF.cloud_config_plugins
-
-    def _priority(self, plugin):
-        """Predict the priority for this plugin
-
-        Returns a numeric value that represents the priority of the plugin
-        designated by the received key.
-
-        Note: If the priority for a plugin is not specified, it will designate
-        the lowest priority for it.
-        """
-        try:
-            return self._plugins_order.index(plugin)
-        except ValueError:
-            return len(self._plugins_order)
-
-    def _content(self, part):
-        """Iterator over the deserialized information from the receivedpart."""
-        loader = getattr(yaml, 'CLoader', yaml.Loader)
-
-        try:
-            content = yaml.load(part, Loader=loader)
-        except (ValueError, AttributeError):
-            LOG.error("Invalid yaml stream provided.")
-            return False
-
-        if not isinstance(content, dict):
-            LOG.warning("Unsupported content type %s", type(content))
-            return False
-
-        # Create a list that will contain the information received in the order
-        # specified by the user.
-        return sorted(content.items(),
-                      key=lambda item: self._priority(item[0]))
-
-    def plugin_write_files(self, files):
-        """Plugin for writing files on the filesystem
-
-        Receives a list of files in order to write them on disk.
-        Each file that should be written is represented by a dictionary which
-        can contain the following keys:
-            path: The absolute path to the location on the filesystem where
-            the file should be written.
-            content: The content that should be placed in the file.
-            owner: The user account and group that should be given ownership of
-            the file.
-            permissions: The octal permissions set that should be given for
-            this file.
-            encoding: An optional encoding specification for the file.
-
-        Note: The only required keys in this dictionary are `path` and
-        `content`.
-        """
-
-        for current_file in files:
-            incomplete = False
-            for required_key in ('path', 'content'):
-                if required_key not in current_file:
-                    incomplete = True
-                    break
-            if incomplete:
-                LOG.warning("Missing required keys from file information %s",
-                            current_file)
-                continue
-
-            path = os.path.abspath(current_file['path'])
-            content = process_content(current_file['content'],
-                                      current_file.get('encoding'))
-            permissions = process_permissions(current_file.get('permissions'))
-            write_file(path, content, permissions)
 
     def process(self, part):
-        content = self._content(part) or []
-        for key, value in content:
-            method_name = "plugin_%s" % key.replace("-", "_")
-            method = getattr(self, method_name, None)
-            if not method:
-                LOG.info("Plugin %s is currently not supported", key)
-                continue
-
-            try:
-                method(value)
-            except Exception as exc:
-                LOG.exception(exc)
+        try:
+            executor = CloudConfigPluginExecutor.from_yaml(part)
+        except CloudConfigError:
+            LOG.error("Could not process the type %r", type(part))
+        else:
+            executor.execute()
