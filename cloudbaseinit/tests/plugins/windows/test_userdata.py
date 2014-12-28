@@ -12,20 +12,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+import pkgutil
+import tempfile
 import unittest
 
 try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows import userdata
 from cloudbaseinit.tests.metadata import fake_json_response
 
-CONF = cfg.CONF
+
+class FakeService(object):
+    def __init__(self, user_data):
+        self.user_data = user_data
+
+    def get_user_data(self):
+        return self.user_data.encode()
+
+
+def _create_tempfile():
+    fd, tmp = tempfile.mkstemp()
+    os.close(fd)
+    return tmp
 
 
 class UserDataPluginTest(unittest.TestCase):
@@ -281,5 +295,26 @@ class UserDataPluginTest(unittest.TestCase):
             user_data=user_data)
 
         mock_load_plugins.assert_called_once_with()
-        mock_cloud_config_plugin.process.assert_called_once_with(user_data)
+        (mock_cloud_config_plugin
+         .process_non_multipart
+         .assert_called_once_with(user_data))
         self.assertEqual(mock_return_value, return_value)
+
+
+class TestCloudConfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.plugin = userdata.UserDataPlugin()
+        cls.userdata = pkgutil.get_data('cloudbaseinit.tests.resources',
+                                        'cloud_config_userdata').decode()
+
+    def test_cloud_config_multipart(self):
+        tmp = _create_tempfile()
+        self.addCleanup(os.remove, tmp)
+
+        service = FakeService(self.userdata.format(b64=tmp))
+        self.plugin.execute(service, {})
+        self.assertTrue(os.path.exists(tmp))
+
+        with open(tmp) as stream:
+            self.assertEqual('42', stream.read())

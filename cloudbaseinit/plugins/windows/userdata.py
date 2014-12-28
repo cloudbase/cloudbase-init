@@ -164,7 +164,7 @@ class UserDataPlugin(base.BasePlugin):
         if user_data.startswith(b'#cloud-config'):
             user_data_plugins = factory.load_plugins()
             cloud_config_plugin = user_data_plugins.get('text/cloud-config')
-            ret_val = cloud_config_plugin.process(user_data)
+            ret_val = cloud_config_plugin.process_non_multipart(user_data)
         else:
             ret_val = userdatautils.execute_user_data_script(user_data)
 

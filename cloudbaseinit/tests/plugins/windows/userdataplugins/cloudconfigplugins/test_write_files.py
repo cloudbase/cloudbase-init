@@ -90,7 +90,7 @@ class WriteFilesPluginTests(unittest.TestCase):
         """.format(tmp))
         with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
                                    'userdataplugins.cloudconfig') as snatcher:
-            self.plugin.process(code)
+            self.plugin.process_non_multipart(code)
 
         self.assertTrue(os.path.exists(tmp),
                         "Expected path does not exist.")
@@ -121,7 +121,7 @@ class WriteFilesPluginTests(unittest.TestCase):
         with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
                                    'userdataplugins.cloudconfigplugins.'
                                    'write_files') as snatcher:
-            self.plugin.process(code)
+            self.plugin.process_non_multipart(code)
 
         self.assertEqual(expected_return, snatcher.output)
 
@@ -137,7 +137,7 @@ class WriteFilesPluginTests(unittest.TestCase):
 
         with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
                                    'userdataplugins.cloudconfig') as snatcher:
-            self.plugin.process(code)
+            self.plugin.process_non_multipart(code)
 
         self.assertTrue(snatcher.output[0].startswith(
             "Processing plugin write_files failed"))
