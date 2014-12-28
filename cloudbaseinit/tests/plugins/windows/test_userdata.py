@@ -308,13 +308,23 @@ class TestCloudConfig(unittest.TestCase):
         cls.userdata = pkgutil.get_data('cloudbaseinit.tests.resources',
                                         'cloud_config_userdata').decode()
 
+    def create_tempfiles(self, number):
+        for _ in range(number):
+            tmp = _create_tempfile()
+            self.addCleanup(os.remove, tmp)
+            yield tmp
+
     def test_cloud_config_multipart(self):
-        tmp = _create_tempfile()
-        self.addCleanup(os.remove, tmp)
+        b64, b64_binary, gz, gz_binary = list(self.create_tempfiles(4))
 
-        service = FakeService(self.userdata.format(b64=tmp))
+        service = FakeService(self.userdata.format(b64=b64,
+                                                   b64_binary=b64_binary,
+                                                   gzip=gz,
+                                                   gzip_binary=gz_binary))
         self.plugin.execute(service, {})
-        self.assertTrue(os.path.exists(tmp))
 
-        with open(tmp) as stream:
-            self.assertEqual('42', stream.read())
+        for path in (b64, b64_binary, gz, gz_binary):
+            self.assertTrue(os.path.exists(path),
+                            "Path {} should exist.".format(path))
+            with open(path) as stream:
+                self.assertEqual('42', stream.read())

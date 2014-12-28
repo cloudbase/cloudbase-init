@@ -17,6 +17,8 @@ import gzip
 import io
 import os
 
+import six
+
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.windows.userdataplugins.cloudconfigplugins import (
@@ -56,7 +58,11 @@ def _convert_permissions(permissions):
 
 def _process_content(content, encoding):
     """Decode the content taking into consideration the encoding."""
-    result = str(content)
+    result = content
+    if six.PY3 and not isinstance(result, six.binary_type):
+        # At this point, content will be string, which is wrong for Python 3.
+        result = result.encode()
+
     steps = _decode_steps(encoding)
     if not steps:
         LOG.error("Unknown encoding, doing nothing.")
@@ -64,7 +70,7 @@ def _process_content(content, encoding):
 
     for mime_type in _decode_steps(encoding):
         if mime_type == GZIP_MIME:
-            bufferio = io.BytesIO(content)
+            bufferio = io.BytesIO(result)
             with gzip.GzipFile(fileobj=bufferio, mode='rb') as file_handle:
                 try:
                     result = file_handle.read()

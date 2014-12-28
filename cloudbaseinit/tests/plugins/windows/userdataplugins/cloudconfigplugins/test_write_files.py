@@ -77,8 +77,10 @@ class WriteFilesPluginTests(unittest.TestCase):
         response = write_files._convert_permissions(mock.sentinel.invalid)
         self.assertEqual(write_files.DEFAULT_PERMISSIONS, response)
 
-    def test_write_file(self):
-        tmp = self._get_tempfile()
+    def test_write_file_list(self):
+        expected_logging = [
+            "Plugin 'invalid' is currently not supported",
+        ]
         code = textwrap.dedent("""
         write_files:
         -   encoding: b64
@@ -87,7 +89,23 @@ class WriteFilesPluginTests(unittest.TestCase):
             permissions: '0o466'
         invalid:
         - stuff: 1
-        """.format(tmp))
+        """)
+        self._test_write_file(code, expected_logging)
+
+    def test_write_file_dict(self):
+        code = textwrap.dedent("""
+        write_files:
+           encoding: b64
+           content: NDI=
+           path: {}
+           permissions: '0o466'
+        """)
+        self._test_write_file(code)
+
+    def _test_write_file(self, code, expected_logging=None):
+        tmp = self._get_tempfile()
+        code = code.format(tmp)
+
         with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
                                    'userdataplugins.cloudconfig') as snatcher:
             self.plugin.process_non_multipart(code)
@@ -97,8 +115,8 @@ class WriteFilesPluginTests(unittest.TestCase):
 
         with open(tmp) as stream:
             self.assertEqual('42', stream.read())
-        self.assertEqual(["Plugin 'invalid' is currently not supported"],
-                         snatcher.output)
+        if expected_logging is not None:
+            self.assertEqual(expected_logging, snatcher.output)
 
         # Test that the proper permissions were set. On Windows,
         # only the read bit is processed, the rest are ignored.
@@ -143,3 +161,24 @@ class WriteFilesPluginTests(unittest.TestCase):
             "Processing plugin write_files failed"))
         self.assertTrue(snatcher.output[0].endswith("ValueError"))
         self.assertFalse(os.path.exists('random_cloudbaseinit_test'))
+
+    def test_unknown_encoding(self):
+        tmp = self._get_tempfile()
+        code = textwrap.dedent("""
+        write_files:
+        -   content: NDI=
+            path: {}
+            permissions: '0o466'
+        """.format(tmp))
+        with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            self.plugin.process_non_multipart(code)
+
+        self.assertTrue(os.path.exists(tmp),
+                        "Expected path does not exist.")
+        with open(tmp) as stream:
+            self.assertEqual('NDI=', stream.read())
+
+        self.assertEqual(["Unknown encoding, doing nothing."],
+                         snatcher.output)
