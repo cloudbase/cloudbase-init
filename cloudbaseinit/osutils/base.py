@@ -34,7 +34,8 @@ class BaseOSUtils(object):
         # On Windows os.urandom() uses CryptGenRandom, which is a
         # cryptographically secure pseudorandom number generator
         b64_password = base64.b64encode(os.urandom(256))
-        return b64_password.replace(b'/', b'').replace(b'+', b'')[:length]
+        return b64_password.replace(
+            b'/', b'').replace(b'+', b'')[:length].decode()
 
     def execute_process(self, args, shell=True, decode_output=False):
         p = subprocess.Popen(args,

@@ -48,7 +48,8 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             fake_ssh_pub_key, fake_password)
 
         mock_load_ssh_key.assert_called_with(fake_ssh_pub_key)
-        mock_rsa.__enter__().public_encrypt.assert_called_with('fake password')
+        mock_rsa.__enter__().public_encrypt.assert_called_with(
+            b'fake password')
         mock_b64encode.assert_called_with('public encrypted')
         self.assertEqual('encrypted password', response)
 

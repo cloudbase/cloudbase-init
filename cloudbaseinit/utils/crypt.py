@@ -67,6 +67,13 @@ openssl.BN_new.restype = ctypes.c_void_p
 openssl.RSA_size.restype = ctypes.c_int
 openssl.RSA_size.argtypes = [ctypes.POINTER(RSA)]
 
+openssl.RSA_public_encrypt.argtypes = [ctypes.c_int,
+                                       ctypes.c_char_p,
+                                       ctypes.c_char_p,
+                                       ctypes.POINTER(RSA),
+                                       ctypes.c_int]
+openssl.RSA_public_encrypt.restype = ctypes.c_int
+
 openssl.RSA_free.argtypes = [ctypes.POINTER(RSA)]
 
 openssl.PEM_write_RSAPublicKey.restype = ctypes.c_int

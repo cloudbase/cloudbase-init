@@ -41,7 +41,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
     def _encrypt_password(self, ssh_pub_key, password):
         cm = crypt.CryptManager()
         with cm.load_ssh_rsa_public_key(ssh_pub_key) as rsa:
-            enc_password = rsa.public_encrypt(password)
+            enc_password = rsa.public_encrypt(password.encode())
         return base64.b64encode(enc_password)
 
     def _get_ssh_public_key(self, service):
