@@ -38,6 +38,21 @@ _W32TIME_SERVICE = "w32time"
 
 
 class NTPClientPlugin(base.BasePlugin):
+
+    @staticmethod
+    def _set_ntp_trigger_mode(osutils):
+        """Set the trigger mode for w32time service to network availability.
+
+        This function changes the triggers for the w32time service, so that
+        the service will always work when there's networking, but will
+        stop itself whenever this condition stops being true.
+        It also changes the current triggers of the service (domain joined
+        for instance).
+        """
+        args = ["sc.exe", "triggerinfo", "w32time",
+                "start/networkon", "stop/networkoff"]
+        return osutils.execute_system32_process(args)
+
     def _check_w32time_svc_status(self, osutils):
 
         svc_start_mode = osutils.get_service_start_mode(
@@ -48,6 +63,7 @@ class NTPClientPlugin(base.BasePlugin):
                 _W32TIME_SERVICE,
                 osutils.SERVICE_START_MODE_AUTOMATIC)
 
+        self._set_ntp_trigger_mode(osutils)
         svc_status = osutils.get_service_status(_W32TIME_SERVICE)
         if svc_status == osutils.SERVICE_STATUS_STOPPED:
             osutils.start_service(_W32TIME_SERVICE)

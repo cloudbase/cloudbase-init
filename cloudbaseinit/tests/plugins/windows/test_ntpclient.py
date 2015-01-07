@@ -30,8 +30,18 @@ class NTPClientPluginTests(unittest.TestCase):
     def setUp(self):
         self._ntpclient = ntpclient.NTPClientPlugin()
 
+    def test_set_ntp_trigger_mode(self):
+        mock_osutils = mock.Mock()
+        self._ntpclient._set_ntp_trigger_mode(mock_osutils)
+        mock_osutils.execute_system32_process.assert_called_once_with(
+            ["sc.exe", "triggerinfo", "w32time",
+             "start/networkon", "stop/networkoff"])
+
     @mock.patch('time.sleep')
-    def _test_check_w32time_svc_status(self, mock_sleep, start_mode,
+    @mock.patch('cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin.'
+                '_set_ntp_trigger_mode')
+    def _test_check_w32time_svc_status(self, mock_set_ntp_trigger_mode,
+                                       mock_sleep, start_mode,
                                        fail_service_start):
         # TODO(rtingirica): use _W32TIME_SERVICE when it will be moved outside
         # of method declaration
@@ -66,6 +76,7 @@ class NTPClientPluginTests(unittest.TestCase):
             ntpclient._W32TIME_SERVICE)
         mock_osutils.get_service_status.assert_called_with(
             ntpclient._W32TIME_SERVICE)
+        mock_set_ntp_trigger_mode.assert_called_once_with(mock_osutils)
 
     def test_check_w32time_svc_status_other_start_mode(self):
         self._test_check_w32time_svc_status(start_mode="not automatic",

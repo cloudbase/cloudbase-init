@@ -978,3 +978,10 @@ class WindowsUtils(base.BaseOSUtils):
                 '-NonInteractive', '-File', script_path]
 
         return self.execute_process(args, shell=False)
+
+    def execute_system32_process(self, args, shell=True, decode_output=False,
+                                 sysnative=True):
+        base_dir = self._get_system_dir(sysnative)
+        process_path = os.path.join(base_dir, args[0])
+        return self.execute_process([process_path] + args[1:],
+                                    decode_output=decode_output, shell=shell)
