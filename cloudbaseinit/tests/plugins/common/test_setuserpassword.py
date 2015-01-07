@@ -71,26 +71,51 @@ class SetUserPasswordPluginTests(unittest.TestCase):
     def test_get_ssh_plublic_key_no_pub_keys(self):
         self._test_get_ssh_public_key(data_exists=False)
 
-    def _test_get_password(self, inject_password):
+    def _test_get_password(self, inject_password, generate_password):
+        shared_data = {}
+        reuse_password = not generate_password and not inject_password
+        expected_password = 'Passw0rd'
+        if reuse_password:
+            # The password should be the one created by
+            # CreateUser plugin.
+            shared_data[constants.SHARED_DATA_PASSWORD] = (
+                mock.sentinel.create_user_password)
+
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
-        mock_service.get_admin_password.return_value = 'Passw0rd'
-        mock_osutils.generate_random_password.return_value = 'Passw0rd'
-        response = self._setpassword_plugin._get_password(mock_service,
-                                                          mock_osutils)
+        mock_service.get_admin_password.return_value = expected_password
+        mock_osutils.generate_random_password.return_value = expected_password
+
+        with testutils.ConfPatcher('inject_user_password', inject_password):
+            response = self._setpassword_plugin._get_password(mock_service,
+                                                              mock_osutils,
+                                                              shared_data)
         if inject_password:
             mock_service.get_admin_password.assert_called_with()
+        elif reuse_password:
+            self.assertFalse(mock_service.get_admin_password.called)
+            self.assertFalse(mock_osutils.generate_random_password.called)
+            expected_password = mock.sentinel.create_user_password
         else:
             mock_osutils.generate_random_password.assert_called_once_with(14)
-        self.assertEqual('Passw0rd', response)
+
+        self.assertEqual(expected_password, response)
 
     def test_get_password_inject_true(self):
-        with testutils.ConfPatcher('inject_user_password', True):
-            self._test_get_password(inject_password=True)
+        self._test_get_password(generate_password=False,
+                                inject_password=True)
 
     def test_get_password_inject_false(self):
-        with testutils.ConfPatcher('inject_user_password', False):
-            self._test_get_password(inject_password=False)
+        self._test_get_password(generate_password=False,
+                                inject_password=False)
+
+    def test_get_password_get_from_create_user_plugin(self):
+        self._test_get_password(inject_password=False,
+                                generate_password=False)
+
+    def test_get_password_generate(self):
+        self._test_get_password(inject_password=False,
+                                generate_password=True)
 
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
                 'SetUserPasswordPlugin._get_ssh_public_key')
@@ -130,12 +155,18 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         mock_get_password.return_value = 'fake password'
-        response = self._setpassword_plugin._set_password(mock_service,
-                                                          mock_osutils,
-                                                          'fake user')
-        mock_get_password.assert_called_once_with(mock_service, mock_osutils)
-        mock_osutils.set_user_password.assert_called_once_with('fake user',
-                                                               'fake password')
+        response = self._setpassword_plugin._set_password(
+            mock_service,
+            mock_osutils,
+            'fake user',
+            mock.sentinel.shared_data)
+        mock_get_password.assert_called_once_with(
+            mock_service,
+            mock_osutils,
+            mock.sentinel.shared_data)
+        mock_osutils.set_user_password.assert_called_once_with(
+            'fake user',
+            'fake password')
         self.assertEqual(response, 'fake password')
 
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
@@ -165,7 +196,8 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             constants.SHARED_DATA_USERNAME, CONF.username)
         mock_osutils.user_exists.assert_called_once_with('fake username')
         mock_set_password.assert_called_once_with(mock_service, mock_osutils,
-                                                  'fake username')
+                                                  'fake username',
+                                                  fake_shared_data)
 
         expected_logging = [
             "Password succesfully updated for user fake username",
@@ -177,6 +209,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             expected_logging.append("Cannot set the password in the metadata "
                                     "as it is not supported by this service")
             self.assertFalse(mock_set_metadata_password.called)
+
         self.assertEqual((1, False), response)
         self.assertEqual(expected_logging, snatcher.output)
 

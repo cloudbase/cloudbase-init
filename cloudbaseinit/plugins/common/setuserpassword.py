@@ -49,7 +49,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
         if public_keys:
             return list(public_keys)[0]
 
-    def _get_password(self, service, osutils):
+    def _get_password(self, service, osutils, shared_data):
         if CONF.inject_user_password:
             password = service.get_admin_password()
         else:
@@ -59,13 +59,12 @@ class SetUserPasswordPlugin(base.BasePlugin):
             LOG.warn('Using admin_pass metadata user password. Consider '
                      'changing it as soon as possible')
         else:
-            # TODO(alexpilotti): setting a random password can be skipped
-            # if it's already present in the shared_data, as it has already
-            # been set by the CreateUserPlugin
-            LOG.debug('Generating a random user password')
-            # Generate a random password
-            # Limit to 14 chars for compatibility with NT
-            password = osutils.generate_random_password(14)
+            password = shared_data.get(constants.SHARED_DATA_PASSWORD)
+            if not password:
+                LOG.debug('Generating a random user password')
+                # Generate a random password
+                # Limit to 14 chars for compatibility with NT
+                password = osutils.generate_random_password(14)
 
         return password
 
@@ -84,8 +83,8 @@ class SetUserPasswordPlugin(base.BasePlugin):
                 LOG.info('No SSH public key available for password encryption')
                 return True
 
-    def _set_password(self, service, osutils, user_name):
-        password = self._get_password(service, osutils)
+    def _set_password(self, service, osutils, user_name, shared_data):
+        password = self._get_password(service, osutils, shared_data)
         LOG.info('Setting the user\'s password')
         osutils.set_user_password(user_name, password)
         return password
@@ -98,7 +97,8 @@ class SetUserPasswordPlugin(base.BasePlugin):
 
         osutils = osutils_factory.get_os_utils()
         if osutils.user_exists(user_name):
-            password = self._set_password(service, osutils, user_name)
+            password = self._set_password(service, osutils,
+                                          user_name, shared_data)
             LOG.info('Password succesfully updated for user %s' % user_name)
             # TODO(alexpilotti): encrypt with DPAPI
             shared_data[constants.SHARED_DATA_PASSWORD] = password
