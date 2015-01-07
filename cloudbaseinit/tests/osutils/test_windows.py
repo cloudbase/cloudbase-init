@@ -27,7 +27,7 @@ from cloudbaseinit.tests import fake
 CONF = cfg.CONF
 
 
-class WindowsUtilsTest(unittest.TestCase):
+class TestWindowsUtils(unittest.TestCase):
     '''Tests for the windows utils class.'''
 
     _CONFIG_NAME = 'FakeConfig'
@@ -1055,9 +1055,15 @@ class WindowsUtilsTest(unittest.TestCase):
                                  mock_msvcrt, handle_disks, last_error,
                                  interface_detail, disk_handle, io_control):
 
-        sizeof_calls = [mock.call(
-            self.windows_utils.Win32_SP_DEVICE_INTERFACE_DATA),
-            mock.call(mock_sdn())]
+        sizeof_calls = [
+            mock.call(
+                self.windows_utils.Win32_SP_DEVICE_INTERFACE_DATA
+            ),
+            mock.call(
+                self.windows_utils.Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W
+            ),
+            mock.call(mock_sdn())
+        ]
         device_interfaces_calls = [
             mock.call(
                 handle_disks, None, self._ctypes_mock.byref.return_value, 0,
@@ -1106,7 +1112,8 @@ class WindowsUtilsTest(unittest.TestCase):
             self._ctypes_mock.POINTER.assert_called_with(
                 self.windows_utils.Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W)
             mock_msvcrt.malloc.assert_called_with(
-                self._wintypes_mock.DWORD.return_value)
+                self._ctypes_mock.c_size_t.return_value
+            )
 
             self.assertEqual(cast_calls, self._ctypes_mock.cast.call_args_list)
 
@@ -1200,33 +1207,6 @@ class WindowsUtilsTest(unittest.TestCase):
         self._client_mock.Dispatch.assert_called_once_with("HNetCfg.FwMgr")
         mock_get_fw_protocol.assert_called_once_with(
             self._winutils.PROTOCOL_TCP)
-
-    @mock.patch('cloudbaseinit.osutils.windows.kernel32.IsWow64Process')
-    @mock.patch('cloudbaseinit.osutils.windows.kernel32.GetCurrentProcess')
-    def _test_is_wow64(self, mock_GetCurrentProcess,
-                       mock_IsWow64Process, ret_val):
-        mock_IsWow64Process.return_value = ret_val
-        self._wintypes_mock.BOOL.return_value.value = ret_val
-
-        if ret_val is False:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.is_wow64)
-
-        else:
-            response = self._winutils.is_wow64()
-            self._ctypes_mock.byref.assert_called_once_with(
-                self._wintypes_mock.BOOL.return_value)
-
-            mock_IsWow64Process.assert_called_once_with(
-                mock_GetCurrentProcess(), self._ctypes_mock.byref.return_value)
-
-            self.assertTrue(response)
-
-    def test_is_wow64(self):
-        self._test_is_wow64(ret_val=True)
-
-    def test_is_wow64_exception(self):
-        self._test_is_wow64(ret_val=False)
 
     @mock.patch('os.path.expandvars')
     def test_get_system32_dir(self, mock_expandvars):
