@@ -58,7 +58,7 @@ class MaaSHttpService(base.BaseMetadataService):
             LOG.debug('MaaS metadata url not set')
         else:
             try:
-                self._get_data('%s/meta-data/' % self._metadata_version)
+                self._get_cache_data('%s/meta-data/' % self._metadata_version)
                 return True
             except Exception as ex:
                 LOG.exception(ex)
