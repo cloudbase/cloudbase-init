@@ -1355,3 +1355,20 @@ class WindowsUtilsTest(unittest.TestCase):
     def test_set_ntp_client_config_sysnative_exception(self):
         self._test_set_ntp_client_config(sysnative=False,
                                          ret_val='fake return value')
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                '_get_system_dir')
+    @mock.patch('cloudbaseinit.osutils.base.BaseOSUtils.'
+                'execute_process')
+    def test_execute_system32_process(self, mock_execute_process,
+                                      mock_get_system_dir):
+        mock_get_system_dir.return_value = 'base_dir'
+        mock_execute_process.return_value = mock.sentinel.execute_process
+        args = ['command', 'argument']
+
+        result = self._winutils.execute_system32_process(args)
+        mock_execute_process.assert_called_once_with(
+            [os.path.join('base_dir', args[0])] + args[1:],
+            decode_output=False,
+            shell=True)
+        self.assertEqual(mock.sentinel.execute_process, result)
