@@ -17,6 +17,7 @@ import ctypes
 from ctypes import wintypes
 import os
 import re
+import struct
 import time
 
 import pywintypes
@@ -193,9 +194,8 @@ kernel32.DeviceIoControl.restype = wintypes.BOOL
 kernel32.GetProcessHeap.argtypes = []
 kernel32.GetProcessHeap.restype = wintypes.HANDLE
 
-# Note: wintypes.ULONG must be replaced with a 64 bit variable on x64
 kernel32.HeapAlloc.argtypes = [wintypes.HANDLE, wintypes.DWORD,
-                               wintypes.ULONG]
+                               ctypes.c_size_t]
 kernel32.HeapAlloc.restype = wintypes.LPVOID
 
 kernel32.HeapFree.argtypes = [wintypes.HANDLE, wintypes.DWORD,
@@ -689,7 +689,7 @@ class WindowsUtils(base.BaseOSUtils):
         heap = kernel32.GetProcessHeap()
 
         size = wintypes.ULONG(ctypes.sizeof(Win32_MIB_IPFORWARDTABLE))
-        p = kernel32.HeapAlloc(heap, 0, size)
+        p = kernel32.HeapAlloc(heap, 0, ctypes.c_size_t(size.value))
         if not p:
             raise exception.CloudbaseInitException(
                 'Unable to allocate memory for the IP forward table')
@@ -701,7 +701,7 @@ class WindowsUtils(base.BaseOSUtils):
                                              ctypes.byref(size), 0)
             if err == self.ERROR_INSUFFICIENT_BUFFER:
                 kernel32.HeapFree(heap, 0, p_forward_table)
-                p = kernel32.HeapAlloc(heap, 0, size)
+                p = kernel32.HeapAlloc(heap, 0, ctypes.c_size_t(size.value))
                 if not p:
                     raise exception.CloudbaseInitException(
                         'Unable to allocate memory for the IP forward table')
@@ -828,6 +828,10 @@ class WindowsUtils(base.BaseOSUtils):
         return [d for d in drives if kernel32.GetDriveTypeW(d) ==
                 self.DRIVE_CDROM]
 
+    def _is_64bit_arch(self):
+        # interpreter's bits
+        return struct.calcsize("P") == 8
+
     def get_physical_disks(self):
         physical_disks = []
 
@@ -860,15 +864,17 @@ class WindowsUtils(base.BaseOSUtils):
                             "SetupDiGetDeviceInterfaceDetailW failed")
 
                 pdidd = ctypes.cast(
-                    msvcrt.malloc(required_size),
+                    msvcrt.malloc(ctypes.c_size_t(required_size.value)),
                     ctypes.POINTER(Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W))
 
                 try:
-                    # NOTE(alexpilotti): the size provided by ctypes.sizeof
-                    # is not the expected one
-                    # pdidd.contents.cbSize = ctypes.sizeof(
-                    #    Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W)
-                    pdidd.contents.cbSize = 6
+                    pdidd.contents.cbSize = ctypes.sizeof(
+                        Win32_SP_DEVICE_INTERFACE_DETAIL_DATA_W)
+                    if not self._is_64bit_arch():
+                        # NOTE(cpoieana): For some reason, on x86 platforms
+                        # the alignment or content of the struct
+                        # is not taken into consideration.
+                        pdidd.contents.cbSize = 6
 
                     if not setupapi.SetupDiGetDeviceInterfaceDetailW(
                             handle_disks, ctypes.byref(did), pdidd,
@@ -942,11 +948,7 @@ class WindowsUtils(base.BaseOSUtils):
         fw_profile = fw_profile.GloballyOpenPorts.Remove(port, fw_protocol)
 
     def is_wow64(self):
-        ret_val = wintypes.BOOL()
-        if not kernel32.IsWow64Process(kernel32.GetCurrentProcess(),
-                                       ctypes.byref(ret_val)):
-            raise exception.CloudbaseInitException("IsWow64Process failed")
-        return bool(ret_val.value)
+        return win32process.IsWow64Process()
 
     def get_system32_dir(self):
         return os.path.expandvars('%windir%\\system32')

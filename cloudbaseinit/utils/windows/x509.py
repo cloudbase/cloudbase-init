@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,16 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import copy
 import ctypes
-import six
+from ctypes import wintypes
 import uuid
 
-from ctypes import wintypes
+import six
 
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import cryptoapi
 from cloudbaseinit.utils import x509constants
+
 
 malloc = ctypes.cdll.msvcrt.malloc
 malloc.restype = ctypes.c_void_p
@@ -51,7 +51,8 @@ class CryptoAPICertManager(object):
                     None, ctypes.byref(thumprint_len)):
                 raise cryptoapi.CryptoAPIException()
 
-            thumbprint = malloc(thumprint_len)
+            size = ctypes.c_size_t(thumprint_len.value)
+            thumbprint = malloc(size)
 
             if not cryptoapi.CertGetCertificateContextProperty(
                     cert_context_p,
@@ -127,7 +128,8 @@ class CryptoAPICertManager(object):
                                            None):
                 raise cryptoapi.CryptoAPIException()
 
-            subject_encoded = ctypes.cast(malloc(subject_encoded_len),
+            size = ctypes.c_size_t(subject_encoded_len.value)
+            subject_encoded = ctypes.cast(malloc(size),
                                           ctypes.POINTER(wintypes.BYTE))
 
             if not cryptoapi.CertStrToName(cryptoapi.X509_ASN_ENCODING,
@@ -230,7 +232,8 @@ class CryptoAPICertManager(object):
                     None, None):
                 raise cryptoapi.CryptoAPIException()
 
-            cert_encoded = ctypes.cast(malloc(cert_encoded_len),
+            size = ctypes.c_size_t(cert_encoded_len.value)
+            cert_encoded = ctypes.cast(malloc(size),
                                        ctypes.POINTER(wintypes.BYTE))
 
             if not cryptoapi.CryptStringToBinaryA(
