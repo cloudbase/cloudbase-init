@@ -49,7 +49,7 @@ class NTPClientPlugin(base.BasePlugin):
         It also changes the current triggers of the service (domain joined
         for instance).
         """
-        args = ["sc.exe", "triggerinfo", "w32time",
+        args = ["sc.exe", "triggerinfo", _W32TIME_SERVICE,
                 "start/networkon", "stop/networkoff"]
         return osutils.execute_system32_process(args)
 
@@ -63,7 +63,9 @@ class NTPClientPlugin(base.BasePlugin):
                 _W32TIME_SERVICE,
                 osutils.SERVICE_START_MODE_AUTOMATIC)
 
-        self._set_ntp_trigger_mode(osutils)
+        if osutils.check_os_version(6, 0):
+            self._set_ntp_trigger_mode(osutils)
+
         svc_status = osutils.get_service_status(_W32TIME_SERVICE)
         if svc_status == osutils.SERVICE_STATUS_STOPPED:
             osutils.start_service(_W32TIME_SERVICE)

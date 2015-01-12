@@ -34,7 +34,7 @@ class NTPClientPluginTests(unittest.TestCase):
         mock_osutils = mock.Mock()
         self._ntpclient._set_ntp_trigger_mode(mock_osutils)
         mock_osutils.execute_system32_process.assert_called_once_with(
-            ["sc.exe", "triggerinfo", "w32time",
+            ["sc.exe", "triggerinfo", ntpclient._W32TIME_SERVICE,
              "start/networkon", "stop/networkoff"])
 
     @mock.patch('time.sleep')
@@ -42,7 +42,8 @@ class NTPClientPluginTests(unittest.TestCase):
                 '_set_ntp_trigger_mode')
     def _test_check_w32time_svc_status(self, mock_set_ntp_trigger_mode,
                                        mock_sleep, start_mode,
-                                       fail_service_start):
+                                       fail_service_start,
+                                       patch_check_os_version=True):
         # TODO(rtingirica): use _W32TIME_SERVICE when it will be moved outside
         # of method declaration
         mock_osutils = mock.MagicMock()
@@ -50,6 +51,7 @@ class NTPClientPluginTests(unittest.TestCase):
         mock_osutils.SERVICE_STATUS_RUNNING = "running"
         mock_osutils.SERVICE_STATUS_STOPPED = "stopped"
         mock_osutils.get_service_start_mode.return_value = start_mode
+        mock_osutils.check_os_version.return_value = patch_check_os_version
 
         if fail_service_start:
             mock_osutils.get_service_status.return_value = "stopped"
@@ -76,7 +78,12 @@ class NTPClientPluginTests(unittest.TestCase):
             ntpclient._W32TIME_SERVICE)
         mock_osutils.get_service_status.assert_called_with(
             ntpclient._W32TIME_SERVICE)
-        mock_set_ntp_trigger_mode.assert_called_once_with(mock_osutils)
+
+        mock_osutils.check_os_version.assert_called_once_with(6, 0)
+        if patch_check_os_version:
+            mock_set_ntp_trigger_mode.assert_called_once_with(mock_osutils)
+        else:
+            self.assertFalse(mock_set_ntp_trigger_mode.called)
 
     def test_check_w32time_svc_status_other_start_mode(self):
         self._test_check_w32time_svc_status(start_mode="not automatic",
@@ -89,6 +96,11 @@ class NTPClientPluginTests(unittest.TestCase):
     def test_check_w32time_svc_status_exception(self):
         self._test_check_w32time_svc_status(start_mode="automatic",
                                             fail_service_start=True)
+
+    def test_check_w32time_older_oses(self):
+        self._test_check_w32time_svc_status(start_mode="automatic",
+                                            fail_service_start=False,
+                                            patch_check_os_version=False)
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.utils.dhcp.get_dhcp_options')
