@@ -104,11 +104,18 @@ class NTPClientPluginTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.utils.dhcp.get_dhcp_options')
-    @mock.patch('socket.inet_ntoa')
     @mock.patch('cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin.'
                 '_check_w32time_svc_status')
-    def _test_execute(self, mock_check_w32time_svc_status, mock_inet_ntoa,
-                      mock_get_dhcp_options, mock_get_os_utils, ntp_data):
+    @mock.patch('cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin.'
+                '_unpack_ntp_hosts')
+    def _test_execute(self, mock_unpack_ntp_hosts,
+                      mock_check_w32time_svc_status,
+                      mock_get_dhcp_options, mock_get_os_utils,
+                      original_unpack_hosts, ntp_data, expected_hosts):
+        # Set the side effect to the actual function, in order to
+        # see the expected result.
+        mock_unpack_ntp_hosts.side_effect = original_unpack_hosts
+
         CONF.set_override('ntp_use_dhcp_config', True)
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
@@ -119,7 +126,6 @@ class NTPClientPluginTests(unittest.TestCase):
                                                             'fake dhcp host')]
         mock_get_dhcp_options.return_value = mock_options_data
         mock_options_data.get.return_value = ntp_data
-        mock_inet_ntoa.return_value = 'fake host'
 
         response = self._ntpclient.execute(service=mock_service,
                                            shared_data='fake data')
@@ -129,17 +135,26 @@ class NTPClientPluginTests(unittest.TestCase):
             'fake dhcp host', [dhcp.OPTION_NTP_SERVERS])
         mock_options_data.get.assert_called_once_with(dhcp.OPTION_NTP_SERVERS)
         if ntp_data:
-            mock_inet_ntoa.assert_called_once_with(ntp_data[:4])
+            mock_unpack_ntp_hosts.assert_called_once_with(ntp_data)
             self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
             mock_check_w32time_svc_status.assert_called_once_with(mock_osutils)
             mock_osutils.set_ntp_client_config.assert_called_once_with(
-                'fake host')
+                expected_hosts)
         else:
             self.assertEqual((base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False),
                              response)
 
     def test_execute_no_ntp_options_data(self):
-        self._test_execute(ntp_data=None)
+        self._test_execute(original_unpack_hosts=None,
+                           ntp_data=None,
+                           expected_hosts=None)
 
     def test_execute(self):
-        self._test_execute(ntp_data='ntp:fake server')
+        self._test_execute(
+            original_unpack_hosts=ntpclient.NTPClientPlugin._unpack_ntp_hosts,
+            ntp_data=b'\xc0\xa8<\x8c',
+            expected_hosts=['192.168.60.140'])
+        self._test_execute(
+            original_unpack_hosts=ntpclient.NTPClientPlugin._unpack_ntp_hosts,
+            ntp_data=b'\xc0\xa8<\x8c\xc0\xa8<\x8e',
+            expected_hosts=['192.168.60.140', '192.168.60.142'])

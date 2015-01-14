@@ -1301,6 +1301,7 @@ class TestWindowsUtils(unittest.TestCase):
                                     mock_check_sysnative_dir_exists,
                                     sysnative, ret_val):
         fake_base_dir = 'fake_dir'
+        ntp_hosts = ["first", "second"]
 
         mock_check_sysnative_dir_exists.return_value = sysnative
         mock_execute_process.return_value = (None, None, ret_val)
@@ -1308,7 +1309,8 @@ class TestWindowsUtils(unittest.TestCase):
         mock_get_sysnative_dir.return_value = fake_base_dir
         mock_get_system32_dir.return_value = fake_base_dir
 
-        args = [w32tm_path, '/config', '/manualpeerlist:%s' % 'fake ntp host',
+        args = [w32tm_path, '/config',
+                '/manualpeerlist:%s' % ",".join(ntp_hosts),
                 '/syncfromflags:manual', '/update']
 
         if ret_val:
@@ -1317,7 +1319,7 @@ class TestWindowsUtils(unittest.TestCase):
                               'fake ntp host')
 
         else:
-            self._winutils.set_ntp_client_config(ntp_host='fake ntp host')
+            self._winutils.set_ntp_client_config(ntp_hosts=ntp_hosts)
 
             if sysnative:
                 mock_get_sysnative_dir.assert_called_once_with()

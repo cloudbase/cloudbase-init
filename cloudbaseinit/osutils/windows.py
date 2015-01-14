@@ -488,11 +488,15 @@ class WindowsUtils(base.BaseOSUtils):
                                    net_addr["dhcp_server"]))
         return dhcp_hosts
 
-    def set_ntp_client_config(self, ntp_host):
+    def set_ntp_client_config(self, ntp_hosts):
         base_dir = self._get_system_dir()
         w32tm_path = os.path.join(base_dir, "w32tm.exe")
 
-        args = [w32tm_path, '/config', '/manualpeerlist:%s' % ntp_host,
+        # Convert the NTP hosts list to a string, in order to pass
+        # it to w32tm.
+        ntp_hosts = ",".join(ntp_hosts)
+
+        args = [w32tm_path, '/config', '/manualpeerlist:%s' % ntp_hosts,
                 '/syncfromflags:manual', '/update']
 
         (out, err, ret_val) = self.execute_process(args, shell=False)

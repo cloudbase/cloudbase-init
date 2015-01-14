@@ -53,6 +53,12 @@ class NTPClientPlugin(base.BasePlugin):
                 "start/networkon", "stop/networkoff"]
         return osutils.execute_system32_process(args)
 
+    @staticmethod
+    def _unpack_ntp_hosts(ntp_option_data):
+        chunks = [ntp_option_data[index: index + 4]
+                  for index in range(0, len(ntp_option_data), 4)]
+        return list(map(socket.inet_ntoa, chunks))
+
     def _check_w32time_svc_status(self, osutils):
 
         svc_start_mode = osutils.get_service_start_mode(
@@ -99,12 +105,11 @@ class NTPClientPlugin(base.BasePlugin):
                 LOG.debug("Could not obtain the NTP configuration via DHCP")
                 return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
 
-            # TODO(alexpilotti): support multiple NTP servers
-            ntp_host = socket.inet_ntoa(ntp_option_data[:4])
+            ntp_hosts = self._unpack_ntp_hosts(ntp_option_data)
 
             self._check_w32time_svc_status(osutils)
-            osutils.set_ntp_client_config(ntp_host)
+            osutils.set_ntp_client_config(ntp_hosts)
 
-            LOG.info('NTP client configured. Server: %s' % ntp_host)
+            LOG.info('NTP client configured. Server(s): %s' % ntp_hosts)
 
         return (base.PLUGIN_EXECUTION_DONE, False)
