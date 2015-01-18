@@ -15,7 +15,10 @@
 import os
 import unittest
 
-import mock
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.tests import testutils

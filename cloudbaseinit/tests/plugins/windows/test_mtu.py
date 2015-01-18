@@ -14,7 +14,10 @@
 
 import unittest
 
-import mock
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 import six
 
 from cloudbaseinit.plugins import base

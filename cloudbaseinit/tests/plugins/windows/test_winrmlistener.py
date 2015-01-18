@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,16 +13,22 @@
 #    under the License.
 
 import importlib
-import mock
 import unittest
 
-from cloudbaseinit.plugins import base
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 from oslo.config import cfg
+
+from cloudbaseinit.plugins import base
+
 
 CONF = cfg.CONF
 
 
 class ConfigWinRMListenerPluginTests(unittest.TestCase):
+
     def setUp(self):
         self._mock_wintypes = mock.MagicMock()
         self._mock_pywintypes = mock.MagicMock()

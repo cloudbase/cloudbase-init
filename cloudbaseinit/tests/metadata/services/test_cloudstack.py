@@ -12,9 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import unittest
 
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 from oslo.config import cfg
 from six.moves import urllib
 

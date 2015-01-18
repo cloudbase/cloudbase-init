@@ -33,6 +33,7 @@ LOG = logging.getLogger(__name__)
 
 
 class WindowsLicensingPlugin(base.BasePlugin):
+
     def _run_slmgr(self, osutils, args):
         if osutils.check_sysnative_dir_exists():
             cscript_dir = osutils.get_sysnative_dir()

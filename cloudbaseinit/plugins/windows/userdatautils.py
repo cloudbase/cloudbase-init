@@ -18,6 +18,7 @@ import re
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common import execcmd
 
+
 LOG = logging.getLogger(__name__)
 
 # Avoid 80+ length by using a local variable, which

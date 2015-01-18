@@ -24,6 +24,7 @@ LOG = logging.getLogger(__name__)
 
 
 class PartHandlerPlugin(base.BaseUserDataPlugin):
+
     def __init__(self):
         super(PartHandlerPlugin, self).__init__("text/part-handler")
 

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +13,13 @@
 #    under the License.
 
 import importlib
-import mock
 import six
 import unittest
+
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 from cloudbaseinit.utils import x509constants
 

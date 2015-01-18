@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,10 +21,12 @@ from cloudbaseinit.utils.windows import security
 from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
+
 LOG = logging.getLogger(__name__)
 
 
 class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
+
     def _get_credentials(self, shared_data):
         user_name = shared_data.get(constants.SHARED_DATA_USERNAME)
         if not user_name:

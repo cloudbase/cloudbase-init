@@ -35,7 +35,9 @@ LOG = openstack_logging.getLogger(__name__)
 
 
 class SerialPortHandler(logging.StreamHandler):
+
     class _UnicodeToBytesStream(object):
+
         def __init__(self, stream):
             self._stream = stream
 

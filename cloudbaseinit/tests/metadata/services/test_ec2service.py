@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,10 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import posixpath
 import unittest
 
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 from oslo.config import cfg
 from six.moves.urllib import error
 
@@ -28,6 +29,7 @@ CONF = cfg.CONF
 
 
 class EC2ServiceTest(unittest.TestCase):
+
     def setUp(self):
         CONF.set_override('retry_count_interval', 0)
         self._service = ec2service.EC2Service()

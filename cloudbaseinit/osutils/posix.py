@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,5 +18,6 @@ from cloudbaseinit.osutils import base
 
 
 class PosixUtil(base.BaseOSUtils):
+
     def reboot(self):
         os.system('reboot')

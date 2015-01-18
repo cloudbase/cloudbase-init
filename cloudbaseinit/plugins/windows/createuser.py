@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -36,6 +34,7 @@ LOG = logging.getLogger(__name__)
 
 
 class CreateUserPlugin(base.BasePlugin):
+
     def _get_password(self, osutils):
         # Generate a temporary random password to be replaced
         # by SetUserPasswordPlugin (starting from Grizzly)

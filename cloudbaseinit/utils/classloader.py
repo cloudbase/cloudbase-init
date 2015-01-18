@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,6 +21,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ClassLoader(object):
+
     def load_class(self, class_path):
         LOG.debug('Loading class \'%s\'' % class_path)
         parts = class_path.rsplit('.', 1)

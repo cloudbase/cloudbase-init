@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,6 +22,7 @@ from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins import constants
 from cloudbaseinit.utils import crypt
 
+
 opts = [
     cfg.BoolOpt('inject_user_password', default=True, help='Set the password '
                 'provided in the configuration. If False or no password is '
@@ -38,6 +37,7 @@ LOG = logging.getLogger(__name__)
 
 
 class SetUserPasswordPlugin(base.BasePlugin):
+
     def _encrypt_password(self, ssh_pub_key, password):
         cm = crypt.CryptManager()
         with cm.load_ssh_rsa_public_key(ssh_pub_key) as rsa:

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2014 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,10 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import subprocess
 import sys
 import unittest
+
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 from cloudbaseinit.osutils import base
 
