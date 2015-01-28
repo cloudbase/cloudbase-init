@@ -74,7 +74,7 @@ class BaseOpenStackService(base.BaseMetadataService):
         if key not in network_config:
             return None
 
-        content_name = network_config[key].rsplit("/", 1)[-1]
+        content_name = network_config[key].split("/", 2)[-1]
         content = self.get_content(content_name)
         content = encoding.get_as_string(content)
 
