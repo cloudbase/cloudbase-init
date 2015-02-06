@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,10 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import sys
 import unittest
 
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 from oslo.config import cfg
 
 from cloudbaseinit.utils import network
@@ -26,6 +27,7 @@ CONF = cfg.CONF
 
 
 class NetworkUtilsTest(unittest.TestCase):
+
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('six.moves.urllib.parse.urlparse')
     def _test_check_metadata_ip_route(self, mock_urlparse, mock_get_os_utils,

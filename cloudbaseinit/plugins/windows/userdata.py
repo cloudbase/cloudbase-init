@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,6 +22,7 @@ from cloudbaseinit.plugins import base
 from cloudbaseinit.plugins.windows.userdataplugins import factory
 from cloudbaseinit.plugins.windows import userdatautils
 from cloudbaseinit.utils import encoding
+
 
 LOG = logging.getLogger(__name__)
 

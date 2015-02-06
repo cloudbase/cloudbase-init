@@ -16,6 +16,7 @@ import abc
 
 
 class BaseUserDataPlugin(object):
+
     def __init__(self, mime_type):
         self._mime_type = mime_type
 

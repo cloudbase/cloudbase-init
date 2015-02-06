@@ -13,12 +13,17 @@
 #    under the License.
 
 import importlib
-import mock
 import unittest
+
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 
 class FakeWindowsError(Exception):
     """WindowsError is available on Windows only."""
+
     def __init__(self, errno):
         self.errno = errno
 

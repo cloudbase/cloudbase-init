@@ -13,8 +13,12 @@
 #    under the License.
 
 import importlib
-import mock
 import unittest
+
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 
 class WS2_32UtilsTests(unittest.TestCase):

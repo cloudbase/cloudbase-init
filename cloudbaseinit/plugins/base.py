@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,6 +17,7 @@ PLUGIN_EXECUTE_ON_NEXT_BOOT = 2
 
 
 class BasePlugin(object):
+
     def get_name(self):
         return self.__class__.__name__
 

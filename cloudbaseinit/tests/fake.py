@@ -14,6 +14,7 @@
 
 
 class FakeComError(Exception):
+
     def __init__(self):
         super(FakeComError, self).__init__()
         self.excepinfo = [None, None, None, None, None, -2144108544]

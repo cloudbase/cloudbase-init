@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,6 +27,7 @@ LOG = logging.getLogger(__name__)
 
 
 class SetUserSSHPublicKeysPlugin(base.BasePlugin):
+
     def execute(self, service, shared_data):
         public_keys = service.get_public_keys()
         if not public_keys:

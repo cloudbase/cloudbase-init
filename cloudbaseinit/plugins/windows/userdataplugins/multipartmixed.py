@@ -16,6 +16,7 @@ from cloudbaseinit.plugins.windows.userdataplugins import base
 
 
 class MultipartMixedPlugin(base.BaseUserDataPlugin):
+
     def __init__(self):
         super(MultipartMixedPlugin, self).__init__("multipart/mixed")
 

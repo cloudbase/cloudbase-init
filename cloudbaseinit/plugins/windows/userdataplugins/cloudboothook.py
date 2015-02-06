@@ -19,6 +19,7 @@ LOG = logging.getLogger(__name__)
 
 
 class CloudBootHookPlugin(base.BaseUserDataPlugin):
+
     def __init__(self):
         super(CloudBootHookPlugin, self).__init__("text/cloud-boothook")
 

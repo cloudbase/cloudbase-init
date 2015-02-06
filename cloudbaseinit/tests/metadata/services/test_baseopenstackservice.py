@@ -17,7 +17,10 @@ import functools
 import posixpath
 import unittest
 
-import mock
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 from oslo.config import cfg
 
 from cloudbaseinit.metadata.services import base

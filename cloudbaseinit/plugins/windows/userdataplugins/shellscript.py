@@ -25,6 +25,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ShellScriptPlugin(base.BaseUserDataPlugin):
+
     def __init__(self):
         super(ShellScriptPlugin, self).__init__("text/x-shellscript")
 

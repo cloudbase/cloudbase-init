@@ -37,7 +37,7 @@ def check_url(url, retries_count=MAX_URL_CHECK_RETRIES):
 
 
 def check_metadata_ip_route(metadata_url):
-    #Workaround for: https://bugs.launchpad.net/quantum/+bug/1174657
+    # Workaround for: https://bugs.launchpad.net/quantum/+bug/1174657
     osutils = osutils_factory.get_os_utils()
 
     if sys.platform == 'win32' and osutils.check_os_version(6, 0):

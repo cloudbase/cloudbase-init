@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -40,6 +38,7 @@ LOG = logging.getLogger(__name__)
 
 
 class ConfigDriveService(baseopenstackservice.BaseOpenStackService):
+
     def __init__(self):
         super(ConfigDriveService, self).__init__()
         self._metadata_path = None

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -103,6 +101,7 @@ class CryptException(Exception):
 
 
 class OpenSSLException(CryptException):
+
     def __init__(self):
         message = self._get_openssl_error_msg()
         super(OpenSSLException, self).__init__(message)
@@ -116,6 +115,7 @@ class OpenSSLException(CryptException):
 
 
 class RSAWrapper(object):
+
     def __init__(self, rsa_p):
         self._rsa_p = rsa_p
 
@@ -145,6 +145,7 @@ class RSAWrapper(object):
 
 
 class CryptManager(object):
+
     def load_ssh_rsa_public_key(self, ssh_pub_key):
         ssh_rsa_prefix = "ssh-rsa "
 

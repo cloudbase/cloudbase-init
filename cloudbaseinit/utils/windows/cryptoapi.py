@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,6 +19,7 @@ from ctypes import wintypes
 
 
 class CryptoAPIException(Exception):
+
     def __init__(self):
         message = self._get_windows_error()
         super(CryptoAPIException, self).__init__(message)
