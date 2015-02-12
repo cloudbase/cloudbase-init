@@ -98,10 +98,15 @@ class CloudConfigPlugin(base.BaseUserDataPlugin):
     def __init__(self):
         super(CloudConfigPlugin, self).__init__("text/cloud-config")
 
-    def process(self, part):
+    def process_non_multipart(self, part):
+        """Process the given data, if it can be loaded through yaml."""
         try:
             executor = CloudConfigPluginExecutor.from_yaml(part)
         except CloudConfigError:
             LOG.error("Could not process the type %r", type(part))
         else:
             executor.execute()
+
+    def process(self, part):
+        payload = part.get_payload()
+        self.process_non_multipart(payload)

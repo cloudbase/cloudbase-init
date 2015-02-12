@@ -64,7 +64,7 @@ class CloudConfigPluginTests(unittest.TestCase):
     def test_invalid_type(self):
         with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
                                    'userdataplugins.cloudconfig') as snatcher:
-            self.plugin.process({'unsupported'})
+            self.plugin.process_non_multipart({'unsupported'})
 
         expected = ["Invalid yaml stream provided.",
                     "Could not process the type %r" % set]
