@@ -12,3 +12,13 @@ write_files:
     content: NDI=
     path: {b64}
     permissions: '0644'
+-   content: !!binary |
+        NDI=
+    path: {b64_binary}
+- path: {gzip}
+  encoding: gzip+b64
+  content: H4sIAGUfoFQC/zMxAgCIsCQyAgAAAA==
+- path: {gzip_binary}
+  encoding: gzip
+  content: !!binary |
+      H4sIAGUfoFQC/zMxAgCIsCQyAgAAAA==
