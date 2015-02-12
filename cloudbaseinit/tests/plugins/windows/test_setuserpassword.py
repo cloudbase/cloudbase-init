@@ -101,6 +101,8 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_get_key.return_value = ssh_pub_key
         mock_encrypt_password.return_value = 'encrypted password'
         mock_service.post_password.return_value = 'value'
+        mock_service.can_post_password = True
+        mock_service.is_password_set = False
         response = self._setpassword_plugin._set_metadata_password(
             fake_passw0rd, mock_service)
         if ssh_pub_key is None:
@@ -160,4 +162,4 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                                                   'fake username')
         mock_set_metadata_password.assert_called_once_with('fake password',
                                                            mock_service)
-        self.assertEqual((2, False), response)
+        self.assertEqual((1, False), response)

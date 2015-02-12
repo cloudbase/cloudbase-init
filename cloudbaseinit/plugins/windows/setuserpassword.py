@@ -70,14 +70,19 @@ class SetUserPasswordPlugin(base.BasePlugin):
         return password
 
     def _set_metadata_password(self, password, service):
-        ssh_pub_key = self._get_ssh_public_key(service)
-        if ssh_pub_key:
-            enc_password_b64 = self._encrypt_password(ssh_pub_key,
-                                                      password)
-            return service.post_password(enc_password_b64)
-        else:
-            LOG.info('No SSH public key available for password encryption')
+        if service.is_password_set:
+            LOG.debug('User\'s password already set in the instance metadata '
+                      'and it cannot be updated in the instance metadata')
             return True
+        else:
+            ssh_pub_key = self._get_ssh_public_key(service)
+            if ssh_pub_key:
+                enc_password_b64 = self._encrypt_password(ssh_pub_key,
+                                                          password)
+                return service.post_password(enc_password_b64)
+            else:
+                LOG.info('No SSH public key available for password encryption')
+                return True
 
     def _set_password(self, service, osutils, user_name):
         password = self._get_password(service, osutils)
@@ -91,20 +96,17 @@ class SetUserPasswordPlugin(base.BasePlugin):
         user_name = shared_data.get(constants.SHARED_DATA_USERNAME,
                                     CONF.username)
 
-        if service.can_post_password and service.is_password_set:
-            LOG.debug('User\'s password already set in the instance metadata')
-        else:
-            osutils = osutils_factory.get_os_utils()
-            if osutils.user_exists(user_name):
-                password = self._set_password(service, osutils, user_name)
-                # TODO(alexpilotti): encrypt with DPAPI
-                shared_data[constants.SHARED_DATA_PASSWORD] = password
+        osutils = osutils_factory.get_os_utils()
+        if osutils.user_exists(user_name):
+            password = self._set_password(service, osutils, user_name)
+            LOG.info('Password succesfully updated for user %s' % user_name)
+            # TODO(alexpilotti): encrypt with DPAPI
+            shared_data[constants.SHARED_DATA_PASSWORD] = password
 
-                if not service.can_post_password:
-                    LOG.info('Cannot set the password in the metadata as it '
-                             'is not supported by this service')
-                    return (base.PLUGIN_EXECUTION_DONE, False)
-                else:
-                    self._set_metadata_password(password, service)
+            if not service.can_post_password:
+                LOG.info('Cannot set the password in the metadata as it is '
+                         'not supported by this service')
+            else:
+                self._set_metadata_password(password, service)
 
-        return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+        return (base.PLUGIN_EXECUTION_DONE, False)
