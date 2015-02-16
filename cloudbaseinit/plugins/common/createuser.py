@@ -35,10 +35,12 @@ LOG = logging.getLogger(__name__)
 
 class CreateUserPlugin(base.BasePlugin):
 
-    def _get_password(self, osutils):
+    @staticmethod
+    def _get_password(osutils):
         # Generate a temporary random password to be replaced
         # by SetUserPasswordPlugin (starting from Grizzly)
-        return osutils.generate_random_password(14)
+        maximum_length = osutils.get_maximum_password_length()
+        return osutils.generate_random_password(maximum_length)
 
     def execute(self, service, shared_data):
         user_name = CONF.username

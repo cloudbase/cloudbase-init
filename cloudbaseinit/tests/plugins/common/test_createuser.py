@@ -36,7 +36,9 @@ class CreateUserPluginTests(unittest.TestCase):
         mock_osutils = mock.MagicMock()
         mock_osutils.generate_random_password.return_value = 'fake password'
         response = self._create_user._get_password(mock_osutils)
-        mock_osutils.generate_random_password.assert_called_once_with(14)
+        mock_osutils.get_maximum_password_length.assert_called_once_with()
+        length = mock_osutils.get_maximum_password_length()
+        mock_osutils.generate_random_password.assert_called_once_with(length)
         self.assertEqual('fake password', response)
 
     @testutils.ConfPatcher('groups', ['Admins'])

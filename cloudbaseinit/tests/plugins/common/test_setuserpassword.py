@@ -97,8 +97,9 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             self.assertFalse(mock_osutils.generate_random_password.called)
             expected_password = mock.sentinel.create_user_password
         else:
-            mock_osutils.generate_random_password.assert_called_once_with(14)
-
+            mock_osutils.get_maximum_password_length.assert_called_once_with()
+            mock_osutils.generate_random_password.assert_called_once_with(
+                mock_osutils.get_maximum_password_length())
         self.assertEqual(expected_password, response)
 
     def test_get_password_inject_true(self):

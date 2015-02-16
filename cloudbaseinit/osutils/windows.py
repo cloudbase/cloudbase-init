@@ -991,3 +991,7 @@ class WindowsUtils(base.BaseOSUtils):
         process_path = os.path.join(base_dir, args[0])
         return self.execute_process([process_path] + args[1:],
                                     decode_output=decode_output, shell=shell)
+
+    def get_maximum_password_length(self):
+        # TODO(cpopa): Limit to 14 chars for compatibility with NT?
+        return 14

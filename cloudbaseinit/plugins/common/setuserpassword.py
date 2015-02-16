@@ -63,8 +63,8 @@ class SetUserPasswordPlugin(base.BasePlugin):
             if not password:
                 LOG.debug('Generating a random user password')
                 # Generate a random password
-                # Limit to 14 chars for compatibility with NT
-                password = osutils.generate_random_password(14)
+                maximum_length = osutils.get_maximum_password_length()
+                password = osutils.generate_random_password(maximum_length)
 
         return password
 

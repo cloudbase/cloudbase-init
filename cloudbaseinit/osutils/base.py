@@ -106,3 +106,7 @@ class BaseOSUtils(object):
 
     def firewall_remove_rule(self, name, port, protocol, allow=True):
         raise NotImplementedError()
+
+    def get_maximum_password_length(self):
+        """Obtain the maximum password length tailored for each OS."""
+        raise NotImplementedError()
