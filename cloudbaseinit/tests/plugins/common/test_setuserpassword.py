@@ -143,25 +143,44 @@ class SetUserPasswordPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
                 'SetUserPasswordPlugin._set_metadata_password')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    def test_execute(self, mock_get_os_utils, mock_set_metadata_password,
-                     mock_set_password):
+    def _test_execute(self, mock_get_os_utils, mock_set_metadata_password,
+                      mock_set_password, is_password_set=False,
+                      can_post_password=True):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         fake_shared_data = mock.MagicMock()
         fake_shared_data.get.return_value = 'fake username'
-        mock_service.is_password_set = False
-        mock_service.can_post_password = True
+        mock_service.is_password_set = is_password_set
+        mock_service.can_post_password = can_post_password
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.user_exists.return_value = True
         mock_set_password.return_value = 'fake password'
-        response = self._setpassword_plugin.execute(mock_service,
-                                                    fake_shared_data)
+
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'setuserpassword') as snatcher:
+            response = self._setpassword_plugin.execute(mock_service,
+                                                        fake_shared_data)
         mock_get_os_utils.assert_called_once_with()
         fake_shared_data.get.assert_called_with(
             constants.SHARED_DATA_USERNAME, CONF.username)
         mock_osutils.user_exists.assert_called_once_with('fake username')
         mock_set_password.assert_called_once_with(mock_service, mock_osutils,
                                                   'fake username')
-        mock_set_metadata_password.assert_called_once_with('fake password',
-                                                           mock_service)
+
+        expected_logging = [
+            "Password succesfully updated for user fake username",
+        ]
+        if can_post_password:
+            mock_set_metadata_password.assert_called_once_with('fake password',
+                                                               mock_service)
+        else:
+            expected_logging.append("Cannot set the password in the metadata "
+                                    "as it is not supported by this service")
+            self.assertFalse(mock_set_metadata_password.called)
         self.assertEqual((1, False), response)
+        self.assertEqual(expected_logging, snatcher.output)
+
+    def test_execute(self):
+        self._test_execute(is_password_set=False, can_post_password=False)
+        self._test_execute(is_password_set=True, can_post_password=True)
+        self._test_execute(is_password_set=False, can_post_password=True)
