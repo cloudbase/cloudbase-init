@@ -19,7 +19,6 @@ try:
 except ImportError:
     import mock
 
-from cloudbaseinit import exception
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import ntpclient
 from cloudbaseinit.tests import testutils
@@ -31,87 +30,15 @@ class NTPClientPluginTests(unittest.TestCase):
     def setUp(self):
         self._ntpclient = ntpclient.NTPClientPlugin()
 
-    def test_set_ntp_trigger_mode(self):
-        mock_osutils = mock.Mock()
-        self._ntpclient._set_ntp_trigger_mode(mock_osutils)
-        mock_osutils.execute_system32_process.assert_called_once_with(
-            ["sc.exe", "triggerinfo", ntpclient._W32TIME_SERVICE,
-             "start/networkon", "stop/networkoff"])
-
-    @mock.patch('time.sleep')
-    @mock.patch('cloudbaseinit.plugins.common.ntpclient.NTPClientPlugin.'
-                '_set_ntp_trigger_mode')
-    def _test_check_w32time_svc_status(self, mock_set_ntp_trigger_mode,
-                                       mock_sleep, start_mode,
-                                       fail_service_start,
-                                       patch_check_os_version=True):
-        # TODO(rtingirica): use _W32TIME_SERVICE when it will be moved outside
-        # of method declaration
-        mock_osutils = mock.MagicMock()
-        mock_osutils.SERVICE_START_MODE_AUTOMATIC = "Automatic"
-        mock_osutils.SERVICE_STATUS_RUNNING = "running"
-        mock_osutils.SERVICE_STATUS_STOPPED = "stopped"
-        mock_osutils.get_service_start_mode.return_value = start_mode
-        mock_osutils.check_os_version.return_value = patch_check_os_version
-
-        if fail_service_start:
-            mock_osutils.get_service_status.return_value = "stopped"
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._ntpclient._check_w32time_svc_status,
-                              mock_osutils)
-
-        else:
-            mock_osutils.get_service_status.side_effect = [
-                "stopped", mock_osutils.SERVICE_STATUS_RUNNING]
-
-            self._ntpclient._check_w32time_svc_status(osutils=mock_osutils)
-
-            if start_mode != mock_osutils.SERVICE_START_MODE_AUTOMATIC:
-                mock_osutils.set_service_start_mode.assert_called_once_with(
-                    ntpclient._W32TIME_SERVICE,
-                    mock_osutils.SERVICE_START_MODE_AUTOMATIC)
-
-            mock_sleep.assert_called_once_with(1)
-            mock_osutils.start_service.assert_called_once_with(
-                ntpclient._W32TIME_SERVICE)
-
-        mock_osutils.get_service_start_mode.assert_called_once_with(
-            ntpclient._W32TIME_SERVICE)
-        mock_osutils.get_service_status.assert_called_with(
-            ntpclient._W32TIME_SERVICE)
-
-        mock_osutils.check_os_version.assert_called_once_with(6, 0)
-        if patch_check_os_version:
-            mock_set_ntp_trigger_mode.assert_called_once_with(mock_osutils)
-        else:
-            self.assertFalse(mock_set_ntp_trigger_mode.called)
-
-    def test_check_w32time_svc_status_other_start_mode(self):
-        self._test_check_w32time_svc_status(start_mode="not automatic",
-                                            fail_service_start=False)
-
-    def test_check_w32time_svc_status_start_automatic(self):
-        self._test_check_w32time_svc_status(start_mode="automatic",
-                                            fail_service_start=False)
-
-    def test_check_w32time_svc_status_exception(self):
-        self._test_check_w32time_svc_status(start_mode="automatic",
-                                            fail_service_start=True)
-
-    def test_check_w32time_older_oses(self):
-        self._test_check_w32time_svc_status(start_mode="automatic",
-                                            fail_service_start=False,
-                                            patch_check_os_version=False)
-
     @testutils.ConfPatcher('ntp_use_dhcp_config', True)
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.utils.dhcp.get_dhcp_options')
     @mock.patch('cloudbaseinit.plugins.common.ntpclient.NTPClientPlugin.'
-                '_check_w32time_svc_status')
+                'verify_time_service')
     @mock.patch('cloudbaseinit.plugins.common.ntpclient.NTPClientPlugin.'
                 '_unpack_ntp_hosts')
     def _test_execute(self, mock_unpack_ntp_hosts,
-                      mock_check_w32time_svc_status,
+                      mock_verify_time_service,
                       mock_get_dhcp_options, mock_get_os_utils,
                       original_unpack_hosts, ntp_data, expected_hosts):
         # Set the side effect to the actual function, in order to
@@ -138,7 +65,7 @@ class NTPClientPluginTests(unittest.TestCase):
         if ntp_data:
             mock_unpack_ntp_hosts.assert_called_once_with(ntp_data)
             self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
-            mock_check_w32time_svc_status.assert_called_once_with(mock_osutils)
+            mock_verify_time_service.assert_called_once_with(mock_osutils)
             mock_osutils.set_ntp_client_config.assert_called_once_with(
                 expected_hosts)
         else:
