@@ -466,6 +466,7 @@ class WindowsUtils(base.BaseOSUtils):
             six.text_type(new_host_name))
         if not ret_val:
             raise exception.CloudbaseInitException("Cannot set host name")
+        return True
 
     def get_network_adapters(self):
         """Return available adapters as a list of tuples of (name, mac)."""

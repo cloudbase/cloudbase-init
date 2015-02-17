@@ -466,7 +466,7 @@ class TestWindowsUtils(unittest.TestCase):
             self.assertRaises(exception.CloudbaseInitException,
                               self._winutils.set_host_name, 'fake name')
         else:
-            self._winutils.set_host_name('fake name')
+            self.assertTrue(self._winutils.set_host_name('fake name'))
 
         mock_SetComputerNameExW.assert_called_with(
             self._winutils.ComputerNamePhysicalDnsHostname,

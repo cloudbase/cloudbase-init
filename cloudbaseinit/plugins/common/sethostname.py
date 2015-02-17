@@ -63,7 +63,6 @@ class SetHostNamePlugin(base.BasePlugin):
             reboot_required = False
         else:
             LOG.info("Setting hostname: %s" % new_host_name)
-            osutils.set_host_name(new_host_name)
-            reboot_required = True
+            reboot_required = osutils.set_host_name(new_host_name)
 
         return (base.PLUGIN_EXECUTION_DONE, reboot_required)

@@ -52,6 +52,7 @@ class SetHostNamePluginPluginTests(unittest.TestCase):
             mock_service.get_host_name.return_value = None
 
         mock_get_os_utils.return_value = mock_osutils
+        mock_get_os_utils.return_value.set_host_name.return_value = True
 
         if hostname_exists is True:
             length = sethostname.NETBIOS_HOST_NAME_MAX_LEN
