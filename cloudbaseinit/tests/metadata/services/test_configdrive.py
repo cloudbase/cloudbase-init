@@ -68,7 +68,10 @@ class ConfigDriveServiceTest(unittest.TestCase):
         mock_gettempdir.assert_called_once_with()
         mock_get_config_drive_manager.assert_called_once_with()
         mock_manager.get_config_drive_files.assert_called_once_with(
-            fake_path, CONF.config_drive_raw_hhd, CONF.config_drive_cdrom)
+            fake_path,
+            check_raw_hhd=CONF.config_drive_raw_hhd,
+            check_cdrom=CONF.config_drive_cdrom,
+            check_vfat=CONF.config_drive_vfat)
         self.assertTrue(response)
         self.assertEqual(fake_path, self._config_drive._metadata_path)
 

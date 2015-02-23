@@ -1,0 +1,112 @@
+# Copyright 2015 Cloudbase Solutions Srl
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import os
+import unittest
+
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
+
+from cloudbaseinit import exception
+from cloudbaseinit.tests import testutils
+from cloudbaseinit.utils.windows import vfat
+
+CONF = vfat.CONF
+
+
+class TestVfat(unittest.TestCase):
+
+    def _test_is_vfat_drive(self, execute_process_value,
+                            expected_logging,
+                            expected_response):
+
+        mock_osutils = mock.Mock()
+        mock_osutils.execute_process.return_value = execute_process_value
+
+        with testutils.LogSnatcher('cloudbaseinit.utils.windows.'
+                                   'vfat') as snatcher:
+            with testutils.ConfPatcher('mtools_path', 'mtools_path'):
+
+                response = vfat.is_vfat_drive(mock_osutils,
+                                              mock.sentinel.drive)
+
+                mdir = os.path.join(CONF.mtools_path, "mdir.exe")
+                mock_osutils.execute_process.assert_called_once_with(
+                    [mdir, "-/", "-b", "-i", mock.sentinel.drive, "/"],
+                    shell=False)
+
+        self.assertEqual(expected_logging, snatcher.output)
+        self.assertEqual(expected_response, response)
+
+    def test_is_vfat_drive_fails(self):
+        expected_logging = [
+            "%r is not a VFAT location." % mock.sentinel.drive,
+        ]
+        execute_process_value = (None, None, 1)
+        expected_response = None
+
+        self._test_is_vfat_drive(execute_process_value=execute_process_value,
+                                 expected_logging=expected_logging,
+                                 expected_response=expected_response)
+
+    def test_is_vfat_drive_works(self):
+        mock_out = mock.Mock()
+        expected_logging = []
+        execute_process_value = (mock_out, None, 0)
+        expected_response = True
+
+        self._test_is_vfat_drive(execute_process_value=execute_process_value,
+                                 expected_logging=expected_logging,
+                                 expected_response=expected_response)
+
+    @testutils.ConfPatcher('mtools_path', 'mtools_path')
+    @mock.patch('os.chdir')
+    def test_copy(self, mock_os_chdir):
+        cwd = os.getcwd()
+        mock_osutils = mock.Mock()
+
+        vfat.copy_from_vfat_drive(mock_osutils,
+                                  mock.sentinel.drive,
+                                  mock.sentinel.target_path)
+
+        mock_os_chdir_calls = [
+            mock.call(mock.sentinel.target_path),
+            mock.call(cwd),
+        ]
+        self.assertEqual(mock_os_chdir_calls, mock_os_chdir.mock_calls)
+        self.assertEqual(os.getcwd(), cwd)
+
+        mcopy = os.path.join(CONF.mtools_path, "mcopy.exe")
+        mock_osutils.execute_process.assert_called_once_with(
+            [mcopy, "-s", "-n", "-i", mock.sentinel.drive, "::/", "."],
+            shell=False)
+
+    def test_is_vfat_drive_mtools_not_given(self):
+        with self.assertRaises(exception.CloudbaseInitException) as cm:
+            vfat.is_vfat_drive(mock.sentinel.osutils,
+                               mock.sentinel.target_path)
+        expected_message = ('"mtools_path" needs to be provided in order '
+                            'to access VFAT drives')
+        self.assertEqual(expected_message, str(cm.exception.args[0]))
+
+    def test_copy_from_vfat_drive_mtools_not_given(self):
+        with self.assertRaises(exception.CloudbaseInitException) as cm:
+            vfat.copy_from_vfat_drive(mock.sentinel.osutils,
+                                      mock.sentinel.drive_path,
+                                      mock.sentinel.target_path)
+        expected_message = ('"mtools_path" needs to be provided in order '
+                            'to access VFAT drives')
+        self.assertEqual(expected_message, str(cm.exception.args[0]))

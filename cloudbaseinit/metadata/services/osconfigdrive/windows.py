@@ -26,6 +26,7 @@ from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils.windows import physical_disk
+from cloudbaseinit.utils.windows import vfat
 
 opts = [
     cfg.StrOpt('bsdtar_path', default='bsdtar.exe',
@@ -144,10 +145,24 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 phys_disk.close()
         return iso_disk_found
 
+    def _get_conf_drive_from_vfat(self, target_path):
+        osutils = osutils_factory.get_os_utils()
+        for drive_path in osutils.get_physical_disks():
+            if vfat.is_vfat_drive(osutils, drive_path):
+                LOG.info('Config Drive found on disk %r', drive_path)
+                os.makedirs(target_path)
+                vfat.copy_from_vfat_drive(osutils, drive_path, target_path)
+                return True
+
     def get_config_drive_files(self, target_path, check_raw_hhd=True,
-                               check_cdrom=True):
+                               check_cdrom=True, check_vfat=True):
         config_drive_found = False
-        if check_raw_hhd:
+
+        if check_vfat:
+            LOG.debug('Looking for Config Drive in VFAT filesystems')
+            config_drive_found = self._get_conf_drive_from_vfat(target_path)
+
+        if not config_drive_found and check_raw_hhd:
             LOG.debug('Looking for Config Drive in raw HDDs')
             config_drive_found = self._get_conf_drive_from_raw_hdd(
                 target_path)

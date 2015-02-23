@@ -29,6 +29,8 @@ opts = [
                 help='Look for an ISO config drive in raw HDDs'),
     cfg.BoolOpt('config_drive_cdrom', default=True,
                 help='Look for a config drive in the attached cdrom drives'),
+    cfg.BoolOpt('config_drive_vfat', default=True,
+                help='Look for a config drive in VFAT filesystems.'),
 ]
 
 CONF = cfg.CONF
@@ -49,9 +51,11 @@ class ConfigDriveService(baseopenstackservice.BaseOpenStackService):
         target_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
 
         mgr = factory.get_config_drive_manager()
-        found = mgr.get_config_drive_files(target_path,
-                                           CONF.config_drive_raw_hhd,
-                                           CONF.config_drive_cdrom)
+        found = mgr.get_config_drive_files(
+            target_path,
+            check_raw_hhd=CONF.config_drive_raw_hhd,
+            check_cdrom=CONF.config_drive_cdrom,
+            check_vfat=CONF.config_drive_vfat)
         if found:
             self._metadata_path = target_path
             LOG.debug('Metadata copied to folder: \'%s\'' %
