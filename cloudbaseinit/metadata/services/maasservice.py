@@ -66,9 +66,20 @@ class MaaSHttpService(base.BaseMetadataService):
                           CONF.maas_metadata_url)
         return False
 
-    def _get_response(self, req):
+    def _ensure_network_up(self, request):
+        while True:
+            try:
+                response = request.urlopen(request)
+                return response
+            except socket.error:
+                LOG.debug("socket error while trying to get a response, network most likely down.")
+                pass
+            except Exception as e:
+                raise e
+
+    def _get_response(req):
         try:
-            return request.urlopen(req)
+            return self._ensure_network_up(req)
         except error.HTTPError as ex:
             if ex.code == 404:
                 raise base.NotExistingMetadataException()
