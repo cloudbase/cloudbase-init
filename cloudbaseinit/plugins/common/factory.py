@@ -23,7 +23,7 @@ opts = [
             'cloudbaseinit.plugins.common.mtu.MTUPlugin',
             'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin',
             'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin',
-            'cloudbaseinit.plugins.common.createuser.CreateUserPlugin',
+            'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
             'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin',
             'cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin',
             'cloudbaseinit.plugins.common.sshpublickeys.'

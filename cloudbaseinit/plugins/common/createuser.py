@@ -12,7 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import abc
+
 from oslo.config import cfg
+import six
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
@@ -33,7 +36,17 @@ CONF.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
 
-class CreateUserPlugin(base.BasePlugin):
+@six.add_metaclass(abc.ABCMeta)
+class BaseCreateUserPlugin(base.BasePlugin):
+    """This is a base class for creating or modifying an user."""
+
+    @abc.abstractmethod
+    def create_user(self, username, password, osutils):
+        """Create a new username, with the given *username*.
+
+        This will be called by :meth:`~execute`, whenever
+        a new user must be created.
+        """
 
     @staticmethod
     def _get_password(osutils):
@@ -50,23 +63,11 @@ class CreateUserPlugin(base.BasePlugin):
         password = self._get_password(osutils)
 
         if osutils.user_exists(user_name):
-            LOG.info('Setting password for existing user "%s"' % user_name)
+            LOG.info('Setting password for existing user "%s"', user_name)
             osutils.set_user_password(user_name, password)
         else:
-            LOG.info('Creating user "%s" and setting password' % user_name)
-            osutils.create_user(user_name, password)
-
-            try:
-                # Create a user profile in order for other plugins
-                # to access the user home, etc
-                token = osutils.create_user_logon_session(user_name,
-                                                          password,
-                                                          True)
-                osutils.close_user_logon_session(token)
-            except Exception as ex:
-                LOG.exception(ex)
-                LOG.error('Cannot create a user logon session for user: "%s"' %
-                          user_name)
+            LOG.info('Creating user "%s" and setting password', user_name)
+            self.create_user(user_name, password, osutils)
 
             # TODO(alexpilotti): encrypt with DPAPI
             shared_data[constants.SHARED_DATA_PASSWORD] = password
@@ -74,8 +75,7 @@ class CreateUserPlugin(base.BasePlugin):
         for group_name in CONF.groups:
             try:
                 osutils.add_user_to_local_group(user_name, group_name)
-            except Exception as ex:
-                LOG.exception(ex)
-                LOG.error('Cannot add user to group "%s"' % group_name)
+            except Exception:
+                LOG.exception('Cannot add user to group "%s"', group_name)
 
         return (base.PLUGIN_EXECUTION_DONE, False)
