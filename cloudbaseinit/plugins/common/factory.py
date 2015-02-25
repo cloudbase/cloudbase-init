@@ -21,7 +21,7 @@ opts = [
         'plugins',
         default=[
             'cloudbaseinit.plugins.common.mtu.MTUPlugin',
-            'cloudbaseinit.plugins.common.ntpclient.NTPClientPlugin',
+            'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin',
             'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin',
             'cloudbaseinit.plugins.common.createuser.CreateUserPlugin',
             'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin',
