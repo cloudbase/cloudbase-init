@@ -110,7 +110,7 @@ class CloudStack(base.BaseMetadataService):
     def get_public_keys(self):
         """Available ssh public keys."""
         ssh_keys = []
-        for ssh_key in self._get_cache_data('public-keys').split():
+        for ssh_key in self._get_cache_data('public-keys').splitlines():
             ssh_key = ssh_key.strip()
             if not ssh_key:
                 continue

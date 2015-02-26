@@ -168,14 +168,15 @@ class CloudStackTest(unittest.TestCase):
                 '._get_cache_data')
     def test_get_public_keys(self, mock_get_cache_data):
         mock_get_cache_data.side_effect = [
-            "a\nb\nc",
-            "\n\na\n\nb\n\nc",
-            " \n \n a \n \n b \n \n c",
+            "ssh-rsa AAAA\nssh-rsa BBBB\nssh-rsa CCCC",
+            "\n\nssh-rsa AAAA\n\nssh-rsa BBBB\n\nssh-rsa CCCC",
+            " \n \n ssh-rsa AAAA \n \n ssh-rsa BBBB \n \n ssh-rsa CCCC",
             " ", "\n", " \n "
         ]
         for _ in range(3):
             response = self._service.get_public_keys()
-            self.assertEqual(["a", "b", "c"], response)
+            self.assertEqual(["ssh-rsa AAAA", "ssh-rsa BBBB", "ssh-rsa CCCC"],
+                             response)
 
         for _ in range(3):
             response = self._service.get_public_keys()
