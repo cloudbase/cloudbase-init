@@ -994,5 +994,4 @@ class WindowsUtils(base.BaseOSUtils):
                                     decode_output=decode_output, shell=shell)
 
     def get_maximum_password_length(self):
-        # TODO(cpopa): Limit to 14 chars for compatibility with NT?
-        return 14
+        return 20

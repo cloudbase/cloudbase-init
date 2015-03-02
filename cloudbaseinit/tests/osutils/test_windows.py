@@ -1359,4 +1359,4 @@ class TestWindowsUtils(unittest.TestCase):
         self.assertEqual(mock.sentinel.execute_process, result)
 
     def test_get_password_maximum_length(self):
-        self.assertEqual(14, self._winutils.get_maximum_password_length())
+        self.assertEqual(20, self._winutils.get_maximum_password_length())
