@@ -20,12 +20,8 @@ LOG = logging.getLogger(__name__)
 
 class CreateUserPlugin(createuser.BaseCreateUserPlugin):
 
-    def create_user(self, username, password, osutils):
-        osutils.create_user(username, password)
-        self._create_user_logon(osutils, username, password)
-
     @staticmethod
-    def _create_user_logon(osutils, user_name, password):
+    def _create_user_logon(user_name, password, osutils):
         try:
             # Create a user profile in order for other plugins
             # to access the user home, etc
@@ -36,3 +32,9 @@ class CreateUserPlugin(createuser.BaseCreateUserPlugin):
         except Exception:
             LOG.exception('Cannot create a user logon session for user: "%s"',
                           user_name)
+
+    def create_user(self, username, password, osutils):
+        osutils.create_user(username, password)
+
+    def post_create_user(self, user_name, password, osutils):
+        self._create_user_logon(user_name, password, osutils)
