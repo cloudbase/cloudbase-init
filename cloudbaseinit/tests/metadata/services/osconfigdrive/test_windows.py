@@ -23,6 +23,8 @@ except ImportError:
 from oslo.config import cfg
 
 from cloudbaseinit import exception
+from cloudbaseinit.tests import testutils
+
 
 CONF = cfg.CONF
 
@@ -265,21 +267,45 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
                 'WindowsConfigDriveManager._get_conf_drive_from_raw_hdd')
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._get_conf_drive_from_cdrom_drive')
-    def test_get_config_drive_files(self,
-                                    mock_get_conf_drive_from_cdrom_drive,
-                                    mock_get_conf_drive_from_raw_hdd):
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager._get_conf_drive_from_vfat')
+    def _test_get_config_drive_files(self,
+                                     mock_get_conf_drive_from_vfat,
+                                     mock_get_conf_drive_from_cdrom_drive,
+                                     mock_get_conf_drive_from_raw_hdd,
+                                     raw_hdd_found=False,
+                                     cdrom_drive_found=False,
+                                     vfat_found=False):
 
         fake_path = os.path.join('fake', 'path')
-        mock_get_conf_drive_from_raw_hdd.return_value = False
-        mock_get_conf_drive_from_cdrom_drive.return_value = True
+        mock_get_conf_drive_from_raw_hdd.return_value = raw_hdd_found
+        mock_get_conf_drive_from_cdrom_drive.return_value = cdrom_drive_found
+        mock_get_conf_drive_from_vfat.return_value = vfat_found
 
         response = self._config_manager.get_config_drive_files(
             target_path=fake_path)
 
-        mock_get_conf_drive_from_raw_hdd.assert_called_once_with(fake_path)
-        mock_get_conf_drive_from_cdrom_drive.assert_called_once_with(
-            fake_path)
+        if vfat_found:
+            mock_get_conf_drive_from_vfat.assert_called_once_with(fake_path)
+            self.assertFalse(mock_get_conf_drive_from_raw_hdd.called)
+            self.assertFalse(mock_get_conf_drive_from_cdrom_drive.called)
+        elif cdrom_drive_found:
+            mock_get_conf_drive_from_vfat.assert_called_once_with(fake_path)
+            mock_get_conf_drive_from_cdrom_drive.assert_called_once_with(
+                fake_path)
+            mock_get_conf_drive_from_raw_hdd.assert_called_once_with(
+                fake_path)
+        elif raw_hdd_found:
+            mock_get_conf_drive_from_vfat.assert_called_once_with(fake_path)
+            mock_get_conf_drive_from_raw_hdd.assert_called_once_with(
+                fake_path)
+            self.assertFalse(mock_get_conf_drive_from_cdrom_drive.called)
         self.assertTrue(response)
+
+    def test_get_config_drive_files(self):
+        self._test_get_config_drive_files(raw_hdd_found=True)
+        self._test_get_config_drive_files(cdrom_drive_found=True)
+        self._test_get_config_drive_files(vfat_found=True)
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager.'
@@ -354,3 +380,43 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
     def test_get_conf_drive_from_raw_hdd_no_drive_found(self):
         self._test_get_conf_drive_from_raw_hdd(found_drive=False)
+
+    @mock.patch('os.makedirs')
+    @mock.patch('cloudbaseinit.utils.windows.vfat.copy_from_vfat_drive')
+    @mock.patch('cloudbaseinit.utils.windows.vfat.is_vfat_drive')
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    def test_get_conf_drive_from_vfat(self, mock_get_os_utils,
+                                      mock_is_vfat_drive,
+                                      mock_copy_from_vfat_drive,
+                                      mock_os_makedirs):
+
+        mock_osutils = mock_get_os_utils.return_value
+        mock_osutils.get_physical_disks.return_value = (
+            mock.sentinel.drive1,
+            mock.sentinel.drive2,
+        )
+        mock_is_vfat_drive.side_effect = (None, True)
+
+        with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
+                                   'osconfigdrive.windows') as snatcher:
+            response = self._config_manager._get_conf_drive_from_vfat(
+                mock.sentinel.target_path)
+
+        self.assertTrue(response)
+        mock_osutils.get_physical_disks.assert_called_once_with()
+
+        expected_is_vfat_calls = [
+            mock.call(mock_osutils, mock.sentinel.drive1),
+            mock.call(mock_osutils, mock.sentinel.drive2),
+        ]
+        self.assertEqual(expected_is_vfat_calls, mock_is_vfat_drive.mock_calls)
+        mock_copy_from_vfat_drive.assert_called_once_with(
+            mock_osutils,
+            mock.sentinel.drive2,
+            mock.sentinel.target_path)
+
+        expected_logging = [
+            'Config Drive found on disk %r' % mock.sentinel.drive2,
+        ]
+        self.assertEqual(expected_logging, snatcher.output)
+        mock_os_makedirs.assert_called_once_with(mock.sentinel.target_path)

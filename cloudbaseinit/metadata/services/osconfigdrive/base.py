@@ -19,5 +19,5 @@ class BaseConfigDriveManager(object):
 
     @abc.abstractmethod
     def get_config_drive_files(self, target_path, check_raw_hhd=True,
-                               check_cdrom=True):
+                               check_cdrom=True, check_vfat=True):
         pass
