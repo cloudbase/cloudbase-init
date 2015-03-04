@@ -1213,19 +1213,30 @@ class TestWindowsUtils(unittest.TestCase):
 
     @mock.patch('os.path.expandvars')
     def test_get_system32_dir(self, mock_expandvars):
-        mock_expandvars.return_value = 'fake_system32'
-
+        path = "system32"
+        mock_expandvars.return_value = path
         response = self._winutils.get_system32_dir()
 
-        self.assertEqual('fake_system32', response)
+        mock_expandvars.assert_called_once_with('%windir%\\{}'.format(path))
+        self.assertEqual(path, response)
+
+    @mock.patch('os.path.expandvars')
+    def test_get_syswow64_dir(self, mock_expandvars):
+        path = "syswow64"
+        mock_expandvars.return_value = path
+        response = self._winutils.get_syswow64_dir()
+
+        mock_expandvars.assert_called_once_with('%windir%\\{}'.format(path))
+        self.assertEqual(path, response)
 
     @mock.patch('os.path.expandvars')
     def test_get_sysnative_dir(self, mock_expandvars):
-        mock_expandvars.return_value = 'fake_sysnative'
-
+        path = "sysnative"
+        mock_expandvars.return_value = path
         response = self._winutils.get_sysnative_dir()
 
-        self.assertEqual('fake_sysnative', response)
+        mock_expandvars.assert_called_once_with('%windir%\\{}'.format(path))
+        self.assertEqual(path, response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.get_sysnative_dir')
@@ -1238,6 +1249,85 @@ class TestWindowsUtils(unittest.TestCase):
         response = self._winutils.check_sysnative_dir_exists()
 
         self.assertTrue(response)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_sysnative_dir_exists')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_sysnative_dir')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._is_64bit_arch')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_syswow64_dir')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_system32_dir')
+    def _test_get_system_dir(self, mock_get_system32_dir,
+                             mock_get_syswow64_dir,
+                             mock_is_64bit_arch,
+                             mock_get_sysnative_dir,
+                             mock_check_sysnative_dir_exists,
+                             sysnative, arches):
+        # settings
+        mock_get_system32_dir.return_value = "system32"
+        mock_get_syswow64_dir.return_value = "syswow64"
+        mock_get_sysnative_dir.return_value = "sysnative"
+        mock_is_64bit_arch.return_value = arches.startswith("64")
+        mock_check_sysnative_dir_exists.return_value = (arches == "32on64")
+        expect_dict = {
+            "32on32": {
+                False: (
+                    "system32",
+                    [mock_is_64bit_arch, mock_get_system32_dir]
+                ),
+                True: (
+                    "system32",
+                    [mock_check_sysnative_dir_exists,
+                     mock_get_system32_dir]
+                )
+            },
+            "32on64": {
+                False: (
+                    "system32",
+                    [mock_is_64bit_arch, mock_get_system32_dir]
+                ),
+                True: (
+                    "sysnative",
+                    [mock_check_sysnative_dir_exists,
+                     mock_get_sysnative_dir]
+                )
+            },
+            "64on64": {
+                False: (
+                    "syswow64",
+                    [mock_is_64bit_arch, mock_get_syswow64_dir]
+                ),
+                True: (
+                    "system32",
+                    [mock_check_sysnative_dir_exists,
+                     mock_get_system32_dir]
+                )
+            }
+        }
+        # actions
+        response = self._winutils._get_system_dir(sysnative=sysnative)
+        expect, calls = expect_dict[arches][sysnative]
+        self.assertEqual(expect, response)
+        for call in calls:
+            call.assert_called_once_with()
+
+    def test_get_system_dir_32on32(self):
+        arches = "32on32"
+        self._test_get_system_dir(sysnative=False, arches=arches)
+        self._test_get_system_dir(sysnative=True, arches=arches)
+
+    def test_get_system_dir_32on64(self):
+        arches = "32on64"
+        self._test_get_system_dir(sysnative=False, arches=arches)
+        self._test_get_system_dir(sysnative=True, arches=arches)
+
+    def test_get_system_dir_64on64(self):
+        arches = "64on64"
+        self._test_get_system_dir(sysnative=False, arches=arches)
+        self._test_get_system_dir(sysnative=True, arches=arches)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')
