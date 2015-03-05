@@ -32,6 +32,9 @@ class CreateUserPlugin(createuser.BaseCreateUserPlugin):
     def create_user(self, username, password, osutils):
         pass
 
+    def post_create_user(self, username, password, osutils):
+        pass
+
 
 class CreateUserPluginTests(unittest.TestCase):
 
@@ -52,18 +55,17 @@ class CreateUserPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.plugins.common.createuser.'
                 'BaseCreateUserPlugin._get_password')
     @mock.patch.object(CreateUserPlugin, 'create_user')
-    def _test_execute(self, mock_create_user, mock_get_password,
-                      mock_get_os_utils,
+    @mock.patch.object(CreateUserPlugin, 'post_create_user')
+    def _test_execute(self, mock_post_create_user, mock_create_user,
+                      mock_get_password, mock_get_os_utils,
                       user_exists=True,
                       group_adding_works=True):
         shared_data = {}
-        mock_token = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         mock_service = mock.MagicMock()
         mock_get_password.return_value = 'password'
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.user_exists.return_value = user_exists
-        mock_osutils.create_user_logon_session.return_value = mock_token
         if not group_adding_works:
             mock_osutils.add_user_to_local_group.side_effect = Exception
 
@@ -85,6 +87,10 @@ class CreateUserPluginTests(unittest.TestCase):
                 mock_osutils)
             expected_logging = ["Creating user \"%s\" and setting password"
                                 % CONF.username]
+
+        mock_post_create_user.assert_called_once_with(
+            CONF.username, 'password',
+            mock_osutils)
 
         self.assertEqual(expected_logging, snatcher.output[:1])
         if not group_adding_works:

@@ -48,6 +48,14 @@ class BaseCreateUserPlugin(base.BasePlugin):
         a new user must be created.
         """
 
+    @abc.abstractmethod
+    def post_create_user(self, user_name, password, osutils):
+        """Executes post user creation logic.
+
+        This will be called after by :meth:`~execute`, after
+        the user is created or the user password is updated.
+        """
+
     @staticmethod
     def _get_password(osutils):
         # Generate a temporary random password to be replaced
@@ -71,6 +79,8 @@ class BaseCreateUserPlugin(base.BasePlugin):
 
             # TODO(alexpilotti): encrypt with DPAPI
             shared_data[constants.SHARED_DATA_PASSWORD] = password
+
+        self.post_create_user(user_name, password, osutils)
 
         for group_name in CONF.groups:
             try:

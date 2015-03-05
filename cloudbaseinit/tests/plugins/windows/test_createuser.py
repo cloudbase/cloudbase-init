@@ -28,9 +28,7 @@ class CreateUserPluginTests(unittest.TestCase):
     def setUp(self):
         self._create_user = createuser.CreateUserPlugin()
 
-    @mock.patch('cloudbaseinit.plugins.windows.createuser.CreateUserPlugin.'
-                '_create_user_logon')
-    def test_create_user(self, mock_create_user_logon):
+    def test_create_user(self):
         mock_osutils = mock.Mock()
         self._create_user.create_user(
             mock.sentinel.username,
@@ -40,10 +38,20 @@ class CreateUserPluginTests(unittest.TestCase):
         mock_osutils.create_user.assert_called_once_with(
             mock.sentinel.username,
             mock.sentinel.password)
-        mock_create_user_logon.assert_called_once_with(
-            mock_osutils,
+
+    @mock.patch('cloudbaseinit.plugins.windows.createuser.CreateUserPlugin.'
+                '_create_user_logon')
+    def test_post_create_user(self, mock_create_user_logon):
+        mock_osutils = mock.Mock()
+        self._create_user.post_create_user(
             mock.sentinel.username,
-            mock.sentinel.password)
+            mock.sentinel.password,
+            mock_osutils)
+
+        mock_create_user_logon.assert_called_once_with(
+            mock.sentinel.username,
+            mock.sentinel.password,
+            mock_osutils)
 
     def test__create_user_logon(self):
         mock_osutils = mock.Mock()
@@ -51,9 +59,9 @@ class CreateUserPluginTests(unittest.TestCase):
         mock_osutils.create_user_logon_session.return_value = mock_token
 
         self._create_user._create_user_logon(
-            mock_osutils,
             mock.sentinel.user_name,
-            mock.sentinel.password)
+            mock.sentinel.password,
+            mock_osutils)
 
         mock_osutils.create_user_logon_session.assert_called_once_with(
             mock.sentinel.user_name,
@@ -69,9 +77,9 @@ class CreateUserPluginTests(unittest.TestCase):
         with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
                                    'createuser') as snatcher:
             self._create_user._create_user_logon(
-                mock_osutils,
                 mock.sentinel.user_name,
-                mock.sentinel.password)
+                mock.sentinel.password,
+                mock_osutils)
 
         mock_osutils.create_user_logon_session.assert_called_once_with(
             mock.sentinel.user_name,
