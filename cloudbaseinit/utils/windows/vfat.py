@@ -13,6 +13,7 @@
 #    under the License.
 
 import os
+import re
 
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
@@ -28,7 +29,9 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
+CONFIG_DRIVE_LABEL = 'config-2'
 LOG = logging.getLogger(__name__)
+VOLUME_LABEL_REGEX = re.compile("Volume label is (.*?)$")
 
 
 def _check_mtools_path():
@@ -41,14 +44,18 @@ def _check_mtools_path():
 def is_vfat_drive(osutils, drive_path):
     """Check if the given drive contains a VFAT filesystem."""
     _check_mtools_path()
-    mdir = os.path.join(CONF.mtools_path, "mdir.exe")
-    args = [mdir, "-/", "-b", "-i", drive_path, "/"]
-    _, _, exit_code = osutils.execute_process(args, shell=False)
-    if exit_code:
-        LOG.warning("%r is not a VFAT location.", drive_path)
-        return
+    mlabel = os.path.join(CONF.mtools_path, "mlabel.exe")
+    args = [mlabel, "-i", drive_path, "-s"]
 
-    return True
+    out, _, exit_code = osutils.execute_process(args, shell=False)
+    if exit_code:
+        LOG.warning("Could not retrieve label for VFAT drive path %r",
+                    drive_path)
+        return False
+
+    out = out.decode().strip()
+    match = VOLUME_LABEL_REGEX.search(out)
+    return match.group(1) == CONFIG_DRIVE_LABEL
 
 
 def copy_from_vfat_drive(osutils, drive_path, target_path):

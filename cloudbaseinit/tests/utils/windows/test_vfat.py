@@ -43,9 +43,9 @@ class TestVfat(unittest.TestCase):
                 response = vfat.is_vfat_drive(mock_osutils,
                                               mock.sentinel.drive)
 
-                mdir = os.path.join(CONF.mtools_path, "mdir.exe")
+                mdir = os.path.join(CONF.mtools_path, "mlabel.exe")
                 mock_osutils.execute_process.assert_called_once_with(
-                    [mdir, "-/", "-b", "-i", mock.sentinel.drive, "/"],
+                    [mdir, "-i", mock.sentinel.drive, "-s"],
                     shell=False)
 
         self.assertEqual(expected_logging, snatcher.output)
@@ -53,19 +53,28 @@ class TestVfat(unittest.TestCase):
 
     def test_is_vfat_drive_fails(self):
         expected_logging = [
-            "%r is not a VFAT location." % mock.sentinel.drive,
+            "Could not retrieve label for VFAT drive path %r"
+            % mock.sentinel.drive,
         ]
         execute_process_value = (None, None, 1)
-        expected_response = None
+        expected_response = False
+
+        self._test_is_vfat_drive(execute_process_value=execute_process_value,
+                                 expected_logging=expected_logging,
+                                 expected_response=expected_response)
+
+    def test_is_vfat_drive_different_label(self):
+        expected_logging = []
+        execute_process_value = (b"Volume label is config", None, 0)
+        expected_response = False
 
         self._test_is_vfat_drive(execute_process_value=execute_process_value,
                                  expected_logging=expected_logging,
                                  expected_response=expected_response)
 
     def test_is_vfat_drive_works(self):
-        mock_out = mock.Mock()
         expected_logging = []
-        execute_process_value = (mock_out, None, 0)
+        execute_process_value = (b"Volume label is config-2   \r\n", None, 0)
         expected_response = True
 
         self._test_is_vfat_drive(execute_process_value=execute_process_value,
