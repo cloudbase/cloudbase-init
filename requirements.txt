@@ -6,6 +6,6 @@ pyserial
 oslo.config
 six>=1.7.0
 Babel>=1.3
-oauth
+oauthlib
 netifaces
 PyYAML

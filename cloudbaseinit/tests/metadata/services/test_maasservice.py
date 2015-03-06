@@ -14,7 +14,6 @@
 
 import os
 import posixpath
-import sys
 import unittest
 
 try:
@@ -25,12 +24,10 @@ from oslo.config import cfg
 from six.moves.urllib import error
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import maasservice
 from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import x509constants
 
-if sys.version_info < (3, 0):
-    # TODO(alexpilotti) replace oauth with a Python 3 compatible module
-    from cloudbaseinit.metadata.services import maasservice
 
 CONF = cfg.CONF
 
@@ -38,12 +35,7 @@ CONF = cfg.CONF
 class MaaSHttpServiceTest(unittest.TestCase):
 
     def setUp(self):
-        if sys.version_info < (3, 0):
-            self.mock_oauth = mock.MagicMock()
-            maasservice.oauth = self.mock_oauth
-            self._maasservice = maasservice.MaaSHttpService()
-        else:
-            self.skipTest("Python 3 is not yet supported for maasservice")
+        self._maasservice = maasservice.MaaSHttpService()
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_data")
@@ -91,32 +83,32 @@ class MaaSHttpServiceTest(unittest.TestCase):
                               'test other error', {}, None)
         self._test_get_response(ret_val=err)
 
-    @mock.patch('time.time')
-    def test_get_oauth_headers(self, mock_time):
-        mock_token = mock.MagicMock()
-        mock_consumer = mock.MagicMock()
-        mock_req = mock.MagicMock()
-        self.mock_oauth.OAuthConsumer.return_value = mock_consumer
-        self.mock_oauth.OAuthToken.return_value = mock_token
-        self.mock_oauth.OAuthRequest.return_value = mock_req
-        mock_time.return_value = 0
-        self.mock_oauth.generate_nonce.return_value = 'fake nounce'
+    @testutils.ConfPatcher('maas_oauth_consumer_key', 'consumer_key')
+    @testutils.ConfPatcher('maas_oauth_consumer_secret', 'consumer_secret')
+    @testutils.ConfPatcher('maas_oauth_token_key', 'token_key')
+    @testutils.ConfPatcher('maas_oauth_token_secret', 'token_secret')
+    def test_get_oauth_headers(self):
         response = self._maasservice._get_oauth_headers(url='196.254.196.254')
-        self.mock_oauth.OAuthConsumer.assert_called_once_with(
-            CONF.maas_oauth_consumer_key, CONF.maas_oauth_consumer_secret)
-        self.mock_oauth.OAuthToken.assert_called_once_with(
-            CONF.maas_oauth_token_key, CONF.maas_oauth_token_secret)
-        parameters = {'oauth_version': "1.0",
-                      'oauth_nonce': 'fake nounce',
-                      'oauth_timestamp': int(0),
-                      'oauth_token': mock_token.key,
-                      'oauth_consumer_key': mock_consumer.key}
-        self.mock_oauth.OAuthRequest.assert_called_once_with(
-            http_url='196.254.196.254', parameters=parameters)
-        mock_req.sign_request.assert_called_once_with(
-            self.mock_oauth.OAuthSignatureMethod_PLAINTEXT(), mock_consumer,
-            mock_token)
-        self.assertEqual(mock_req.to_header.return_value, response)
+        self.assertIsInstance(response, dict)
+        self.assertIn('Authorization', response)
+
+        auth = response['Authorization']
+        self.assertTrue(auth.startswith('OAuth'))
+
+        auth = auth[6:]
+        parts = [item.strip() for item in auth.split(",")]
+        auth_parts = dict(part.split("=") for part in parts)
+
+        required_headers = {
+            'oauth_token',
+            'oauth_consumer_key',
+            'oauth_signature',
+        }
+        self.assertTrue(required_headers.issubset(set(auth_parts)))
+        self.assertEqual('"token_key"', auth_parts['oauth_token'])
+        self.assertEqual('"consumer_key"', auth_parts['oauth_consumer_key'])
+        self.assertEqual('"consumer_secret%26token_secret"',
+                         auth_parts['oauth_signature'])
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_oauth_headers")
