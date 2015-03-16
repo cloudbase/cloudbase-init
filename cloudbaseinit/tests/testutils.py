@@ -18,9 +18,16 @@ import logging as base_logging
 import os
 import shutil
 import tempfile
+import unittest
+
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 
 
@@ -30,6 +37,7 @@ __all__ = (
     'create_tempfile',
     'create_tempdir',
     'LogSnatcher',
+    'CloudbaseInitTestBase',
     'ConfPatcher',
 )
 
@@ -145,3 +153,48 @@ class ConfPatcher(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._conf.set_override(self._key, self._original_value)
+
+
+class CloudbaseInitTestBase(unittest.TestCase):
+    """A test base class, which provides a couple of useful methods."""
+
+    @contextlib.contextmanager
+    def assert_raises_windows_message(
+            self, expected_msg, error_code,
+            exc=exception.WindowsCloudbaseInitException):
+        """Helper method for testing raised error messages
+
+        This assert method is similar to :meth:`~assertRaises`, but
+        it can only be used as a context manager. It will check that the
+        block of the with statement raises an exception of type :class:`exc`,
+        having as message the result of the interpolation between
+        `expected_msg` and a formatted string, obtained through
+        `ctypes.FormatError(error_code)`.
+        """
+        # Can't use the decorator form, since it will not be properly set
+        # after the function passes control with the `yield` (so the
+        # with statement block will have the original value, not the
+        # mocked one).
+
+        with self.assertRaises(exc) as cm:
+            with mock.patch('cloudbaseinit.exception.'
+                            'ctypes.FormatError',
+                            create=True) as mock_format_error:
+                with mock.patch('cloudbaseinit.exception.ctypes.'
+                                'GetLastError',
+                                create=True) as mock_get_last_error:
+                    mock_format_error.return_value = "description"
+                    yield
+
+        if mock_get_last_error.called:
+            # This can be called when the error code is not given,
+            # but we don't have control over that, so test that
+            # it's actually called only once.
+            mock_get_last_error.assert_called_once_with()
+            mock_format_error.assert_called_once_with(
+                mock_get_last_error.return_value)
+        else:
+            mock_format_error.assert_called_once_with(error_code)
+
+        expected_msg = expected_msg % mock_format_error.return_value
+        self.assertEqual(expected_msg, cm.exception.args[0])

@@ -13,17 +13,16 @@
 #    under the License.
 
 import importlib
-import unittest
 
 try:
     import unittest.mock as mock
 except ImportError:
     import mock
 
-from cloudbaseinit import exception
+from cloudbaseinit.tests import testutils
 
 
-class WindowsVirtualDiskUtilsTests(unittest.TestCase):
+class WindowsVirtualDiskUtilsTests(testutils.CloudbaseInitTestBase):
 
     def setUp(self):
         self._ctypes_mock = mock.MagicMock()
@@ -73,9 +72,10 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
             self._vdisk_class._handle = handle
 
         if ret_val:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._vdisk_class.open)
-
+            with self.assert_raises_windows_message(
+                    "Cannot open virtual disk: %r",
+                    ret_val):
+                self._vdisk_class.open()
         else:
             self._vdisk_class.open()
             if handle:
@@ -95,7 +95,7 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         self._test_open(handle=None, ret_val=None)
 
     def test_open_exception(self):
-        self._test_open(handle=None, ret_val=mock.sentinel.error_value)
+        self._test_open(handle=None, ret_val=100)
 
     def test_open_handle_exists(self):
         self._test_open(handle=None, ret_val=None)
@@ -106,8 +106,10 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         virtdisk.AttachVirtualDisk.return_value = ret_val
 
         if ret_val:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._vdisk_class.attach)
+            with self.assert_raises_windows_message(
+                    "Cannot attach virtual disk: %r",
+                    ret_val):
+                self._vdisk_class.attach()
         else:
             self._vdisk_class.attach()
 
@@ -119,7 +121,7 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         self._test_attach(ret_val=None)
 
     def test_attach_exception(self):
-        self._test_attach(ret_val=mock.sentinel.error_value)
+        self._test_attach(ret_val=100)
 
     def _test_detach(self, ret_val):
         virtdisk = self._ctypes_mock.windll.virtdisk
@@ -127,8 +129,9 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         virtdisk.DetachVirtualDisk.return_value = ret_val
 
         if ret_val:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._vdisk_class.detach)
+            with self.assert_raises_windows_message(
+                    "Cannot detach virtual disk: %r", ret_val):
+                self._vdisk_class.detach()
         else:
             self._vdisk_class.detach()
 
@@ -140,7 +143,7 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         self._test_detach(ret_val=None)
 
     def test_detach_exception(self):
-        self._test_detach(ret_val=mock.sentinel.error_value)
+        self._test_detach(ret_val=100)
 
     def _test_get_physical_path(self, ret_val):
         virtdisk = self._ctypes_mock.windll.virtdisk
@@ -150,8 +153,9 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         buf = self._ctypes_mock.create_unicode_buffer.return_value
 
         if ret_val:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._vdisk_class.get_physical_path)
+            with self.assert_raises_windows_message(
+                    "Cannot get virtual disk physical path: %r", ret_val):
+                self._vdisk_class.get_physical_path()
         else:
             response = self._vdisk_class.get_physical_path()
             self.assertEqual(buf.value, response)
@@ -163,14 +167,23 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
             buf)
 
         virtdisk.GetVirtualDiskPhysicalPath.assert_called_once_with(
-            self._vdisk_class._handle, self._ctypes_mock.byref.return_value)
+            self._vdisk_class._handle,
+            self._ctypes_mock.byref.return_value,
+            self._ctypes_mock.create_unicode_buffer.return_value)
         self._ctypes_mock.byref.assert_called_once_with(
             self._ctypes_mock.wintypes.DWORD.return_value)
+        self._ctypes_mock.create_unicode_buffer.assert_called_once_with(1024)
+
+    def test_get_physical_path(self):
+        self._test_get_physical_path(ret_val=None)
+
+    def test_get_physical_path_fails(self):
+        self._test_get_physical_path(ret_val=100)
 
     @mock.patch('cloudbaseinit.utils.windows.virtual_disk'
                 '.VirtualDisk.get_physical_path')
     def _test_get_cdrom_drive_mount_point(self, mock_get_physical_path,
-                                          buf_len, ret_val):
+                                          buf_len, ret_val, last_error=None):
         buf = self._ctypes_mock.create_unicode_buffer.return_value
         kernel32 = self.virtual_disk.kernel32
         kernel32.GetLogicalDriveStringsW.return_value = buf_len
@@ -186,11 +199,13 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         expected_create_unicode_buffer = [mock.call(2048)]
 
         if not buf_len:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._vdisk_class.get_cdrom_drive_mount_point)
+            with self.assert_raises_windows_message(
+                    "Cannot enumerate logical devices: %r", last_error):
+                self._vdisk_class.get_cdrom_drive_mount_point()
         elif not ret_val:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._vdisk_class.get_cdrom_drive_mount_point)
+            with self.assert_raises_windows_message(
+                    "Cannot query NT device: %r", last_error):
+                self._vdisk_class.get_cdrom_drive_mount_point()
 
             expected_create_unicode_buffer.append(mock.call(2048))
             expected_sizeof.append(mock.call(self._ctypes_mock.wintypes.WCHAR))
@@ -230,10 +245,12 @@ class WindowsVirtualDiskUtilsTests(unittest.TestCase):
         kernel32.GetLogicalDriveStringsW.assert_called_once_with(1, buf)
 
     def test_get_cdrom_drive_mount_point_exception_buf_len(self):
-        self._test_get_cdrom_drive_mount_point(buf_len=0, ret_val=1)
+        self._test_get_cdrom_drive_mount_point(buf_len=0, ret_val=1,
+                                               last_error=100)
 
     def test_get_cdrom_drive_mount_point_exception_query(self):
-        self._test_get_cdrom_drive_mount_point(buf_len=1, ret_val=0)
+        self._test_get_cdrom_drive_mount_point(buf_len=1, ret_val=0,
+                                               last_error=100)
 
     def test_get_cdrom_drive_mount_point(self):
         self._test_get_cdrom_drive_mount_point(buf_len=1, ret_val=1)

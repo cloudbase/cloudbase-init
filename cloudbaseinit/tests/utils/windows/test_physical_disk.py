@@ -13,7 +13,6 @@
 #    under the License.
 
 import importlib
-import unittest
 
 try:
     import unittest.mock as mock
@@ -21,9 +20,10 @@ except ImportError:
     import mock
 
 from cloudbaseinit import exception as cbinit_exception
+from cloudbaseinit.tests import testutils
 
 
-class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
+class WindowsPhysicalDiskUtilsTests(testutils.CloudbaseInitTestBase):
 
     def setUp(self):
         self._ctypes_mock = mock.MagicMock()
@@ -100,7 +100,8 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.windows.physical_disk'
                 '.Win32_DiskGeometry')
-    def _test_get_geometry(self, mock_Win32_DiskGeometry, _geom, ret_val):
+    def _test_get_geometry(self, mock_Win32_DiskGeometry, _geom, ret_val,
+                           last_error=None):
         mock_DeviceIoControl = self.physical_disk.kernel32.DeviceIoControl
         expect_byref = [mock.call(mock_Win32_DiskGeometry.return_value),
                         mock.call(
@@ -110,8 +111,9 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
         self.physical_disk.kernel32.DeviceIoControl.return_value = ret_val
 
         if not ret_val:
-            self.assertRaises(cbinit_exception.CloudbaseInitException,
-                              self._phys_disk_class.get_geometry)
+            with self.assert_raises_windows_message(
+                    "Cannot get disk geometry: %r", last_error):
+                self._phys_disk_class.get_geometry()
         elif _geom:
             response = self._phys_disk_class.get_geometry()
             self.assertEqual(_geom, response)
@@ -142,10 +144,12 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
 
     def test_get_geometry_no_geom(self):
         self._test_get_geometry(_geom=None,
-                                ret_val=mock.sentinel.ret_val)
+                                ret_val=mock.sentinel.ret_val,
+                                last_error=100)
 
     def test_get_geometry_no_geom_exception(self):
-        self._test_get_geometry(_geom=None, ret_val=None)
+        self._test_get_geometry(_geom=None, ret_val=None,
+                                last_error=100)
 
     def _test_seek(self, exception):
         expect_DWORD = [mock.call(0), mock.call(1)]
@@ -174,13 +178,14 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
     def test_seek_exception(self):
         self._test_seek(exception=True)
 
-    def _test_read(self, ret_val):
+    def _test_read(self, ret_val, last_error=None):
         bytes_to_read = mock.sentinel.bytes_to_read
         self.physical_disk.kernel32.ReadFile.return_value = ret_val
 
         if not ret_val:
-            self.assertRaises(cbinit_exception.CloudbaseInitException,
-                              self._phys_disk_class.read, bytes_to_read)
+            with self.assert_raises_windows_message(
+                    "Read exception: %r", last_error):
+                self._phys_disk_class.read(bytes_to_read)
         else:
             response = self._phys_disk_class.read(bytes_to_read)
 
@@ -204,4 +209,4 @@ class WindowsPhysicalDiskUtilsTests(unittest.TestCase):
         self._test_read(ret_val=mock.sentinel.ret_val)
 
     def test_read_exception(self):
-        self._test_read(ret_val=None)
+        self._test_read(ret_val=None, last_error=100)

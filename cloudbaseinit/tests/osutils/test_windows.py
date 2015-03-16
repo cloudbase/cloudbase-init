@@ -15,7 +15,6 @@
 
 import importlib
 import os
-import unittest
 
 try:
     import unittest.mock as mock
@@ -26,11 +25,12 @@ import six
 
 from cloudbaseinit import exception
 from cloudbaseinit.tests import fake
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
 
-class TestWindowsUtils(unittest.TestCase):
+class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     '''Tests for the windows utils class.'''
 
     _CONFIG_NAME = 'FakeConfig'
@@ -101,14 +101,16 @@ class TestWindowsUtils(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._enable_shutdown_privilege')
-    def _test_reboot(self, mock_enable_shutdown_privilege, ret_value):
+    def _test_reboot(self, mock_enable_shutdown_privilege, ret_value,
+                     expected_ret_value=None):
         advapi32 = self._windll_mock.advapi32
         advapi32.InitiateSystemShutdownW = mock.MagicMock(
             return_value=ret_value)
 
         if not ret_value:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.reboot)
+            with self.assert_raises_windows_message(
+                    "Reboot failed: %r", expected_ret_value):
+                self._winutils.reboot()
         else:
             self._winutils.reboot()
 
@@ -121,7 +123,7 @@ class TestWindowsUtils(unittest.TestCase):
         self._test_reboot(ret_value=True)
 
     def test_reboot_failed(self):
-        self._test_reboot(ret_value=None)
+        self._test_reboot(ret_value=None, expected_ret_value=100)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._sanitize_wmi_input')
@@ -256,7 +258,7 @@ class TestWindowsUtils(unittest.TestCase):
     def test_set_password_expiration_no_object(self):
         self._test_set_user_password_expiration(fake_obj=None)
 
-    def _test_get_user_sid_and_domain(self, ret_val):
+    def _test_get_user_sid_and_domain(self, ret_val, last_error=None):
         cbSid = mock.Mock()
         sid = mock.Mock()
         size = 1024
@@ -272,10 +274,11 @@ class TestWindowsUtils(unittest.TestCase):
 
         advapi32.LookupAccountNameW.return_value = ret_val
         if ret_val is None:
-            self.assertRaises(
-                exception.CloudbaseInitException,
-                self._winutils._get_user_sid_and_domain,
-                self._USERNAME)
+            with self.assert_raises_windows_message(
+                    "Cannot get user SID: %r",
+                    last_error):
+                self._winutils._get_user_sid_and_domain(
+                    self._USERNAME)
         else:
             response = self._winutils._get_user_sid_and_domain(self._USERNAME)
 
@@ -291,7 +294,7 @@ class TestWindowsUtils(unittest.TestCase):
         self._test_get_user_sid_and_domain(ret_val=fake_obj)
 
     def test_get_user_sid_and_domain_no_return_value(self):
-        self._test_get_user_sid_and_domain(ret_val=None)
+        self._test_get_user_sid_and_domain(ret_val=None, last_error=100)
 
     @mock.patch('cloudbaseinit.osutils.windows'
                 '.Win32_LOCALGROUP_MEMBERS_INFO_3')
@@ -372,8 +375,8 @@ class TestWindowsUtils(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.osutils.windows.Win32_PROFILEINFO')
     def _test_create_user_logon_session(self, mock_Win32_PROFILEINFO, logon,
-                                        loaduser,
-                                        load_profile=True):
+                                        loaduser, load_profile=True,
+                                        last_error=None):
         self._wintypes_mock.HANDLE = mock.MagicMock()
         pi = self.windows_utils.Win32_PROFILEINFO()
         advapi32 = self._windll_mock.advapi32
@@ -383,20 +386,20 @@ class TestWindowsUtils(unittest.TestCase):
         advapi32.LogonUserW.return_value = logon
 
         if not logon:
-            self.assertRaises(
-                exception.CloudbaseInitException,
-                self._winutils.create_user_logon_session,
-                self._USERNAME, self._PASSWORD, domain='.',
-                load_profile=load_profile)
+            with self.assert_raises_windows_message(
+                    "User logon failed: %r", last_error):
+                self._winutils.create_user_logon_session(
+                    self._USERNAME, self._PASSWORD, domain='.',
+                    load_profile=load_profile)
 
         elif load_profile and not loaduser:
             userenv.LoadUserProfileW.return_value = None
             kernel32.CloseHandle.return_value = None
-
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.create_user_logon_session,
-                              self._USERNAME, self._PASSWORD, domain='.',
-                              load_profile=load_profile)
+            with self.assert_raises_windows_message(
+                    "Cannot load user profile: %r", last_error):
+                self._winutils.create_user_logon_session(
+                    self._USERNAME, self._PASSWORD, domain='.',
+                    load_profile=load_profile)
 
             userenv.LoadUserProfileW.assert_called_with(
                 self._wintypes_mock.HANDLE.return_value,
@@ -427,28 +430,38 @@ class TestWindowsUtils(unittest.TestCase):
             self.assertTrue(response is not None)
 
     def test_create_user_logon_session_fail_load_false(self):
-        self._test_create_user_logon_session(0, 0, True)
+        self._test_create_user_logon_session(logon=0, loaduser=0,
+                                             load_profile=True,
+                                             last_error=100)
 
     def test_create_user_logon_session_fail_load_true(self):
-        self._test_create_user_logon_session(0, 0, False)
+        self._test_create_user_logon_session(logon=0, loaduser=0,
+                                             load_profile=False,
+                                             last_error=100)
 
     def test_create_user_logon_session_load_true(self):
         m = mock.Mock()
         n = mock.Mock()
-        self._test_create_user_logon_session(m, n, True)
+        self._test_create_user_logon_session(logon=m, loaduser=n,
+                                             load_profile=True)
 
     def test_create_user_logon_session_load_false(self):
         m = mock.Mock()
         n = mock.Mock()
-        self._test_create_user_logon_session(m, n, False)
+        self._test_create_user_logon_session(logon=m, loaduser=n,
+                                             load_profile=False)
 
     def test_create_user_logon_session_no_load_true(self):
         m = mock.Mock()
-        self._test_create_user_logon_session(m, None, True)
+        self._test_create_user_logon_session(logon=m, loaduser=None,
+                                             load_profile=True,
+                                             last_error=100)
 
     def test_create_user_logon_session_no_load_false(self):
         m = mock.Mock()
-        self._test_create_user_logon_session(m, None, False)
+        self._test_create_user_logon_session(logon=m, loaduser=None,
+                                             load_profile=False,
+                                             last_error=100)
 
     def test_close_user_logon_session(self):
         token = mock.Mock()
@@ -459,12 +472,14 @@ class TestWindowsUtils(unittest.TestCase):
         self._windll_mock.kernel32.CloseHandle.assert_called_with(token)
 
     @mock.patch('ctypes.windll.kernel32.SetComputerNameExW')
-    def _test_set_host_name(self, mock_SetComputerNameExW, ret_value):
+    def _test_set_host_name(self, mock_SetComputerNameExW, ret_value,
+                            last_error=None):
         mock_SetComputerNameExW.return_value = ret_value
 
         if not ret_value:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.set_host_name, 'fake name')
+            with self.assert_raises_windows_message(
+                    "Cannot set host name: %r", last_error):
+                self._winutils.set_host_name('fake name')
         else:
             self.assertTrue(self._winutils.set_host_name('fake name'))
 
@@ -476,7 +491,7 @@ class TestWindowsUtils(unittest.TestCase):
         self._test_set_host_name(ret_value='fake response')
 
     def test_set_host_exception(self):
-        self._test_set_host_name(ret_value=None)
+        self._test_set_host_name(ret_value=None, last_error=100)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.get_user_sid')
@@ -1013,7 +1028,7 @@ class TestWindowsUtils(unittest.TestCase):
         mock_generate_random_password.assert_called_once_with(length)
         self.assertEqual('Passw0rd', response)
 
-    def _test_get_logical_drives(self, buf_length):
+    def _test_get_logical_drives(self, buf_length, last_error=None):
         mock_buf = mock.MagicMock()
         mock_buf.__getitem__.side_effect = ['1', '\x00']
         mock_get_drives = self._windll_mock.kernel32.GetLogicalDriveStringsW
@@ -1022,9 +1037,9 @@ class TestWindowsUtils(unittest.TestCase):
         mock_get_drives.return_value = buf_length
 
         if buf_length is None:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils._get_logical_drives)
-
+            with self.assert_raises_windows_message(
+                    "GetLogicalDriveStringsW failed: %r", last_error):
+                self._winutils._get_logical_drives()
         else:
             response = self._winutils._get_logical_drives()
 
@@ -1033,7 +1048,7 @@ class TestWindowsUtils(unittest.TestCase):
             self.assertEqual(['1'], response)
 
     def test_get_logical_drives_exception(self):
-        self._test_get_logical_drives(buf_length=None)
+        self._test_get_logical_drives(buf_length=None, last_error=100)
 
     def test_get_logical_drives(self):
         self._test_get_logical_drives(buf_length=2)
@@ -1056,7 +1071,8 @@ class TestWindowsUtils(unittest.TestCase):
     @mock.patch('cloudbaseinit.osutils.windows.Win32_STORAGE_DEVICE_NUMBER')
     def _test_get_physical_disks(self, mock_sdn, mock_setupapi, mock_kernel32,
                                  mock_msvcrt, handle_disks, last_error,
-                                 interface_detail, disk_handle, io_control):
+                                 interface_detail, disk_handle, io_control,
+                                 last_error_code=None):
 
         sizeof_calls = [
             mock.call(
@@ -1095,9 +1111,18 @@ class TestWindowsUtils(unittest.TestCase):
                 interface_detail) or (
                     disk_handle == self._winutils.INVALID_HANDLE_VALUE) or (
                         not io_control):
-
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.get_physical_disks)
+            if not io_control:
+                with self.assert_raises_windows_message(
+                        "DeviceIoControl failed: %r", last_error_code):
+                    self._winutils.get_physical_disks()
+            elif not interface_detail:
+                with self.assert_raises_windows_message(
+                        "SetupDiGetDeviceInterfaceDetailW failed: %r",
+                        last_error_code):
+                    self._winutils.get_physical_disks()
+            else:
+                self.assertRaises(exception.CloudbaseInitException,
+                                  self._winutils.get_physical_disks)
 
         else:
             response = self._winutils.get_physical_disks()
@@ -1163,6 +1188,7 @@ class TestWindowsUtils(unittest.TestCase):
         self._test_get_physical_disks(
             handle_disks=mock_handle_disks,
             last_error='other', interface_detail=None,
+            last_error_code=100,
             disk_handle=mock_disk_handle, io_control=True)
 
     def test_get_physical_disks_invalid_disk_handle(self):
@@ -1180,6 +1206,7 @@ class TestWindowsUtils(unittest.TestCase):
             handle_disks=mock_handle_disks,
             last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
             interface_detail='fake interface detail',
+            last_error_code=100,
             disk_handle=mock_disk_handle, io_control=False)
 
     def test_get_physical_disks_handle_disks_invalid(self):

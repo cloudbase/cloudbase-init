@@ -313,7 +313,7 @@ class WindowsUtils(base.BaseOSUtils):
         ret_val = advapi32.InitiateSystemShutdownW(0, "Cloudbase-Init reboot",
                                                    0, True, True)
         if not ret_val:
-            raise exception.CloudbaseInitException("Reboot failed")
+            raise exception.WindowsCloudbaseInitException("Reboot failed: %r")
 
     def _get_user_wmi_object(self, username):
         conn = wmi.WMI(moniker='//./root/cimv2')
@@ -390,7 +390,8 @@ class WindowsUtils(base.BaseOSUtils):
             0, six.text_type(username), sid, ctypes.byref(cbSid), domainName,
             ctypes.byref(cchReferencedDomainName), ctypes.byref(sidNameUse))
         if not ret_val:
-            raise exception.CloudbaseInitException("Cannot get user SID")
+            raise exception.WindowsCloudbaseInitException(
+                "Cannot get user SID: %r")
 
         return (sid, domainName.value)
 
@@ -430,7 +431,8 @@ class WindowsUtils(base.BaseOSUtils):
                                       six.text_type(password), 2, 0,
                                       ctypes.byref(token))
         if not ret_val:
-            raise exception.CloudbaseInitException("User logon failed")
+            raise exception.WindowsCloudbaseInitException(
+                "User logon failed: %r")
 
         if load_profile:
             pi = Win32_PROFILEINFO()
@@ -439,8 +441,8 @@ class WindowsUtils(base.BaseOSUtils):
             ret_val = userenv.LoadUserProfileW(token, ctypes.byref(pi))
             if not ret_val:
                 kernel32.CloseHandle(token)
-                raise exception.CloudbaseInitException(
-                    "Cannot load user profile")
+                raise exception.WindowsCloudbaseInitException(
+                    "Cannot load user profile: %r")
 
         return token
 
@@ -465,7 +467,8 @@ class WindowsUtils(base.BaseOSUtils):
             self.ComputerNamePhysicalDnsHostname,
             six.text_type(new_host_name))
         if not ret_val:
-            raise exception.CloudbaseInitException("Cannot set host name")
+            raise exception.WindowsCloudbaseInitException(
+                "Cannot set host name: %r")
         return True
 
     def get_network_adapters(self):
@@ -823,8 +826,8 @@ class WindowsUtils(base.BaseOSUtils):
         buf = ctypes.create_unicode_buffer(buf_size + 1)
         buf_len = kernel32.GetLogicalDriveStringsW(buf_size, buf)
         if not buf_len:
-            raise exception.CloudbaseInitException(
-                "GetLogicalDriveStringsW failed")
+            raise exception.WindowsCloudbaseInitException(
+                "GetLogicalDriveStringsW failed: %r")
 
         return self._split_str_buf_list(buf, buf_len)
 
@@ -865,8 +868,8 @@ class WindowsUtils(base.BaseOSUtils):
                         ctypes.byref(required_size), None):
                     if (kernel32.GetLastError() !=
                             self.ERROR_INSUFFICIENT_BUFFER):
-                        raise exception.CloudbaseInitException(
-                            "SetupDiGetDeviceInterfaceDetailW failed")
+                        raise exception.WindowsCloudbaseInitException(
+                            "SetupDiGetDeviceInterfaceDetailW failed: %r")
 
                 pdidd = ctypes.cast(
                     msvcrt.malloc(ctypes.c_size_t(required_size.value)),
@@ -884,8 +887,8 @@ class WindowsUtils(base.BaseOSUtils):
                     if not setupapi.SetupDiGetDeviceInterfaceDetailW(
                             handle_disks, ctypes.byref(did), pdidd,
                             required_size, None, None):
-                        raise exception.CloudbaseInitException(
-                            "SetupDiGetDeviceInterfaceDetailW failed")
+                        raise exception.WindowsCloudbaseInitException(
+                            "SetupDiGetDeviceInterfaceDetailW failed: %r")
 
                     device_path = ctypes.cast(
                         pdidd.contents.DevicePath, wintypes.LPWSTR).value
@@ -904,8 +907,8 @@ class WindowsUtils(base.BaseOSUtils):
                             handle_disk, self.IOCTL_STORAGE_GET_DEVICE_NUMBER,
                             None, 0, ctypes.byref(sdn), ctypes.sizeof(sdn),
                             ctypes.byref(b), None):
-                        raise exception.CloudbaseInitException(
-                            'DeviceIoControl failed')
+                        raise exception.WindowsCloudbaseInitException(
+                            'DeviceIoControl failed: %r')
 
                     physical_disks.append(
                         r"\\.\PHYSICALDRIVE%d" % sdn.DeviceNumber)

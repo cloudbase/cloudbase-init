@@ -99,7 +99,7 @@ def get_adapter_addresses():
 
             if ret_val:
                 raise exception.CloudbaseInitException(
-                    "GetAdaptersAddresses failed")
+                    "GetAdaptersAddresses failed: %r" % ret_val)
 
             p_curr_addr = p_addr
             while p_curr_addr:

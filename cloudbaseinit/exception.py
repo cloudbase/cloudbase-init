@@ -12,6 +12,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ctypes
+
 
 class CloudbaseInitException(Exception):
     pass
+
+
+class WindowsCloudbaseInitException(CloudbaseInitException):
+
+    def __init__(self, msg="%r", error_code=None):
+        if error_code is None:
+            error_code = ctypes.GetLastError()
+        description = ctypes.FormatError(error_code)
+        try:
+            formatted_msg = msg % description
+        except TypeError:
+            formatted_msg = msg
+        super(WindowsCloudbaseInitException, self).__init__(formatted_msg)
