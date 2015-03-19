@@ -87,15 +87,13 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         reboot = len(missed_adapters) != self._count
         self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, reboot), ret)
 
-    def _setUp(self, same_names=True):
+    def _setUp(self, same_names=True, wrong_names=False, no_macs=False):
         # Generate fake pairs of NetworkDetails objects and
         # local ethernet network adapters.
+        iface_name = "Ethernet" if wrong_names else "eth"
         self._count = 3
-        details_names = [
-            "eth0",
-            "eth1",
-            "eth2"
-        ]
+        details_names = ["{}{}".format(iface_name, idx)
+                         for idx in range(self._count)]
         if same_names:
             adapters_names = details_names[:]
         else:
@@ -120,7 +118,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             "192.168.255.255",
             "192.168.122.127",
         ]
-        gateway = [
+        gateways = [
             "192.168.122.1",
             "192.168.122.16",
             "192.168.122.32",
@@ -136,11 +134,11 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             adapter = (adapters_names[ind], macs[ind])
             nic = service_base.NetworkDetails(
                 details_names[ind],
-                macs[ind],
+                None if no_macs else macs[ind],
                 addresses[ind],
                 netmasks[ind],
                 broadcasts[ind],
-                gateway[ind],
+                gateways[ind],
                 dnsnses[ind].split()
             )
             self._network_adapters.append(adapter)
@@ -164,6 +162,10 @@ class TestNetworkConfigPlugin(unittest.TestCase):
 
     def test_execute_invalid_network_details(self):
         self._network_details.append([None] * 6)
+        self._partial_test_execute(invalid_details=True)
+
+    def test_execute_invalid_network_details_name(self):
+        self._setUp(wrong_names=True, no_macs=True)
         self._partial_test_execute(invalid_details=True)
 
     def test_execute_single(self):

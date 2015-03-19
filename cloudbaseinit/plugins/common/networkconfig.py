@@ -13,6 +13,8 @@
 #    under the License.
 
 
+import re
+
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base as service_base
 from cloudbaseinit.openstack.common import log as logging
@@ -34,18 +36,30 @@ NET_REQUIRE = {
 }
 
 
+def _name2idx(name):
+    """Get the position of a network interface by its name."""
+    match = re.search(r"eth(\d+)", name, re.I)
+    if not match:
+        raise exception.CloudbaseInitException(
+            "invalid NetworkDetails name {!r}"
+            .format(name)
+        )
+    return int(match.group(1))
+
+
 def _preprocess_nics(network_details, network_adapters):
     """Check NICs and fill missing data if possible."""
-    # initial checks
+    # Initial checks.
     if not network_adapters:
         raise exception.CloudbaseInitException(
             "no network adapters available")
     # Sort VM adapters by name (assuming that those
     # from the context are in correct order).
+    # Do this for a better matching by order
+    # if hardware address is missing.
     network_adapters = sorted(network_adapters, key=lambda arg: arg[0])
-    _network_details = []    # store here processed data
-    # check and update every NetworkDetails object
-    ind = 0
+    _network_details = []    # store here processed interfaces
+    # Check and update every NetworkDetails object.
     total = len(network_adapters)
     for nic in network_details:
         if not isinstance(nic, service_base.NetworkDetails):
@@ -53,7 +67,7 @@ def _preprocess_nics(network_details, network_adapters):
                 "invalid NetworkDetails object {!r}"
                 .format(type(nic))
             )
-        # check requirements
+        # Check requirements.
         final_status = True
         for fields, status in NET_REQUIRE.items():
             if not status:
@@ -68,14 +82,14 @@ def _preprocess_nics(network_details, network_adapters):
             # Complete hardware address if missing by selecting
             # the corresponding MAC in terms of naming, then ordering.
             if not nic.mac:
-                mac = None
-                # by name
+                # By name...
                 macs = [adapter[1] for adapter in network_adapters
                         if adapter[0] == nic.name]
                 mac = macs[0] if macs else None
-                # or by order
-                if not mac and ind < total:
-                    mac = network_adapters[ind][1]
+                # ...or by order.
+                idx = _name2idx(nic.name)
+                if not mac and idx < total:
+                    mac = network_adapters[idx][1]
                 nic = service_base.NetworkDetails(
                     nic.name,
                     mac,
@@ -86,7 +100,6 @@ def _preprocess_nics(network_details, network_adapters):
                     nic.dnsnameservers
                 )
             _network_details.append(nic)
-        ind += 1
     return _network_details
 
 
