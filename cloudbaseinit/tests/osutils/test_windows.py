@@ -51,6 +51,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._moves_mock = mock.MagicMock()
         self._xmlrpc_client_mock = mock.MagicMock()
         self._ctypes_mock = mock.MagicMock()
+        self._tzlocal_mock = mock.Mock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
@@ -61,7 +62,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
              'six.moves': self._moves_mock,
              'six.moves.xmlrpc_client': self._xmlrpc_client_mock,
              'ctypes': self._ctypes_mock,
-             'pywintypes': self._pywintypes_mock})
+             'pywintypes': self._pywintypes_mock,
+             'tzlocal': self._tzlocal_mock})
 
         self._module_patcher.start()
         self.windows_utils = importlib.import_module(
@@ -78,31 +80,10 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def tearDown(self):
         self._module_patcher.stop()
 
-    def test_enable_shutdown_privilege(self):
-        fake_process = mock.MagicMock()
-        fake_token = True
-        LUID = 'fakeid'
-        self._win32process_mock.GetCurrentProcess.return_value = fake_process
-        self._win32security_mock.OpenProcessToken.return_value = fake_token
-        self._win32security_mock.LookupPrivilegeValue.return_value = LUID
-
-        self._winutils._enable_shutdown_privilege()
-
-        privilege = [(LUID,
-                      self._win32security_mock.SE_PRIVILEGE_ENABLED)]
-        self._win32security_mock.AdjustTokenPrivileges.assert_called_with(
-            fake_token,
-            False,
-            privilege)
-
-        self._win32security_mock.OpenProcessToken.assert_called_with(
-            fake_process, self._win32security_mock.TOKEN_ADJUST_PRIVILEGES |
-            self._win32security_mock.TOKEN_QUERY)
-
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._enable_shutdown_privilege')
-    def _test_reboot(self, mock_enable_shutdown_privilege, ret_value,
+    @mock.patch('cloudbaseinit.osutils.windows.privilege')
+    def _test_reboot(self, mock_privilege_module, ret_value,
                      expected_ret_value=None):
+        mock_privilege_module.acquire_privilege = mock.MagicMock()
         advapi32 = self._windll_mock.advapi32
         advapi32.InitiateSystemShutdownW = mock.MagicMock(
             return_value=ret_value)
@@ -118,6 +99,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 0,
                 "Cloudbase-Init reboot",
                 0, True, True)
+        mock_privilege_module.acquire_privilege.assert_called_once_with(
+            self._win32security_mock.SE_SHUTDOWN_NAME)
 
     def test_reboot(self):
         self._test_reboot(ret_value=True)
@@ -1477,3 +1460,32 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_get_password_maximum_length(self):
         self.assertEqual(20, self._winutils.get_maximum_password_length())
+
+    @mock.patch('cloudbaseinit.osutils.windows.windows_tz')
+    def test_set_timezone_fails(self, mock_windows_tz):
+        mock_windows_tz.tz_win.get.return_value = None
+
+        with self.assertRaises(exception.CloudbaseInitException) as cm:
+            self._winutils.set_timezone(mock.sentinel.timezone)
+        expected = (
+            "The given timezone name is unrecognised: %r"
+            % mock.sentinel.timezone
+        )
+        self.assertEqual(expected, str(cm.exception))
+        mock_windows_tz.tz_win.get.assert_called_once_with(
+            mock.sentinel.timezone)
+
+    @mock.patch('cloudbaseinit.osutils.windows.timezone')
+    @mock.patch('cloudbaseinit.osutils.windows.windows_tz')
+    def test_set_timezone(self, mock_windows_tz, mock_timezone):
+        mock_windows_tz.tz_win.get.return_value = (
+            mock.sentinel.windows_timezone)
+
+        self._winutils.set_timezone(mock.sentinel.timezone)
+
+        mock_windows_tz.tz_win.get.assert_called_once_with(
+            mock.sentinel.timezone)
+        mock_timezone.Timezone.assert_called_once_with(
+            mock.sentinel.windows_timezone)
+        mock_timezone.Timezone.return_value.set.assert_called_once_with(
+            self._winutils)

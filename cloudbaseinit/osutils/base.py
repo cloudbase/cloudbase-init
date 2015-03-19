@@ -110,3 +110,7 @@ class BaseOSUtils(object):
     def get_maximum_password_length(self):
         """Obtain the maximum password length tailored for each OS."""
         raise NotImplementedError()
+
+    def set_timezone(self, timezone):
+        """Set the timezone for this instance."""
+        raise NotImplementedError()
