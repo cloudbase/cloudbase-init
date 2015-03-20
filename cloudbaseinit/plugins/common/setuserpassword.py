@@ -60,11 +60,6 @@ class SetUserPasswordPlugin(base.BasePlugin):
                      'changing it as soon as possible')
         else:
             password = shared_data.get(constants.SHARED_DATA_PASSWORD)
-            if not password:
-                LOG.debug('Generating a random user password')
-                # Generate a random password
-                maximum_length = osutils.get_maximum_password_length()
-                password = osutils.generate_random_password(maximum_length)
 
         return password
 
@@ -84,8 +79,27 @@ class SetUserPasswordPlugin(base.BasePlugin):
                 return True
 
     def _set_password(self, service, osutils, user_name, shared_data):
+        """Change the password for the received username if it is required.
+
+        The used password can be the one received from the metadata provider,
+        if it does exist, or a random one will be generated.
+
+        .. notes:
+            This method has a different behaviour depending on the value of
+            :meth:`~can_update password` if this is True the password will
+            be set only if the :meth:`~is_password_changed` is also True.
+        """
+        if service.can_update_password and not service.is_password_changed():
+            LOG.info('Updating password is not required.')
+            return None
+
         password = self._get_password(service, osutils, shared_data)
-        LOG.info('Setting the user\'s password')
+        if not password:
+            LOG.debug('Generating a random user password')
+            maximum_length = osutils.get_maximum_password_length()
+            password = osutils.generate_random_password(
+                maximum_length)
+
         osutils.set_user_password(user_name, password)
         return password
 
@@ -99,14 +113,22 @@ class SetUserPasswordPlugin(base.BasePlugin):
         if osutils.user_exists(user_name):
             password = self._set_password(service, osutils,
                                           user_name, shared_data)
-            LOG.info('Password succesfully updated for user %s' % user_name)
-            # TODO(alexpilotti): encrypt with DPAPI
-            shared_data[constants.SHARED_DATA_PASSWORD] = password
+            if password:
+                LOG.info('Password succesfully updated for user %s' %
+                         user_name)
+                # TODO(alexpilotti): encrypt with DPAPI
+                shared_data[constants.SHARED_DATA_PASSWORD] = password
 
-            if not service.can_post_password:
-                LOG.info('Cannot set the password in the metadata as it is '
-                         'not supported by this service')
-            else:
-                self._set_metadata_password(password, service)
+                if not service.can_post_password:
+                    LOG.info('Cannot set the password in the metadata as it '
+                             'is not supported by this service')
+                else:
+                    self._set_metadata_password(password, service)
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        if service.can_update_password:
+            # If the metadata provider can update the password, the plugin
+            # must run at every boot in order to update the password if
+            # it was changed.
+            return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+        else:
+            return (base.PLUGIN_EXECUTION_DONE, False)
