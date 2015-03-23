@@ -58,7 +58,7 @@ def _preprocess_nics(network_details, network_adapters):
     # Do this for a better matching by order
     # if hardware address is missing.
     network_adapters = sorted(network_adapters, key=lambda arg: arg[0])
-    _network_details = []    # store here processed interfaces
+    refined_network_details = []    # store here processed interfaces
     # Check and update every NetworkDetails object.
     total = len(network_adapters)
     for nic in network_details:
@@ -99,8 +99,8 @@ def _preprocess_nics(network_details, network_adapters):
                     nic.gateway,
                     nic.dnsnameservers
                 )
-            _network_details.append(nic)
-    return _network_details
+            refined_network_details.append(nic)
+    return refined_network_details
 
 
 class NetworkConfigPlugin(plugin_base.BasePlugin):
