@@ -24,8 +24,8 @@ except ImportError:
     import mock
 from oslo.config import cfg
 
-from cloudbaseinit.plugins.windows.userdataplugins import cloudconfig
-from cloudbaseinit.plugins.windows.userdataplugins.cloudconfigplugins import (
+from cloudbaseinit.plugins.common.userdataplugins import cloudconfig
+from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     write_files
 )
 from cloudbaseinit.tests import testutils
@@ -106,7 +106,7 @@ class WriteFilesPluginTests(unittest.TestCase):
         tmp = self._get_tempfile()
         code = code.format(tmp)
 
-        with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'userdataplugins.cloudconfig') as snatcher:
             self.plugin.process_non_multipart(code)
 
@@ -136,14 +136,14 @@ class WriteFilesPluginTests(unittest.TestCase):
             "information {'c0ntent': 'NDI='}"
         ]
 
-        with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'userdataplugins.cloudconfigplugins.'
                                    'write_files') as snatcher:
             self.plugin.process_non_multipart(code)
 
         self.assertEqual(expected_return, snatcher.output)
 
-    @mock.patch('cloudbaseinit.plugins.windows.userdataplugins.'
+    @mock.patch('cloudbaseinit.plugins.common.userdataplugins.'
                 'cloudconfigplugins.write_files.WriteFilesPlugin.process')
     def test_processing_plugin_failed(self, mock_write_files):
         mock_write_files.side_effect = ValueError
@@ -153,7 +153,7 @@ class WriteFilesPluginTests(unittest.TestCase):
             path: random_cloudbaseinit_test
         """)
 
-        with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'userdataplugins.cloudconfig') as snatcher:
             self.plugin.process_non_multipart(code)
 
@@ -170,7 +170,7 @@ class WriteFilesPluginTests(unittest.TestCase):
             path: {}
             permissions: '0o466'
         """.format(tmp))
-        with testutils.LogSnatcher('cloudbaseinit.plugins.windows.'
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'userdataplugins.cloudconfigplugins.'
                                    'write_files') as snatcher:
             self.plugin.process_non_multipart(code)
