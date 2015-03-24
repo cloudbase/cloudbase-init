@@ -42,7 +42,7 @@ class EC2ServiceTest(unittest.TestCase):
         response = self._service.load()
         mock_check_metadata_ip_route.assert_called_once_with(
             CONF.ec2_metadata_base_url)
-        mock_get_host_name.assert_called_once()
+        mock_get_host_name.assert_called_once_with()
         if side_effect is Exception:
             self.assertFalse(response)
         else:

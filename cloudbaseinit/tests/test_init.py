@@ -155,7 +155,7 @@ class InitManagerTest(unittest.TestCase):
 
         self._init.configure_host()
 
-        self.osutils.wait_for_boot_completion.assert_called_once()
+        self.osutils.wait_for_boot_completion.assert_called_once_with()
         mock_get_metadata_service.assert_called_once_with()
         fake_service.get_name.assert_called_once_with()
         mock_check_os_requirements.assert_called_once_with(self.osutils,

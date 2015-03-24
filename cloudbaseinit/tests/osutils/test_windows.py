@@ -1404,7 +1404,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
         response = self._winutils.get_dhcp_hosts_in_use()
 
-        mock_get_adapter_addresses.assert_called()
+        mock_get_adapter_addresses.assert_called_once_with()
         self.assertEqual([('fake mac address', 'fake dhcp server')], response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'

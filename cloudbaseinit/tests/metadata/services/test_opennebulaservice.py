@@ -209,8 +209,9 @@ class TestOpenNebulaService(_TestOpenNebulaService):
             if level > 1:
                 (mock_osutils.get_volume_label
                     .assert_called_once_with(fakes["drive"]))
-                mock_os_path.join.assert_called_once()
-                mock_os_path.isfile.assert_called_once()
+                mock_os_path.join.assert_called_once_with(
+                    "mount_point", opennebulaservice.CONTEXT_FILE)
+                mock_os_path.isfile.assert_called_once_with("fake_path")
         # check response and members
         if level in (1, 2):
             self.assertFalse(ret)
