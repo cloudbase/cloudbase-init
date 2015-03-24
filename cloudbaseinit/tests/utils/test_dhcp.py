@@ -141,6 +141,8 @@ class DHCPUtilsTests(unittest.TestCase):
 
         mock_randint.assert_called_once_with(0, 2 ** 32 - 1)
         mock_socket.assert_called_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket().setsockopt.assert_called_once_with(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         mock_socket().bind.assert_called_once_with(('', 68))
         mock_socket().settimeout.assert_called_once_with(5)
         mock_socket().connect.assert_called_once_with(('fake host', 67))

@@ -126,6 +126,7 @@ def get_dhcp_options(dhcp_host, requested_options=[], timeout=5.0,
     options = None
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         _bind_dhcp_client_socket(s, max_bind_attempts, bind_retry_interval)
 
