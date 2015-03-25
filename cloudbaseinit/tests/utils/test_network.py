@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
 import unittest
 
 try:
@@ -28,13 +27,13 @@ CONF = cfg.CONF
 
 class NetworkUtilsTest(unittest.TestCase):
 
+    @mock.patch('sys.platform', new='win32')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('six.moves.urllib.parse.urlparse')
     def _test_check_metadata_ip_route(self, mock_urlparse, mock_get_os_utils,
                                       side_effect):
         mock_utils = mock.MagicMock()
         mock_split = mock.MagicMock()
-        sys.platform = 'win32'
         mock_get_os_utils.return_value = mock_utils
         mock_utils.check_os_version.return_value = True
         mock_urlparse().netloc.split.return_value = mock_split

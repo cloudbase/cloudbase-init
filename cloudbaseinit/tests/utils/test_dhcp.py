@@ -22,6 +22,7 @@ try:
 except ImportError:
     import mock
 
+from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import dhcp
 
 
@@ -157,3 +158,27 @@ class DHCPUtilsTests(unittest.TestCase):
                                                       'fake int')
         mock_socket().close.assert_called_once_with()
         self.assertEqual('fake replied options', response)
+
+    def test__bind_dhcp_client_socket_bind_succeeds(self):
+        mock_socket = mock.Mock()
+        dhcp._bind_dhcp_client_socket(mock_socket, 0, 0)
+
+        mock_socket.bind.assert_called_once_with(('', 68))
+
+    @mock.patch('time.sleep')
+    def test__bind_dhcp_client_socket(self, mock_time_sleep):
+        mock_socket = mock.Mock()
+        exc = socket.error()
+        exc.errno = 48
+        mock_socket.bind = mock.Mock(side_effect=exc)
+
+        with testutils.LogSnatcher('cloudbaseinit.utils.dhcp') as snatcher:
+            with self.assertRaises(socket.error):
+                dhcp._bind_dhcp_client_socket(
+                    mock_socket, max_bind_attempts=4,
+                    bind_retry_interval=mock.sentinel.bind_retry_interval)
+
+        expected_occurences = sum(
+            1 for item in snatcher.output
+            if item.startswith("Retrying to bind DHCP client port in "))
+        self.assertEqual(3, expected_occurences)

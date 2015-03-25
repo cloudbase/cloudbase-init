@@ -38,14 +38,24 @@ class MaaSHttpServiceTest(unittest.TestCase):
         self._maasservice = maasservice.MaaSHttpService()
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
-                "._get_data")
-    def _test_load(self, mock_get_data, ip):
+                "._get_cache_data")
+    def _test_load(self, mock_get_cache_data, ip, cache_data_fails=False):
+        if cache_data_fails:
+            mock_get_cache_data.side_effect = Exception
+
         with testutils.ConfPatcher('maas_metadata_url', ip):
-            response = self._maasservice.load()
+            with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
+                                       'maasservice') as snatcher:
+                response = self._maasservice.load()
+
             if ip is not None:
-                mock_get_data.assert_called_once_with(
-                    '%s/meta-data/' % self._maasservice._metadata_version)
-                self.assertTrue(response)
+                if not cache_data_fails:
+                    mock_get_cache_data.assert_called_once_with(
+                        '%s/meta-data/' % self._maasservice._metadata_version)
+                    self.assertTrue(response)
+                else:
+                    expected_logging = 'Metadata not found at URL \'%s\'' % ip
+                    self.assertEqual(expected_logging, snatcher.output[-1])
             else:
                 self.assertFalse(response)
 
@@ -54,6 +64,9 @@ class MaaSHttpServiceTest(unittest.TestCase):
 
     def test_load_no_ip(self):
         self._test_load(ip=None)
+
+    def test_load_get_cache_data_fails(self):
+        self._test_load(ip='196.254.196.254', cache_data_fails=True)
 
     @mock.patch('six.moves.urllib.request.urlopen')
     def _test_get_response(self, mock_urlopen, ret_val):

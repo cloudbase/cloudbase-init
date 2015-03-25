@@ -24,6 +24,7 @@ except ImportError:
     import mock
 from oslo.config import cfg
 
+from cloudbaseinit import exception
 from cloudbaseinit.plugins.common.userdataplugins import cloudconfig
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     write_files
@@ -162,6 +163,38 @@ class WriteFilesPluginTests(unittest.TestCase):
         self.assertTrue(snatcher.output[0].endswith("ValueError"))
         self.assertFalse(os.path.exists('random_cloudbaseinit_test'))
 
+    def test_wrong_gzip_content(self):
+        tmp = self._get_tempfile()
+        code = textwrap.dedent("""
+        write_files:
+        -   content: lala
+            encoding: gz
+            path: {}
+        """.format(tmp))
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            self.plugin.process_non_multipart(code)
+
+        self.assertTrue(snatcher.output[0].startswith(
+            "Fail to decompress gzip content"))
+
+    def test_wrong_b64_content(self):
+        tmp = self._get_tempfile()
+        code = textwrap.dedent("""
+        write_files:
+        -   content: l
+            encoding: b64
+            path: {}
+        """.format(tmp))
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            self.plugin.process_non_multipart(code)
+
+        self.assertTrue(snatcher.output[0].startswith(
+            "Fail to decode base64 content."))
+
     def test_unknown_encoding(self):
         tmp = self._get_tempfile()
         code = textwrap.dedent("""
@@ -182,3 +215,10 @@ class WriteFilesPluginTests(unittest.TestCase):
 
         self.assertEqual(["Unknown encoding, doing nothing."],
                          snatcher.output)
+
+    def test_invalid_object_passed(self):
+        with self.assertRaises(exception.CloudbaseInitException) as cm:
+            write_files.WriteFilesPlugin().process(1)
+
+        expected = "Can't process the type of data %r" % type(1)
+        self.assertEqual(expected, str(cm.exception))
