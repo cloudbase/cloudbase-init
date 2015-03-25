@@ -131,9 +131,16 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_service.post_password.return_value = 'value'
         mock_service.can_post_password = True
         mock_service.is_password_set = False
-        response = self._setpassword_plugin._set_metadata_password(
-            fake_passw0rd, mock_service)
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'setuserpassword') as snatcher:
+            response = self._setpassword_plugin._set_metadata_password(
+                fake_passw0rd, mock_service)
+
+        expected_logging = []
         if ssh_pub_key is None:
+            expected_logging = [
+                'No SSH public key available for password encryption'
+            ]
             self.assertTrue(response)
         else:
             mock_get_key.assert_called_once_with(mock_service)
@@ -142,6 +149,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             mock_service.post_password.assert_called_with(
                 'encrypted password')
             self.assertEqual('value', response)
+        self.assertEqual(expected_logging, snatcher.output)
 
     def test_set_metadata_password_with_ssh_key(self):
         fake_key = 'fake key'
@@ -149,6 +157,20 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
     def test_set_metadata_password_no_ssh_key(self):
         self._test_set_metadata_password(ssh_pub_key=None)
+
+    def test_set_metadata_password_already_set(self):
+        mock_service = mock.MagicMock()
+        mock_service.is_password_set = True
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'setuserpassword') as snatcher:
+            response = self._setpassword_plugin._set_metadata_password(
+                mock.sentinel.fake_password, mock_service)
+
+        self.assertTrue(response)
+        expected_logging = ['User\'s password already set in the '
+                            'instance metadata and it cannot be '
+                            'updated in the instance metadata']
+        self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
                 'SetUserPasswordPlugin._get_password')

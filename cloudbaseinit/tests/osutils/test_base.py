@@ -56,3 +56,11 @@ class BaseOSUtilsTests(unittest.TestCase):
                              response)
         else:
             self.assertEqual((mock_out, mock_err, mock_p.returncode), response)
+
+    @mock.patch('os.urandom')
+    def test_generate_random_password(self, mock_urandom):
+        mock_urandom.return_value = b"test"
+        response = self._base.generate_random_password(20)
+
+        mock_urandom.assert_called_once_with(256)
+        self.assertEqual("dGVzdA==", response)

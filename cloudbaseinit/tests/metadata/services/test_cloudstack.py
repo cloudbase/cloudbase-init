@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import socket
 import unittest
 
 try:
@@ -23,6 +24,7 @@ from six.moves import urllib
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import cloudstack
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
@@ -49,11 +51,12 @@ class CloudStackTest(unittest.TestCase):
                                    msg='Testing 404 Not Found.'),
             urllib.error.HTTPError(url=url, code=427, hdrs={}, fp=None,
                                    msg='Testing 429 Too Many Requests.'),
-            base.NotExistingMetadataException()
+            base.NotExistingMetadataException(),
+            socket.error,
         ]
 
         self.assertTrue(self._service._test_api(url))
-        for _ in range(3):
+        for _ in range(4):
             self.assertFalse(self._service._test_api(url))
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
@@ -181,3 +184,21 @@ class CloudStackTest(unittest.TestCase):
         for _ in range(3):
             response = self._service.get_public_keys()
             self.assertEqual([], response)
+
+    @mock.patch('six.moves.urllib.request')
+    def test__http_request(self, mock_urllib_request):
+        mock_urllib_request.Request.return_value = mock.sentinel.request
+        with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
+                                   'cloudstack') as snatcher:
+            self._service._http_request(mock.sentinel.url)
+
+        expected_logging = [
+            'Getting metadata from:  %s' % mock.sentinel.url,
+        ]
+        mock_urllib_request.Request.assert_called_once_with(
+            mock.sentinel.url)
+        mock_urllib_request.urlopen.assert_called_once_with(
+            mock.sentinel.request)
+        mock_urlopen = mock_urllib_request.urlopen.return_value
+        mock_urlopen.read.assert_called_once_with()
+        self.assertEqual(expected_logging, snatcher.output)

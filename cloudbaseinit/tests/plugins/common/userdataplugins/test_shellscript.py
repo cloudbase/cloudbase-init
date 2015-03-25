@@ -29,12 +29,17 @@ class ShellScriptPluginTests(unittest.TestCase):
     def setUp(self):
         self._shellscript = shellscript.ShellScriptPlugin()
 
+    @mock.patch('os.path.exists')
+    @mock.patch('os.remove')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('tempfile.gettempdir')
     @mock.patch('cloudbaseinit.plugins.common.fileexecutils.exec_file')
     @mock.patch('cloudbaseinit.utils.encoding.write_file')
     def _test_process(self, mock_write_file, mock_exec_file, mock_gettempdir,
-                      mock_get_os_utils, exception=False):
+                      mock_get_os_utils, mock_os_remove,
+                      mock_path_exists, exception=False):
+
+        mock_path_exists.return_value = True
         fake_dir_path = os.path.join("fake", "dir")
         mock_osutils = mock.MagicMock()
         mock_part = mock.MagicMock()
@@ -58,6 +63,8 @@ class ShellScriptPluginTests(unittest.TestCase):
         mock_gettempdir.assert_called_once_with()
         if not exception:
             self.assertEqual('fake response', response)
+        mock_os_remove.assert_called_once_with(fake_target)
+        mock_path_exists.assert_called_once_with(fake_target)
 
     def test_process(self):
         self._test_process(exception=False)

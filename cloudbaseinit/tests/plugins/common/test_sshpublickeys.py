@@ -72,3 +72,14 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
 
     def test_execute_with_no_user_home(self):
         self._test_execute(user_home=None)
+
+    def test_no_public_keys(self):
+        mock_service = mock.Mock()
+        mock_service.get_public_keys.return_value = None
+
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'sshpublickeys') as snatcher:
+            self._set_ssh_keys_plugin.execute(mock_service, {})
+
+        expected_logging = ['Public keys not found in metadata']
+        self.assertEqual(expected_logging, snatcher.output)
