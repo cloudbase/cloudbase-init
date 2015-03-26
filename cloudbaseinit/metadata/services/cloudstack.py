@@ -228,3 +228,12 @@ class CloudStack(base.BaseMetadataService):
         if password:
             self._delete_password()
         return password
+
+    @property
+    def can_update_password(self):
+        """The CloudStack Password Server supports password update."""
+        return True
+
+    def is_password_changed(self):
+        """Check if a new password exists in the Password Server."""
+        return bool(self._get_password())
