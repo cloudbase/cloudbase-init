@@ -12,7 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
 from oslo.config import cfg
+from six.moves import http_client
 from six.moves import urllib
 
 from cloudbaseinit.metadata.services import base
@@ -27,6 +30,10 @@ OPTS = [
 ]
 CONF = cfg.CONF
 CONF.register_opts(OPTS)
+
+BAD_REQUEST = b"bad_request"
+SAVED_PASSWORD = b"saved_password"
+TIMEOUT = 10
 
 
 class CloudStack(base.BaseMetadataService):
@@ -116,3 +123,108 @@ class CloudStack(base.BaseMetadataService):
                 continue
             ssh_keys.append(ssh_key)
         return ssh_keys
+
+    def _get_password(self):
+        """Get the password from the Password Server.
+
+        The Password Server can be found on the DHCP_SERVER on the port 8080.
+        .. note:
+            The Password Server can return the following values:
+                * `bad_request`:    the Password Server did not recognise
+                                    the request
+                * `saved_password`: the password was already deleted from
+                                    the Password Server
+                * ``:               the Password Server did not have any
+                                    password for this instance
+                * the password
+        """
+        LOG.debug("Try to get password from the Password Server.")
+        headers = {"DomU_Request": "send_my_password"}
+        password = None
+
+        with contextlib.closing(http_client.HTTPConnection(
+                self._router_ip, 8080, timeout=TIMEOUT)) as connection:
+
+            for _ in range(CONF.retry_count):
+                try:
+                    connection.request("GET", "/", headers=headers)
+                    response = connection.getresponse()
+                except http_client.HTTPException as exc:
+                    LOG.exception(exc)
+                    continue
+
+                if response.status != 200:
+                    LOG.warning("Getting password failed: %(status)s "
+                                "%(reason)s - %(message)s",
+                                {"status": response.status,
+                                 "reason": response.reason,
+                                 "message": response.read()})
+                    continue
+
+                content = response.read()
+                content = content.strip()
+                if not content:
+                    LOG.warning("The Password Server did not have any "
+                                "password for the current instance.")
+                    continue
+
+                if content == BAD_REQUEST:
+                    LOG.error("The Password Server did not recognise the "
+                              "request.")
+                    break
+
+                if content == SAVED_PASSWORD:
+                    LOG.warning("For this instance the password was already "
+                                "taken from the Password Server.")
+                    break
+
+                LOG.info("The password server return a valid password "
+                         "for the current instance.")
+                password = content.decode()
+                break
+
+        return password
+
+    def _delete_password(self):
+        """Delete the password from the Password Server.
+
+        After the password is used, it must be deleted from the Password
+        Server for security reasons.
+        """
+        LOG.debug("Remove the password for this instance from the "
+                  "Password Server.")
+        headers = {"DomU_Request": "saved_password"}
+        connection = http_client.HTTPConnection(self._router_ip, 8080,
+                                                timeout=TIMEOUT)
+        for _ in range(CONF.retry_count):
+            connection.request("GET", "/", headers=headers)
+            response = connection.getresponse()
+            if response.status != 200:
+                LOG.warning("Removing password failed: %(status)s "
+                            "%(reason)s - %(message)s",
+                            {"status": response.status,
+                             "reason": response.reason,
+                             "message": response.read()})
+                continue
+
+            content = response.read()
+            if content.decode() != BAD_REQUEST:
+                LOG.info("The password was removed from the Password Server.")
+                break
+        else:
+            LOG.warning("Fail to remove the password from the "
+                        "Password Server.")
+
+    def get_admin_password(self):
+        """Get the admin pasword from the Password Server.
+
+        .. note:
+            The password is deleted from the Password Server after the first
+            call of this method.
+            Another request for password will work only if the password was
+            changed and sent to the Password Server.
+        """
+        password = self._get_password()
+        if password:
+            self._delete_password()
+        return password
