@@ -52,11 +52,14 @@ class TestVfat(unittest.TestCase):
         self.assertEqual(expected_response, response)
 
     def test_is_vfat_drive_fails(self):
+        test_stderr = b"test stderr"
+
         expected_logging = [
             "Could not retrieve label for VFAT drive path %r"
-            % mock.sentinel.drive,
+            % (mock.sentinel.drive),
+            "mlabel failed with error %r" % test_stderr,
         ]
-        execute_process_value = (None, None, 1)
+        execute_process_value = (None, test_stderr, 1)
         expected_response = False
 
         self._test_is_vfat_drive(execute_process_value=execute_process_value,

@@ -47,10 +47,11 @@ def is_vfat_drive(osutils, drive_path):
     mlabel = os.path.join(CONF.mtools_path, "mlabel.exe")
     args = [mlabel, "-i", drive_path, "-s"]
 
-    out, _, exit_code = osutils.execute_process(args, shell=False)
+    out, err, exit_code = osutils.execute_process(args, shell=False)
     if exit_code:
         LOG.warning("Could not retrieve label for VFAT drive path %r",
                     drive_path)
+        LOG.warning("mlabel failed with error %r", err)
         return False
 
     out = out.decode().strip()
