@@ -67,8 +67,12 @@ class TestVfat(unittest.TestCase):
                                  expected_response=expected_response)
 
     def test_is_vfat_drive_different_label(self):
-        expected_logging = []
-        execute_process_value = (b"Volume label is config", None, 0)
+        mock_out = b"Volume label is config"
+        expected_logging = [
+            "Obtained label information for drive %r: %r"
+            % (mock.sentinel.drive, mock_out)
+        ]
+        execute_process_value = (mock_out, None, 0)
         expected_response = False
 
         self._test_is_vfat_drive(execute_process_value=execute_process_value,
@@ -76,8 +80,12 @@ class TestVfat(unittest.TestCase):
                                  expected_response=expected_response)
 
     def test_is_vfat_drive_works(self):
-        expected_logging = []
-        execute_process_value = (b"Volume label is config-2   \r\n", None, 0)
+        mock_out = b"Volume label is config-2   \r\n"
+        expected_logging = [
+            "Obtained label information for drive %r: %r"
+            % (mock.sentinel.drive, mock_out)
+        ]
+        execute_process_value = (mock_out, None, 0)
         expected_response = True
 
         self._test_is_vfat_drive(execute_process_value=execute_process_value,
