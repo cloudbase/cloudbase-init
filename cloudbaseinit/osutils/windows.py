@@ -23,6 +23,7 @@ import time
 import pywintypes
 import six
 from six.moves import winreg
+from tzlocal import windows_tz
 from win32com import client
 import win32process
 import win32security
@@ -33,6 +34,8 @@ from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import network
+from cloudbaseinit.utils.windows import privilege
+from cloudbaseinit.utils.windows import timezone
 
 
 LOG = logging.getLogger(__name__)
@@ -296,24 +299,14 @@ class WindowsUtils(base.BaseOSUtils):
     _FW_SCOPE_ALL = 0
     _FW_SCOPE_LOCAL_SUBNET = 1
 
-    def _enable_shutdown_privilege(self):
-        process = win32process.GetCurrentProcess()
-        token = win32security.OpenProcessToken(
-            process,
-            win32security.TOKEN_ADJUST_PRIVILEGES |
-            win32security.TOKEN_QUERY)
-        priv_luid = win32security.LookupPrivilegeValue(
-            None, win32security.SE_SHUTDOWN_NAME)
-        privilege = [(priv_luid, win32security.SE_PRIVILEGE_ENABLED)]
-        win32security.AdjustTokenPrivileges(token, False, privilege)
-
     def reboot(self):
-        self._enable_shutdown_privilege()
-
-        ret_val = advapi32.InitiateSystemShutdownW(0, "Cloudbase-Init reboot",
-                                                   0, True, True)
-        if not ret_val:
-            raise exception.WindowsCloudbaseInitException("Reboot failed: %r")
+        with privilege.acquire_privilege(win32security.SE_SHUTDOWN_NAME):
+            ret_val = advapi32.InitiateSystemShutdownW(
+                0, "Cloudbase-Init reboot",
+                0, True, True)
+            if not ret_val:
+                raise exception.WindowsCloudbaseInitException(
+                    "Reboot failed: %r")
 
     def _get_user_wmi_object(self, username):
         conn = wmi.WMI(moniker='//./root/cimv2')
@@ -1047,3 +1040,10 @@ class WindowsUtils(base.BaseOSUtils):
 
     def get_maximum_password_length(self):
         return 20
+
+    def set_timezone(self, timezone_name):
+        windows_name = windows_tz.tz_win.get(timezone_name)
+        if not windows_name:
+            raise exception.CloudbaseInitException(
+                "The given timezone name is unrecognised: %r" % timezone_name)
+        timezone.Timezone(windows_name).set(self)

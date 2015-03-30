@@ -20,6 +20,8 @@ from cloudbaseinit.utils import classloader
 PLUGINS = {
     'write_files': 'cloudbaseinit.plugins.common.userdataplugins.'
                    'cloudconfigplugins.write_files.WriteFilesPlugin',
+    'set_timezone': 'cloudbaseinit.plugins.common.userdataplugins.'
+                    'cloudconfigplugins.set_timezone.SetTimezonePlugin',
 }
 
 
