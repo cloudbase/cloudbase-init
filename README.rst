@@ -42,8 +42,8 @@ Plugins
 Plugins execute actions based on the metadata obtained by the service.
 
 
-cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sets the instance's hostname.
 
@@ -153,8 +153,8 @@ Activates the Windows instance if the following option is True.
 +--------------------+------------------+---------+
 
 
-cloudbaseinit.plugins.common.ntpclient.NTPClientPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Applies NTP client info based on the DHCP server options, if available.
 
