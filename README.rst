@@ -66,8 +66,8 @@ plugin.
 +------------+--------------------------------+------------------+
 
 
-cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sets the cloud user's password. If a password has been provided in the
 metadata during boot (user_data) it will be used, otherwise a random password
@@ -82,8 +82,8 @@ provider).
 +------------------------+-------------------------------------------------------------------------------------+---------+
 
 
-cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Configures static networking.
 
@@ -98,13 +98,13 @@ adapter will be chosen if it cannot be matched with the configuration provided
 in the metadata.
 
 
-cloudbaseinit.plugins.windows.sshpublickeys.SetUserSSHPublicKeysPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Creates an "authorized_keys" file in the user's home directory containing the
 SSH keys provided in the metadata.
 It is needed by the
-*cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin* plugin.
+*cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin* plugin.
 
 
 cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin
@@ -129,8 +129,8 @@ PowerShell.
 See: http://www.cloudbase.it/windows-without-passwords-in-openstack/
 
 
-cloudbaseinit.plugins.windows.localscripts.LocalScriptsPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Executes any script (e.g. Powershell, CMD, etc) located in the following path.
 
@@ -153,8 +153,8 @@ Activates the Windows instance if the following option is True.
 +--------------------+------------------+---------+
 
 
-cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.ntpclient.NTPClientPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Applies NTP client info based on the DHCP server options, if available.
 
@@ -165,8 +165,8 @@ Applies NTP client info based on the DHCP server options, if available.
 +-----------------------+-------------------+---------+
 
 
-cloudbaseinit.plugins.windows.mtu.MTUPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.mtu.MTUPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sets the network interfaces MTU based on the value provided by the DHCP server
 options, if available.
@@ -181,8 +181,8 @@ for networking (e.g. OpenStack GRE Neutron Open vSwitch configurations).
 +-----------------------+-------------------+---------+
 
 
-cloudbaseinit.plugins.windows.userdata.UserDataPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.common.userdata.UserDataPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Executes custom scripts provided with the user_data metadata as plain text or
 compressed with Gzip.
@@ -228,7 +228,66 @@ specific content. The user_data first line must be:
 
     #cloud-config
 
-Note: currently only local file creation is supported.
+The following cloud-config directives are supported:
+
+    * write_files
+
+      Defines a set of files which will be created on
+      the local filesystem. It can be a list of items or only one item,
+      with the following attributes:
+
+      - path
+
+        Absolute path on disk where the content should be written
+
+      - content
+
+        The content which will be written in the given file
+
+      - permissions
+
+        Integer representing file permissions
+
+      - encoding
+
+        The encoding of the data in content.
+        Supported encodings are: ``b64``, ``base64`` for base64-encoded
+        content, ``gz``, ``gzip`` for gzip encoded content, ``gz+b64``,
+        ``gz+base64``, ``gzip+b64``, ``gzip+base64`` for base64 encoded
+        gzip content.
+
+      Examples::
+
+        # One item
+        write_files:
+           encoding: b64
+           content: NDI=
+           path: C:\test
+           permissions: '0o466'
+
+        # Multiple items
+        write_files:
+           -   encoding: b64
+               content: NDI=
+               path: C:\b64
+               permissions: '0644'
+           -   encoding: base64
+               content: NDI=
+               path: C:\b64_1
+               permissions: '0644'
+           -   encoding: gzip
+               content: !!binary |
+                   H4sIAGUfoFQC/zMxAgCIsCQyAgAAAA==
+               path: C:\gzip
+               permissions: '0644'
+
+    * set_timezone
+
+      Change the underlying timezone.
+
+      Example::
+
+        set_timezone: Asia/Tbilisi
 
 
 Multi-part userdata content
