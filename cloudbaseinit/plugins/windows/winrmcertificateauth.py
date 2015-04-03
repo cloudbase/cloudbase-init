@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.config import cfg
+
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
@@ -22,23 +24,30 @@ from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
 
+CONF = cfg.CONF
+CONF.import_opt('username', 'cloudbaseinit.plugins.common.createuser')
 LOG = logging.getLogger(__name__)
 
 
 class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
 
-    def _get_credentials(self, shared_data):
-        user_name = shared_data.get(constants.SHARED_DATA_USERNAME)
+    @staticmethod
+    def _get_credentials(service, shared_data):
+        user_name = shared_data.get(constants.SHARED_DATA_USERNAME,
+                                    CONF.username)
         if not user_name:
             raise exception.CloudbaseInitException(
                 "Cannot execute plugin as the username has not been set in "
-                "the plugins shared data")
+                "the plugins shared data, nor it was found in config file.")
 
         password = shared_data.get(constants.SHARED_DATA_PASSWORD)
         if not password:
-            raise exception.CloudbaseInitException(
-                "Cannot execute plugin as the password has not been set in the"
-                " plugins shared data")
+            password = service.get_admin_password()
+            if not password:
+                raise exception.CloudbaseInitException(
+                    "Cannot execute plugin as the password has not been set "
+                    "in the plugins shared data, nor it was retrieved "
+                    "from the metadata service.")
 
         # For security reasons unset the password in the shared_data
         # as it is currently not needed by other plugins
@@ -47,7 +56,7 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
         return (user_name, password)
 
     def execute(self, service, shared_data):
-        user_name, password = self._get_credentials(shared_data)
+        user_name, password = self._get_credentials(service, shared_data)
 
         certs_data = service.get_client_auth_certs()
         if not certs_data:
