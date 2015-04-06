@@ -67,11 +67,13 @@ def _get_registry_dhcp_server(adapter_name):
 
 def get_adapter_addresses():
     net_adapters = []
+    filter_flags = (iphlpapi.GAA_FLAG_SKIP_ANYCAST |
+                    iphlpapi.GAA_FLAG_SKIP_MULTICAST)
 
     size = wintypes.ULONG()
     ret_val = iphlpapi.GetAdaptersAddresses(
         ws2_32.AF_UNSPEC,
-        iphlpapi.GAA_FLAG_SKIP_ANYCAST,
+        filter_flags,
         None, None, ctypes.byref(size))
 
     if ret_val == kernel32.ERROR_NO_DATA:
@@ -91,7 +93,7 @@ def get_adapter_addresses():
 
             ret_val = iphlpapi.GetAdaptersAddresses(
                 ws2_32.AF_UNSPEC,
-                iphlpapi.GAA_FLAG_SKIP_ANYCAST,
+                filter_flags,
                 None, p_addr, ctypes.byref(size))
 
             if ret_val == kernel32.ERROR_NO_DATA:

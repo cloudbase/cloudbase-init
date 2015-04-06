@@ -171,9 +171,12 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
             (mock_socket_addr_to_str.return_value,
              unicast_addr.Address.lpSockaddr.contents.sa_family)]
 
+        filter_flags = (self.network.iphlpapi.GAA_FLAG_SKIP_ANYCAST |
+                        self.network.iphlpapi.GAA_FLAG_SKIP_MULTICAST)
+
         compare_GetAdaptersAddresses = [mock.call(
             self.network.ws2_32.AF_UNSPEC,
-            self.network.iphlpapi.GAA_FLAG_SKIP_ANYCAST,
+            filter_flags,
             None, None, mock_byref.return_value)]
 
         if not p:
@@ -187,7 +190,7 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
 
             compare_GetAdaptersAddresses.append(mock.call(
                 self.network.ws2_32.AF_UNSPEC,
-                self.network.iphlpapi.GAA_FLAG_SKIP_ANYCAST, None,
+                filter_flags, None,
                 p_curr_addr, mock_byref.return_value))
 
         else:
@@ -208,7 +211,7 @@ class WindowsNetworkUtilsTests(unittest.TestCase):
 
                 compare_GetAdaptersAddresses.append(mock.call(
                     self.network.ws2_32.AF_UNSPEC,
-                    self.network.iphlpapi.GAA_FLAG_SKIP_ANYCAST, None,
+                    filter_flags, None,
                     p_curr_addr, mock_byref.return_value))
 
                 if ret_val2 == self.network.kernel32.ERROR_NO_DATA:
