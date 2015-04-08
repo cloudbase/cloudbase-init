@@ -17,6 +17,7 @@ import re
 
 from win32com import client
 from xml.etree import ElementTree
+from xml.sax import saxutils
 
 
 CBT_HARDENING_LEVEL_NONE = "none"
@@ -127,6 +128,8 @@ class WinRMConfig(object):
         resource_uri = self._SERVICE_CERTMAPPING_URI % {'issuer': issuer,
                                                         'subject': subject,
                                                         'uri': uri}
+        escaped_password = saxutils.escape(password)
+        escaped_username = saxutils.escape(username)
         self._create_resource(
             resource_uri,
             '<p:certmapping xmlns:p="http://schemas.microsoft.com/wbem/wsman/'
@@ -135,8 +138,8 @@ class WinRMConfig(object):
             '<p:Password>%(password)s</p:Password>'
             '<p:UserName>%(username)s</p:UserName>'
             '</p:certmapping>' % {'enabled': self._get_xml_bool(enabled),
-                                  'username': username,
-                                  'password': password})
+                                  'username': escaped_username,
+                                  'password': escaped_password})
 
     def get_listener(self, protocol=LISTENER_PROTOCOL_HTTPS, address="*"):
         resource_uri = self._SERVICE_LISTENER_URI % {'protocol': protocol,

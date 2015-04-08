@@ -14,6 +14,7 @@
 
 import importlib
 import unittest
+from xml.sax import saxutils
 
 try:
     import unittest.mock as mock
@@ -267,10 +268,14 @@ class WinRMConfigTests(unittest.TestCase):
                      'subject': 'subject',
                      'uri': 'fake:\\uri'}
         mock_get_xml_bool.return_value = True
+        fake_password = "Pa&ssw0rd!"
+        fake_username = 'fake user'
+        expected_password = saxutils.escape(fake_password)
+        expected_username = saxutils.escape(fake_username)
 
         self._winrmconfig.create_cert_mapping(
-            issuer='issuer', subject='subject', username='fake user',
-            password='fake password', uri='fake:\\uri', enabled=True)
+            issuer='issuer', subject='subject', username=fake_username,
+            password=fake_password, uri='fake:\\uri', enabled=True)
 
         mock_get_xml_bool.assert_called_once_with(True)
         mock_create_resource.assert_called_once_with(
@@ -281,8 +286,8 @@ class WinRMConfigTests(unittest.TestCase):
             '<p:Password>%(password)s</p:Password>'
             '<p:UserName>%(username)s</p:UserName>'
             '</p:certmapping>' % {'enabled': True,
-                                  'username': 'fake user',
-                                  'password': 'fake password'})
+                                  'username': expected_username,
+                                  'password': expected_password})
 
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_resource')
