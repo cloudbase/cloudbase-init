@@ -20,6 +20,7 @@ from cloudbaseinit.metadata.services import base as service_base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugin_base
+from cloudbaseinit.utils import network
 
 
 LOG = logging.getLogger(__name__)
@@ -28,10 +29,10 @@ LOG = logging.getLogger(__name__)
 # if the key is a tuple, then at least one field must exists.
 NET_REQUIRE = {
     ("name", "mac"): True,
-    "address": True,
-    "netmask": True,
+    ("address", "address6"): True,
+    ("netmask", "netmask6"): True,
     "broadcast": False,    # currently not used
-    "gateway": False,
+    ("gateway", "gateway6"): False,
     "dnsnameservers": False
 }
 
@@ -76,30 +77,44 @@ def _preprocess_nics(network_details, network_adapters):
                 fields = (fields,)
             final_status = any([getattr(nic, field) for field in fields])
             if not final_status:
-                LOG.error("Incomplete NetworkDetails object %s", nic)
                 break
+        address, netmask = nic.address, nic.netmask
         if final_status:
-            # Complete hardware address if missing by selecting
-            # the corresponding MAC in terms of naming, then ordering.
-            if not nic.mac:
-                # By name...
-                macs = [adapter[1] for adapter in network_adapters
-                        if adapter[0] == nic.name]
-                mac = macs[0] if macs else None
-                # ...or by order.
-                idx = _name2idx(nic.name)
-                if not mac and idx < total:
-                    mac = network_adapters[idx][1]
-                nic = service_base.NetworkDetails(
-                    nic.name,
-                    mac,
-                    nic.address,
-                    nic.netmask,
-                    nic.broadcast,
-                    nic.gateway,
-                    nic.dnsnameservers
-                )
-            refined_network_details.append(nic)
+            # Additional check for info version.
+            if not (address and netmask):
+                final_status = nic.address6 and nic.netmask6
+                if final_status:
+                    address = address or network.address6_to_4_truncate(
+                        nic.address6)
+                    netmask = netmask or network.netmask6_to_4_truncate(
+                        nic.netmask6)
+        if not final_status:
+            LOG.error("Incomplete NetworkDetails object %s", nic)
+            continue
+        # Complete hardware address if missing by selecting
+        # the corresponding MAC in terms of naming, then ordering.
+        if not nic.mac:
+            # By name...
+            macs = [adapter[1] for adapter in network_adapters
+                    if adapter[0] == nic.name]
+            mac = macs[0] if macs else None
+            # ...or by order.
+            idx = _name2idx(nic.name)
+            if not mac and idx < total:
+                mac = network_adapters[idx][1]
+            nic = service_base.NetworkDetails(
+                nic.name,
+                mac,
+                address,
+                nic.address6,
+                netmask,
+                nic.netmask6,
+                nic.broadcast,
+                nic.gateway,
+                nic.gateway6,
+                nic.dnsnameservers
+            )
+        refined_network_details.append(nic)
     return refined_network_details
 
 
@@ -109,18 +124,18 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
         osutils = osutils_factory.get_os_utils()
         network_details = service.get_network_details()
         if not network_details:
-            return (plugin_base.PLUGIN_EXECUTION_DONE, False)
+            return plugin_base.PLUGIN_EXECUTION_DONE, False
 
-        # check and save NICs by MAC
+        # Check and save NICs by MAC.
         network_adapters = osutils.get_network_adapters()
         network_details = _preprocess_nics(network_details,
                                            network_adapters)
         macnics = {}
         for nic in network_details:
-            # assuming that the MAC address is unique
+            # Assuming that the MAC address is unique.
             macnics[nic.mac] = nic
 
-        # try configuring all the available adapters
+        # Try configuring all the available adapters.
         adapter_macs = [pair[1] for pair in network_adapters]
         reboot_required = False
         configured = False
@@ -139,10 +154,18 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
                 nic.dnsnameservers
             )
             reboot_required = reboot or reboot_required
+            # Set v6 info too if available.
+            if nic.address6 and nic.netmask6:
+                osutils.set_static_network_config_v6(
+                    mac,
+                    nic.address6,
+                    nic.netmask6,
+                    nic.gateway6
+                )
             configured = True
         for mac in macnics:
             LOG.warn("Details not used for adapter %s", mac)
         if not configured:
             LOG.error("No adapters were configured")
 
-        return (plugin_base.PLUGIN_EXECUTION_DONE, reboot_required)
+        return plugin_base.PLUGIN_EXECUTION_DONE, reboot_required

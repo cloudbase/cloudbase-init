@@ -16,16 +16,22 @@
 NAME0 = "eth0"
 MAC0 = "fa:16:3e:2d:ec:cd"
 ADDRESS0 = "10.0.0.15"
+ADDRESS60 = "2001:db8::3"
 NETMASK0 = "255.255.255.0"
+NETMASK60 = "64"
 BROADCAST0 = "10.0.0.255"
 GATEWAY0 = "10.0.0.1"
+GATEWAY60 = "2001:db8::1"
 DNSNS0 = "208.67.220.220 208.67.222.222"
 
 NAME1 = "eth1"
 ADDRESS1 = "10.1.0.2"
+ADDRESS61 = "::ffff:a00:1"
 NETMASK1 = "255.255.255.0"
+NETMASK61 = None
 BROADCAST1 = "10.1.0.255"
 GATEWAY1 = "10.1.0.1"
+GATEWAY61 = "2001::ffff:a00:1b"
 
 
 def get_fake_metadata_json(version):
@@ -67,6 +73,8 @@ def get_fake_metadata_json(version):
         },
         "network_config": {
             "content_path": "network",
+            # This is not actually in the metadata json file,
+            # but is present here for the ease of reading such information.
             "debian_config": ("""
 # Injected by Nova on instance boot
 #
@@ -85,6 +93,8 @@ iface {name0} inet static
     broadcast {broadcast0}
     gateway {gateway0}
     dns-nameservers {dnsns0}
+    post-up ip -6 addr add {address60}/{netmask60} dev {name0}
+    post-up ip -6 route add default via {gateway60} dev {name0}
 
 auto {name1}
 iface {name1} inet static
@@ -92,19 +102,30 @@ iface {name1} inet static
     netmask {netmask1}
     broadcast {broadcast1}
     gateway {gateway1}
-         """).format(name0=NAME0,    # eth0 (IPv4)
+iface eth2 inet6 static
+    address {address61}
+    netmask {netmask61}
+    gateway {gateway61}
+         """).format(name0=NAME0,    # eth0 (IPv4/6)
                      mac0=MAC0,
                      address0=ADDRESS0,
                      broadcast0=BROADCAST0,
                      netmask0=NETMASK0,
                      gateway0=GATEWAY0,
                      dnsns0=DNSNS0,
-                     # eth1 (IPv4)
+                     address60=ADDRESS60,
+                     netmask60=NETMASK60,
+                     gateway60=GATEWAY60,
+                     # eth1 (IPv4/6)
                      name1=NAME1,
                      address1=ADDRESS1,
                      broadcast1=BROADCAST1,
                      netmask1=NETMASK1,
-                     gateway1=GATEWAY1)
+                     gateway1=GATEWAY1,
+                     address61=ADDRESS61,
+                     netmask61=NETMASK61,
+                     gateway61=GATEWAY61
+                     )
         }
     }
 

@@ -105,9 +105,12 @@ def _get_nic_details(iid=0):
             opennebulaservice.IF_FORMAT.format(iid=iid),
             MAC,
             ADDRESS,
+            None,
             NETMASK,
+            None,
             BROADCAST,
             GATEWAY,
+            None,
             DNSNS.split(" ")
         )
         return details
@@ -307,9 +310,9 @@ class TestLoadedOpenNebulaService(_TestOpenNebulaService):
 
     def test_multiple_nics(self):
         self.load_context(context=CONTEXT2)
-        nic1 = _get_nic_details(iid=0)
-        nic2 = _get_nic_details(iid=1)
-        network_details = [nic1, nic2]
+        nic0 = _get_nic_details(iid=0)
+        nic1 = _get_nic_details(iid=1)
+        network_details = [nic0, nic1]
         self.assertEqual(
             network_details,
             self._service.get_network_details()

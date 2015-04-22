@@ -37,18 +37,24 @@ class TestInterfacesParser(unittest.TestCase):
             fake_json_response.NAME0,
             fake_json_response.MAC0.upper(),
             fake_json_response.ADDRESS0,
+            fake_json_response.ADDRESS60,
             fake_json_response.NETMASK0,
+            fake_json_response.NETMASK60,
             fake_json_response.BROADCAST0,
             fake_json_response.GATEWAY0,
+            fake_json_response.GATEWAY60,
             fake_json_response.DNSNS0.split()
         )
         nic1 = service_base.NetworkDetails(
             fake_json_response.NAME1,
             None,
             fake_json_response.ADDRESS1,
+            fake_json_response.ADDRESS61,
             fake_json_response.NETMASK1,
+            fake_json_response.NETMASK61,
             fake_json_response.BROADCAST1,
             fake_json_response.GATEWAY1,
+            fake_json_response.GATEWAY61,
             None
         )
         self.assertEqual([nic0, nic1], nics)

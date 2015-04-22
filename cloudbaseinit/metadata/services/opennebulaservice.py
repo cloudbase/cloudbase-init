@@ -227,13 +227,17 @@ class OpenNebulaService(base.BaseMetadataService):
                 broadcast = self._compute_broadcast(address, netmask)
                 # gather them as namedtuple objects
                 details = base.NetworkDetails(
-                    IF_FORMAT.format(iid=iid),
-                    mac,
-                    address,
-                    netmask,
-                    broadcast,
-                    gateway,
-                    self._get_cache_data(DNSNS, iid=iid).split(" ")
+                    name=IF_FORMAT.format(iid=iid),
+                    mac=mac,
+                    address=address,
+                    address6=None,
+                    netmask=netmask,
+                    netmask6=None,
+                    broadcast=broadcast,
+                    gateway=gateway,
+                    gateway6=None,
+                    dnsnameservers=self._get_cache_data(DNSNS,
+                                                        iid=iid).split(" ")
                 )
             except base.NotExistingMetadataException:
                 LOG.debug("Incomplete NIC details")

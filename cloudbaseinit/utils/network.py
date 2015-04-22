@@ -12,6 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
+import binascii
+import socket
+import struct
 import sys
 
 from six.moves.urllib import parse
@@ -62,3 +66,20 @@ def check_metadata_ip_route(metadata_url):
                     except Exception as ex:
                         # Ignore it
                         LOG.exception(ex)
+
+
+def address6_to_4_truncate(address6):
+    """Try to obtain IPv4 address from version 6."""
+    chunks = address6.split(":")
+    hi, lo = chunks[-2], chunks[-1]
+    network_address = binascii.unhexlify(hi.zfill(4) + lo.zfill(4))
+    return socket.inet_ntoa(network_address)
+
+
+def netmask6_to_4_truncate(netmask6):
+    """Try to obtain IPv4 netmask from version 6."""
+    # Harsh 128bit to 32bit.
+    length = int(int(netmask6) / 4)
+    mask = "1" * length + "0" * (32 - length)
+    network_address = struct.pack("!L", int(mask, 2))
+    return socket.inet_ntoa(network_address)

@@ -39,6 +39,10 @@ from cloudbaseinit.utils.windows import timezone
 
 
 LOG = logging.getLogger(__name__)
+AF_INET6 = 23
+UNICAST = 1
+MANUAL = 1
+PREFERRED_ADDR = 4
 
 advapi32 = ctypes.windll.advapi32
 kernel32 = ctypes.windll.kernel32
@@ -541,13 +545,13 @@ class WindowsUtils(base.BaseOSUtils):
                                   broadcast, gateway, dnsnameservers):
         conn = wmi.WMI(moniker='//./root/cimv2')
 
-        q = conn.query("SELECT * FROM Win32_NetworkAdapter WHERE "
-                       "MACAddress = '{}'".format(mac_address))
-        if not len(q):
+        query = conn.query("SELECT * FROM Win32_NetworkAdapter WHERE "
+                           "MACAddress = '{}'".format(mac_address))
+        if not len(query):
             raise exception.CloudbaseInitException(
                 "Network adapter not found")
 
-        adapter_config = q[0].associators(
+        adapter_config = query[0].associators(
             wmi_result_class='Win32_NetworkAdapterConfiguration')[0]
 
         LOG.debug("Setting static IP address")
@@ -574,6 +578,57 @@ class WindowsUtils(base.BaseOSUtils):
             reboot_required = reboot_required or ret_val == 1
 
         return reboot_required
+
+    def set_static_network_config_v6(self, mac_address, address6,
+                                     netmask6, gateway6):
+        """Set IPv6 info for a network card."""
+
+        # Get local properties by MAC identification.
+        adapters = network.get_adapter_addresses()
+        for adapter in adapters:
+            if mac_address == adapter["mac_address"]:
+                ifname = adapter["friendly_name"]
+                ifindex = adapter["interface_index"]
+                break
+        else:
+            raise exception.CloudbaseInitException(
+                "Adapter with MAC {!r} not available".format(mac_address))
+
+        # TODO(cpoieana): Extend support for other platforms.
+        #                 Currently windows8 @ ws2012 or above.
+        if not self.check_os_version(6, 2):
+            LOG.warning("Setting IPv6 info not available "
+                        "on this system")
+            return
+        conn = wmi.WMI(moniker='//./root/StandardCimv2')
+        query = conn.query("SELECT * FROM MSFT_NetIPAddress "
+                           "WHERE InterfaceAlias = '{}'".format(ifname))
+        netip = query[0]
+
+        params = {
+            "InterfaceIndex": ifindex,
+            "InterfaceAlias": ifname,
+            "IPAddress": address6,
+            "AddressFamily": AF_INET6,
+            "PrefixLength": netmask6,
+            # Manual set type.
+            "Type": UNICAST,
+            "PrefixOrigin": MANUAL,
+            "SuffixOrigin": MANUAL,
+            "AddressState": PREFERRED_ADDR,
+            # No expiry.
+            "ValidLifetime": None,
+            "PreferredLifetime": None,
+            "SkipAsSource": False,
+            "DefaultGateway": gateway6,
+            "PolicyStore": None,
+            "PassThru": False,
+        }
+        LOG.debug("Setting IPv6 info for %s", ifname)
+        try:
+            netip.Create(**params)
+        except wmi.x_wmi as exc:
+            raise exception.CloudbaseInitException(exc.com_error)
 
     def _get_config_key_name(self, section):
         key_name = self._config_key

@@ -44,9 +44,12 @@ NetworkDetails = collections.namedtuple(
         "name",
         "mac",
         "address",
+        "address6",
         "netmask",
+        "netmask6",
         "broadcast",
         "gateway",
+        "gateway6",
         "dnsnameservers",
     ]
 )

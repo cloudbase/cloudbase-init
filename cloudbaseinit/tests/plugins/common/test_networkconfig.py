@@ -39,7 +39,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                       invalid_details=False,
                       missed_adapters=[],
                       extra_network_details=[]):
-        # prepare mock environment
+        # Prepare mock environment.
         mock_service = mock.MagicMock()
         mock_shared_data = mock.Mock()
         mock_osutils = mock.MagicMock()
@@ -51,22 +51,18 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             self._network_plugin.execute,
             mock_service, mock_shared_data
         )
-        # actual tests
+        # Actual tests.
         if not network_details:
             ret = network_execute()
             self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, False), ret)
             return
-        if invalid_details:
+        if invalid_details or not network_adapters:
             with self.assertRaises(exception.CloudbaseInitException):
                 network_execute()
             return
-        if not network_adapters:
-            with self.assertRaises(exception.CloudbaseInitException):
-                network_execute()
-            return
-        # good to go for the configuration process
+        # Good to go for the configuration process.
         ret = network_execute()
-        calls = []
+        calls, calls6 = [], []
         for adapter in set(network_adapters) - set(missed_adapters):
             nics = [nic for nic in (network_details +
                                     extra_network_details)
@@ -81,9 +77,25 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                 nic.gateway,
                 nic.dnsnameservers
             )
+            call6 = mock.call(
+                nic.mac,
+                nic.address6,
+                nic.netmask6,
+                nic.gateway6
+            )
             calls.append(call)
+            if nic.address6 and nic.netmask6:
+                calls6.append(call6)
+        self.assertEqual(
+            len(calls),
+            mock_osutils.set_static_network_config.call_count)
+        self.assertEqual(
+            len(calls6),
+            mock_osutils.set_static_network_config_v6.call_count)
         mock_osutils.set_static_network_config.assert_has_calls(
             calls, any_order=True)
+        mock_osutils.set_static_network_config_v6.assert_has_calls(
+            calls6, any_order=True)
         reboot = len(missed_adapters) != self._count
         self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, reboot), ret)
 
@@ -108,10 +120,20 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             "192.168.103.104",
             "192.168.122.105",
         ]
+        addresses6 = [
+            "::ffff:c0a8:7a65",
+            "::ffff:c0a8:6768",
+            "::ffff:c0a8:7a69"
+        ]
         netmasks = [
             "255.255.255.0",
             "255.255.0.0",
             "255.255.255.128",
+        ]
+        netmasks6 = [
+            "96",
+            "64",
+            "100"
         ]
         broadcasts = [
             "192.168.122.255",
@@ -122,6 +144,11 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             "192.168.122.1",
             "192.168.122.16",
             "192.168.122.32",
+        ]
+        gateways6 = [
+            "::ffff:c0a8:7a01",
+            "::ffff:c0a8:7a10",
+            "::ffff:c0a8:7a20"
         ]
         dnsnses = [
             "8.8.8.8",
@@ -136,16 +163,19 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                 details_names[ind],
                 None if no_macs else macs[ind],
                 addresses[ind],
+                addresses6[ind],
                 netmasks[ind],
+                netmasks6[ind],
                 broadcasts[ind],
                 gateways[ind],
+                gateways6[ind],
                 dnsnses[ind].split()
             )
             self._network_adapters.append(adapter)
             self._network_details.append(nic)
-        # get the network config plugin
+        # Get the network config plugin.
         self._network_plugin = networkconfig.NetworkConfigPlugin()
-        # execution wrapper
+        # Execution wrapper.
         self._partial_test_execute = functools.partial(
             self._test_execute,
             network_adapters=self._network_adapters,
@@ -189,36 +219,44 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             nic.name,
             "00" + nic.mac[2:],
             nic.address,
+            nic.address6,
             nic.netmask,
+            nic.netmask6,
             nic.broadcast,
             nic.gateway,
+            nic.gateway6,
             nic.dnsnameservers
         )
         self._network_details[:] = [nic]
         self._partial_test_execute(missed_adapters=self._network_adapters)
 
     def _test_execute_missing_smth(self, name=False, mac=False,
-                                   address=False, gateway=False,
-                                   fail=False):
+                                   address=False, address6=False,
+                                   netmask=False, netmask6=False,
+                                   gateway=False, fail=False):
         ind = self._count - 1
         nic = self._network_details[ind]
         nic2 = service_base.NetworkDetails(
             None if name else nic.name,
             None if mac else nic.mac,
             None if address else nic.address,
-            nic.netmask,
+            None if address6 else nic.address6,
+            None if netmask else nic.netmask,
+            None if netmask6 else nic.netmask6,
             nic.broadcast,
             None if gateway else nic.gateway,
+            None if gateway else nic.gateway6,
             nic.dnsnameservers
         )
         self._network_details[ind] = nic2
-        # excluding address and gateway switches...
+        # Excluding address and gateway switches...
         if not fail:
-            # even this way, all adapters should be configured
+            # Even this way, all adapters should be configured.
             missed_adapters = []
             extra_network_details = [nic]
         else:
-            # both name and MAC are missing, so we can't make the match
+            # Both name and MAC are missing, so we can't make the match.
+            # Or other vital details.
             missed_adapters = [self._network_adapters[ind]]
             extra_network_details = []
         self._partial_test_execute(
@@ -237,7 +275,20 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         self._test_execute_missing_smth(name=True, mac=True, fail=True)
 
     def test_execute_missing_address(self):
-        self._test_execute_missing_smth(address=True, fail=True)
+        self._test_execute_missing_smth(address=True)
+
+    def test_execute_missing_netmask(self):
+        self._test_execute_missing_smth(netmask=True)
+
+    def test_execute_missing_address6(self):
+        self._test_execute_missing_smth(address6=True)
+
+    def test_execute_missing_netmask6(self):
+        self._test_execute_missing_smth(netmask6=True)
+
+    def test_execute_missing_address_netmask6(self):
+        self._test_execute_missing_smth(address=True, netmask6=True,
+                                        fail=True)
 
     def test_execute_missing_gateway(self):
         self._test_execute_missing_smth(gateway=True)

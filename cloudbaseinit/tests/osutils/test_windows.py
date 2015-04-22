@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import functools
 import importlib
 import os
 
@@ -28,6 +29,11 @@ from cloudbaseinit.tests import fake
 from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
+
+
+class WMIError(Exception):
+
+    com_error = "fake data"
 
 
 class TestWindowsUtils(testutils.CloudbaseInitTestBase):
@@ -48,6 +54,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._win32process_mock = mock.MagicMock()
         self._win32security_mock = mock.MagicMock()
         self._wmi_mock = mock.MagicMock()
+        self._wmi_mock.x_wmi = WMIError
         self._moves_mock = mock.MagicMock()
         self._xmlrpc_client_mock = mock.MagicMock()
         self._ctypes_mock = mock.MagicMock()
@@ -529,121 +536,163 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_get_network_adapters_xp_2003(self):
         self._test_get_network_adapters(True)
 
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._sanitize_wmi_input')
-    def _test_set_static_network_config(self, mock_sanitize_wmi_input,
-                                        adapter, ret_val1=None,
-                                        ret_val2=None, ret_val3=None):
+    def _test_set_static_network_config(self, adapter=True, static_val=(0,),
+                                        gateway_val=(0,), dns_val=(0,)):
         conn = self._wmi_mock.WMI
-        address = '10.10.10.10'
         mac_address = '54:EE:75:19:F4:61'
+        address = '10.10.10.10'
         broadcast = '0.0.0.0'
         dns_list = ['8.8.8.8']
+        set_static_call = functools.partial(
+            self._winutils.set_static_network_config,
+            mac_address, address, self._NETMASK,
+            broadcast, self._GATEWAY, dns_list
+        )
 
-        if not adapter:
+        if adapter:
+            adapter = mock.MagicMock()
+        else:
             self.assertRaises(
                 exception.CloudbaseInitException,
-                self._winutils.set_static_network_config,
-                mac_address, address, self._NETMASK,
-                broadcast, self._GATEWAY, dns_list)
+                set_static_call
+            )
+            return
+
+        conn.return_value.query.return_value = adapter
+        adapter_config = adapter[0].associators.return_value[0]
+        adapter_config.EnableStatic.return_value = static_val
+        adapter_config.SetGateways.return_value = gateway_val
+        adapter_config.SetDNSServerSearchOrder.return_value = dns_val
+        adapter.__len__.return_value = 1
+        if static_val[0] > 1 or gateway_val[0] > 1 or dns_val[0] > 1:
+            self.assertRaises(
+                exception.CloudbaseInitException,
+                set_static_call)
         else:
-            conn.return_value.query.return_value = adapter
-            adapter_config = adapter[0].associators()[0]
-            adapter_config.EnableStatic.return_value = ret_val1
-            adapter_config.SetGateways.return_value = ret_val2
-            adapter_config.SetDNSServerSearchOrder.return_value = ret_val3
-            adapter.__len__.return_value = 1
-
-            if ret_val1[0] > 1:
-                self.assertRaises(
-                    exception.CloudbaseInitException,
-                    self._winutils.set_static_network_config,
-                    mac_address, address, self._NETMASK,
-                    broadcast, self._GATEWAY, dns_list)
-
-            elif ret_val2[0] > 1:
-                self.assertRaises(
-                    exception.CloudbaseInitException,
-                    self._winutils.set_static_network_config,
-                    mac_address, address, self._NETMASK,
-                    broadcast, self._GATEWAY, dns_list)
-
-            elif ret_val3[0] > 1:
-                self.assertRaises(
-                    exception.CloudbaseInitException,
-                    self._winutils.set_static_network_config,
-                    mac_address, address, self._NETMASK,
-                    broadcast, self._GATEWAY, dns_list)
-
+            response = set_static_call()
+            if static_val[0] or gateway_val[0] or dns_val[0]:
+                self.assertTrue(response)
             else:
-                response = self._winutils.set_static_network_config(
-                    mac_address, address, self._NETMASK,
-                    broadcast, self._GATEWAY, dns_list)
+                self.assertFalse(response)
 
-                if ret_val1[0] or ret_val2[0] or ret_val3[0] == 1:
-                    self.assertTrue(response)
-                else:
-                    self.assertFalse(response)
-                adapter_config.EnableStatic.assert_called_with(
-                    [address], [self._NETMASK])
-                adapter_config.SetGateways.assert_called_with(
-                    [self._GATEWAY], [1])
-                adapter_config.SetDNSServerSearchOrder.assert_called_with(
-                    dns_list)
+            select = ("SELECT * FROM Win32_NetworkAdapter WHERE "
+                      "MACAddress = '{}'".format(mac_address))
+            conn.return_value.query.assert_called_once_with(select)
+            adapter[0].associators.assert_called_with(
+                wmi_result_class='Win32_NetworkAdapterConfiguration')
+            adapter_config.EnableStatic.assert_called_with(
+                [address], [self._NETMASK])
+            adapter_config.SetGateways.assert_called_with(
+                [self._GATEWAY], [1])
+            adapter_config.SetDNSServerSearchOrder.assert_called_with(
+                dns_list)
 
-                adapter[0].associators.assert_called_with(
-                    wmi_result_class='Win32_NetworkAdapterConfiguration')
-                conn.return_value.query.assert_called_with(
-                    "SELECT * FROM Win32_NetworkAdapter WHERE "
-                    "MACAddress = '{}'".format(mac_address)
-                )
+    @mock.patch("cloudbaseinit.utils.windows.network"
+                ".get_adapter_addresses")
+    def _test_set_static_network_config_v6(self, mock_get_adapter_addresses,
+                                           v6adapters=True, v6error=False):
+        friendly_name = "Ethernet0"
+        interface_index = "4"
+        mac_address = '54:EE:75:19:F4:61'
+        address6 = "2001:db8::3"
+        netmask6 = "64"
+        gateway6 = "2001:db8::1"
+
+        conn = self._wmi_mock.WMI
+        netip = conn.return_value.query.return_value[0]
+        if v6error:
+            netip.Create.side_effect = WMIError
+        adapter_addresses = []
+        if v6adapters:
+            adapter_addresses = [
+                {
+                    "mac_address": mac_address,
+                    "friendly_name": friendly_name,
+                    "interface_index": interface_index
+                }
+            ]
+        mock_get_adapter_addresses.return_value = adapter_addresses
+
+        set_static_call = functools.partial(
+            self._winutils.set_static_network_config_v6,
+            mac_address, address6, netmask6, gateway6)
+
+        if not v6adapters or v6error:
+            self.assertRaises(
+                exception.CloudbaseInitException,
+                set_static_call)
+        else:
+            set_static_call()
+            mock_get_adapter_addresses.assert_called_once_with()
+            select = ("SELECT * FROM MSFT_NetIPAddress "
+                      "WHERE InterfaceAlias = '{}'".format(friendly_name))
+            conn.return_value.query.assert_called_once_with(select)
+            params = {
+                "InterfaceIndex": interface_index,
+                "InterfaceAlias": friendly_name,
+                "IPAddress": address6,
+                "AddressFamily": self.windows_utils.AF_INET6,
+                "PrefixLength": netmask6,
+                # Manual set type.
+                "Type": self.windows_utils.UNICAST,
+                "PrefixOrigin": self.windows_utils.MANUAL,
+                "SuffixOrigin": self.windows_utils.MANUAL,
+                "AddressState": self.windows_utils.PREFERRED_ADDR,
+                # No expiry.
+                "ValidLifetime": None,
+                "PreferredLifetime": None,
+                "SkipAsSource": False,
+                "DefaultGateway": gateway6,
+                "PolicyStore": None,
+                "PassThru": False,
+            }
+            netip.Create.assert_called_once_with(**params)
 
     def test_set_static_network_config(self):
-        adapter = mock.MagicMock()
         ret_val1 = (1,)
         ret_val2 = (1,)
         ret_val3 = (0,)
-        self._test_set_static_network_config(adapter=adapter,
-                                             ret_val1=ret_val1,
-                                             ret_val2=ret_val2,
-                                             ret_val3=ret_val3)
+        self._test_set_static_network_config(static_val=ret_val1,
+                                             gateway_val=ret_val2,
+                                             dns_val=ret_val3)
 
     def test_set_static_network_config_query_fail(self):
-        self._test_set_static_network_config(adapter=None)
+        self._test_set_static_network_config(adapter=False)
 
     def test_set_static_network_config_cannot_set_ip(self):
-        adapter = mock.MagicMock()
         ret_val1 = (2,)
-        self._test_set_static_network_config(adapter=adapter,
-                                             ret_val1=ret_val1)
+        self._test_set_static_network_config(static_val=ret_val1)
 
     def test_set_static_network_config_cannot_set_gateway(self):
-        adapter = mock.MagicMock()
         ret_val1 = (1,)
         ret_val2 = (2,)
-        self._test_set_static_network_config(adapter=adapter,
-                                             ret_val1=ret_val1,
-                                             ret_val2=ret_val2)
+        self._test_set_static_network_config(static_val=ret_val1,
+                                             gateway_val=ret_val2)
 
     def test_set_static_network_config_cannot_set_DNS(self):
-        adapter = mock.MagicMock()
         ret_val1 = (1,)
         ret_val2 = (1,)
         ret_val3 = (2,)
-        self._test_set_static_network_config(adapter=adapter,
-                                             ret_val1=ret_val1,
-                                             ret_val2=ret_val2,
-                                             ret_val3=ret_val3)
+        self._test_set_static_network_config(static_val=ret_val1,
+                                             gateway_val=ret_val2,
+                                             dns_val=ret_val3)
 
     def test_set_static_network_config_no_reboot(self):
-        adapter = mock.MagicMock()
         ret_val1 = (0,)
         ret_val2 = (0,)
         ret_val3 = (0,)
-        self._test_set_static_network_config(adapter=adapter,
-                                             ret_val1=ret_val1,
-                                             ret_val2=ret_val2,
-                                             ret_val3=ret_val3)
+        self._test_set_static_network_config(static_val=ret_val1,
+                                             gateway_val=ret_val2,
+                                             dns_val=ret_val3)
+
+    def test_set_static_network_config_v6(self):
+        self._test_set_static_network_config_v6()
+
+    def test_set_static_network_config_v6_no_adapters(self):
+        self._test_set_static_network_config_v6(v6adapters=False)
+
+    def test_set_static_network_config_v6_error(self):
+        self._test_set_static_network_config_v6(v6error=True)
 
     def _test_get_config_key_name(self, section):
         response = self._winutils._get_config_key_name(section)
