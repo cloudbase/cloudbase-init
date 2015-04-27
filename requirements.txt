@@ -10,5 +10,8 @@ Babel>=1.3
 oauthlib
 netifaces
 PyYAML
-tzlocal
 requests
+pywin32;sys_platform=="win32"
+comtypes;sys_platform=="win32"
+wmi;sys_platform=="win32"
+tzlocal;sys_platform=="win32"
