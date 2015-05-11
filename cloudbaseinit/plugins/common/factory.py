@@ -14,6 +14,7 @@
 
 from oslo.config import cfg
 
+from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import classloader
 
 opts = [
@@ -44,11 +45,19 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
+LOG = logging.getLogger(__name__)
 
 
 def load_plugins():
     plugins = []
     cl = classloader.ClassLoader()
     for class_path in CONF.plugins:
-        plugins.append(cl.load_class(class_path)())
+        try:
+            plugin_cls = cl.load_class(class_path)
+        except ImportError:
+            LOG.error("Could not import plugin module %r", class_path)
+            continue
+
+        plugin = plugin_cls()
+        plugins.append(plugin)
     return plugins

@@ -21,6 +21,7 @@ except ImportError:
 from oslo.config import cfg
 
 from cloudbaseinit.plugins.common import factory
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
@@ -35,3 +36,13 @@ class PluginFactoryTests(unittest.TestCase):
         response = factory.load_plugins()
         self.assertEqual(expected, mock_load_class.call_args_list)
         self.assertTrue(response is not None)
+
+    @testutils.ConfPatcher('plugins', ['missing.plugin'])
+    def test_load_plugins_plugin_failed(self):
+        with testutils.LogSnatcher('cloudbaseinit.plugins.'
+                                   'common.factory') as snatcher:
+            plugins = factory.load_plugins()
+
+        self.assertEqual([], plugins)
+        self.assertEqual(["Could not import plugin module 'missing.plugin'"],
+                         snatcher.output)
