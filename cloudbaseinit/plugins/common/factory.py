@@ -47,11 +47,49 @@ CONF = cfg.CONF
 CONF.register_opts(opts)
 LOG = logging.getLogger(__name__)
 
+# Some plugins were moved to plugins.common, in order to
+# better reflect the fact that they are not platform specific.
+# Unfortunately, there are a lot of users out there with old
+# config files which are using the old plugin names.
+# So in order not to crash cloudbaseinit for their cases,
+# we provide this explicit mapping. This will be removed
+# when we'll reach 1.0 though.
+
+OLD_PLUGINS = {
+    'cloudbaseinit.plugins.windows.mtu.MTUPlugin':
+    'cloudbaseinit.plugins.common.mtu.MTUPlugin',
+
+    'cloudbaseinit.plugins.windows.sethostname.SetHostNamePlugin':
+    'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin',
+
+    'cloudbaseinit.plugins.windows.networkconfig.NetworkConfigPlugin':
+    'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin',
+
+    'cloudbaseinit.plugins.windows.sshpublickeys.SetUserSSHPublicKeysPlugin':
+    'cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin',
+
+    'cloudbaseinit.plugins.windows.userdata.UserDataPlugin':
+    'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
+
+    'cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin':
+    'cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin',
+
+    'cloudbaseinit.plugins.windows.localscripts.LocalScriptsPlugin':
+    'cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin',
+}
+
 
 def load_plugins():
     plugins = []
     cl = classloader.ClassLoader()
     for class_path in CONF.plugins:
+        if class_path in OLD_PLUGINS:
+            new_class_path = OLD_PLUGINS[class_path]
+            LOG.warn("Old plugin module %r was found. The new name is %r. "
+                     "The old name will not be supported starting with "
+                     "cloudbaseinit 1.0", class_path, new_class_path)
+            class_path = new_class_path
+
         try:
             plugin_cls = cl.load_class(class_path)
         except ImportError:

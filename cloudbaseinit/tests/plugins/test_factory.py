@@ -46,3 +46,24 @@ class PluginFactoryTests(unittest.TestCase):
         self.assertEqual([], plugins)
         self.assertEqual(["Could not import plugin module 'missing.plugin'"],
                          snatcher.output)
+
+    @testutils.ConfPatcher('plugins', ["cloudbaseinit.plugins.windows."
+                                       "localscripts.LocalScriptsPlugin"])
+    @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
+    def test_old_plugin_mapping(self, mock_load_class):
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'factory') as snatcher:
+            factory.load_plugins()
+
+        expected = [
+            "Old plugin module 'cloudbaseinit.plugins.windows."
+            "localscripts.LocalScriptsPlugin' was found. "
+            "The new name is 'cloudbaseinit.plugins.common."
+            "localscripts.LocalScriptsPlugin'. The old name will not "
+            "be supported starting with cloudbaseinit 1.0",
+        ]
+        expected_call = mock.call('cloudbaseinit.plugins.common.'
+                                  'localscripts.LocalScriptsPlugin')
+        self.assertEqual(expected, snatcher.output)
+        called = mock_load_class.mock_calls[0]
+        self.assertEqual(expected_call, called)
