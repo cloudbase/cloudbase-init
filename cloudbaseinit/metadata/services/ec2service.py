@@ -100,7 +100,3 @@ class EC2Service(base.BaseMetadataService):
             ssh_keys.append(ssh_key)
 
         return ssh_keys
-
-    def get_network_details(self):
-        # TODO(cpoieana): add static network config support
-        pass
