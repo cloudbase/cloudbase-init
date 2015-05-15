@@ -62,9 +62,18 @@ class BaseOpenStackService(base.BaseMetadataService):
         return self._get_meta_data().get('hostname')
 
     def get_public_keys(self):
-        public_keys = self._get_meta_data().get('public_keys')
-        if public_keys:
-            return public_keys.values()
+        """Get a list of all unique public keys found among the metadata."""
+        public_keys = []
+        meta_data = self._get_meta_data()
+        public_keys_dict = meta_data.get('public_keys')
+        if public_keys_dict:
+            public_keys = list(public_keys_dict.values())
+        keys = meta_data.get("keys")
+        if keys:
+            for key_dict in keys:
+                if key_dict["type"] == "ssh":
+                    public_keys.append(key_dict["data"])
+        return list(set(public_keys))
 
     def get_network_details(self):
         network_config = self._get_meta_data().get('network_config')
@@ -94,35 +103,44 @@ class BaseOpenStackService(base.BaseMetadataService):
         return password
 
     def get_client_auth_certs(self):
-        cert_data = None
+        """Gather all unique certificates found among the metadata.
 
+        If there are no certificates under "meta" or "keys" field,
+        then try looking into user-data for this kind of information.
+        """
+        certs = []
         meta_data = self._get_meta_data()
-        meta = meta_data.get('meta')
 
+        meta = meta_data.get("meta")
         if meta:
-            i = 0
+            cert_data_list = []
+            idx = 0
             while True:
                 # Chunking is necessary as metadata items can be
-                # max. 255 chars long
-                cert_chunk = meta.get('admin_cert%d' % i)
+                # max. 255 chars long.
+                cert_chunk = meta.get("admin_cert%d" % idx)
                 if not cert_chunk:
                     break
-                if not cert_data:
-                    cert_data = cert_chunk
-                else:
-                    cert_data += cert_chunk
-                i += 1
+                cert_data_list.append(cert_chunk)
+                idx += 1
+            if cert_data_list:
+                # It's a list of strings for sure.
+                certs.append("".join(cert_data_list))
 
-        if not cert_data:
+        keys = meta_data.get("keys")
+        if keys:
+            for key_dict in keys:
+                if key_dict["type"] == "x509":
+                    certs.append(key_dict["data"])
 
+        if not certs:
             # Look if the user_data contains a PEM certificate
             try:
                 user_data = self.get_user_data()
                 if user_data.startswith(
                         x509constants.PEM_HEADER.encode()):
-                    cert_data = user_data
+                    certs.append(user_data)
             except base.NotExistingMetadataException:
                 LOG.debug("user_data metadata not present")
 
-        if cert_data:
-            return [cert_data]
+        return list(set((cert.strip() for cert in certs)))
