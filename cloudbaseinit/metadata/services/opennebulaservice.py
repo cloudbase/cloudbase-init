@@ -195,7 +195,7 @@ class OpenNebulaService(base.BaseMetadataService):
         return self._get_cache_data(USER_DATA)
 
     def get_public_keys(self):
-        return [self._get_cache_data(PUBLIC_KEY)]
+        return self._get_cache_data(PUBLIC_KEY).splitlines()
 
     def get_network_details(self):
         """Return a list of NetworkDetails objects.

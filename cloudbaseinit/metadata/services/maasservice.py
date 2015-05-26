@@ -118,9 +118,8 @@ class MaaSHttpService(base.BaseMetadataService):
         return [v + delimiter for v in text.split(delimiter)]
 
     def get_public_keys(self):
-        return self._get_list_from_text(
-            self._get_cache_data('%s/meta-data/public-keys' %
-                                 self._metadata_version), "\n")
+        return self._get_cache_data('%s/meta-data/public-keys' %
+                                    self._metadata_version).splitlines()
 
     def get_client_auth_certs(self):
         return self._get_list_from_text(

@@ -110,6 +110,7 @@ class BaseMetadataService(object):
         pass
 
     def get_public_keys(self):
+        """Get a list of space-stripped strings as public keys."""
         pass
 
     def get_network_details(self):

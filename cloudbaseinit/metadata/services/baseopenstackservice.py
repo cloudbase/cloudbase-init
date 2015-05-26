@@ -65,7 +65,7 @@ class BaseOpenStackService(base.BaseMetadataService):
         """Get a list of all unique public keys found among the metadata."""
         public_keys = []
         meta_data = self._get_meta_data()
-        public_keys_dict = meta_data.get('public_keys')
+        public_keys_dict = meta_data.get("public_keys")
         if public_keys_dict:
             public_keys = list(public_keys_dict.values())
         keys = meta_data.get("keys")
@@ -73,7 +73,7 @@ class BaseOpenStackService(base.BaseMetadataService):
             for key_dict in keys:
                 if key_dict["type"] == "ssh":
                     public_keys.append(key_dict["data"])
-        return list(set(public_keys))
+        return list(set((key.strip() for key in public_keys)))
 
     def get_network_details(self):
         network_config = self._get_meta_data().get('network_config')

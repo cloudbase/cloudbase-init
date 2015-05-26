@@ -164,17 +164,18 @@ class MaaSHttpServiceTest(unittest.TestCase):
         self.assertEqual(['fake:', 'text:'], response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
-                "._get_list_from_text")
-    @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
-    def test_get_public_keys(self, mock_get_cache_data,
-                             mock_get_list_from_text):
+    def test_get_public_keys(self, mock_get_cache_data):
+        public_keys = [
+            "fake key 1",
+            "fake key 2"
+        ]
+        public_key = "\n".join(public_keys) + "\n"
+        mock_get_cache_data.return_value = public_key
         response = self._maasservice.get_public_keys()
         mock_get_cache_data.assert_called_with(
             '%s/meta-data/public-keys' % self._maasservice._metadata_version)
-        mock_get_list_from_text.assert_called_once_with(mock_get_cache_data(),
-                                                        "\n")
-        self.assertEqual(mock_get_list_from_text.return_value, response)
+        self.assertEqual(public_keys, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_list_from_text")

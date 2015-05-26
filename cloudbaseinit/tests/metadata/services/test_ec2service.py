@@ -113,7 +113,7 @@ class EC2ServiceTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
                 '._get_cache_data')
     def test_get_public_keys(self, mock_get_cache_data):
-        mock_get_cache_data.side_effect = ['key=info', 'fake key']
+        mock_get_cache_data.side_effect = ['key=info', 'fake key\n']
         response = self._service.get_public_keys()
         expected = [
             mock.call('%s/meta-data/public-keys' %

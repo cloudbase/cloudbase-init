@@ -52,6 +52,7 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
         LOG.info("Writing SSH public keys in: %s" % authorized_keys_path)
         with open(authorized_keys_path, 'w') as f:
             for public_key in public_keys:
-                f.write(public_key)
+                # All public keys are space-stripped.
+                f.write(public_key + "\n")
 
         return (base.PLUGIN_EXECUTION_DONE, False)

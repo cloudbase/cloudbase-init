@@ -97,6 +97,6 @@ class EC2Service(base.BaseMetadataService):
             ssh_key = self._get_cache_data(
                 '%(version)s/meta-data/public-keys/%(idx)s/openssh-key' %
                 {'version': self._metadata_version, 'idx': idx})
-            ssh_keys.append(ssh_key)
+            ssh_keys.append(ssh_key.strip())
 
         return ssh_keys

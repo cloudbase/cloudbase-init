@@ -101,13 +101,18 @@ class TestBaseOpenStackService(unittest.TestCase):
         mock_get_meta_data.return_value.get.side_effect = \
             [self._fake_public_keys, self._fake_keys]
         response = self._service.get_public_keys()
+
         mock_get_meta_data.assert_called_once_with()
         mock_get_meta_data.return_value.get.assert_any_call("public_keys")
         mock_get_meta_data.return_value.get.assert_any_call("keys")
-        values = (list(self._fake_public_keys.values()) +
-                  [key["data"] for key in self._fake_keys
-                   if key["type"] == "ssh"])
-        self.assertEqual(sorted(list(set(values))), sorted(response))
+
+        public_keys = (list(self._fake_public_keys.values()) +
+                       [key["data"] for key in self._fake_keys
+                        if key["type"] == "ssh"])
+        public_keys = [key.strip() for key in public_keys]
+
+        self.assertEqual(sorted(list(set(public_keys))),
+                         sorted(response))
 
     @mock.patch(MODPATH +
                 ".BaseOpenStackService._get_meta_data")
