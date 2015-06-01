@@ -139,3 +139,30 @@ class BaseMetadataService(object):
 
     def cleanup(self):
         pass
+
+    @property
+    def can_update_password(self):
+        """The ability to update password of the metadata provider.
+
+        If :meth:`~can_update_password` is True, plugins can check
+        periodically (e.g. at every boot) if the password changed.
+
+        :rtype: bool
+
+        .. notes:
+            The password will be updated only if the
+            :meth:`~is_password_changed` returns True.
+        """
+        return False
+
+    def is_password_changed(self):
+        """Check if the metadata provider has a new password for this
+        instance.
+
+        :rtype: bool
+
+        .. notes:
+            This method will be used only when :meth:`~can_update_password`
+            is True.
+        """
+        return False
