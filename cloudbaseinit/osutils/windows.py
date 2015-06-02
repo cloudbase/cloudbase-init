@@ -1040,43 +1040,7 @@ class WindowsUtils(base.BaseOSUtils):
         C:\Windows\(System32|SysWOW64|Sysnative).
         Note that "Sysnative" is just an alias (doesn't really exist on disk).
 
-        On 32bit OSes, the return value will be the System32 directory,
-        which contains 32bit programs.
-        On 64bit OSes, the return value may be different, depending on the
-        Python bits and the `sysnative` parameter. If the Python interpreter is
-        32bit, the return value will be System32 (containing 32bit
-        programs) if `sysnative` is set to False and Sysnative otherwise. But
-        if the Python interpreter is 64bit and `sysnative` is False, the return
-        value will be SysWOW64 and System32 for a True value of `sysnative`.
-
-        Why this behavior and what is the purpose of `sysnative` parameter?
-
-        On a 32bit OS the things are clear, there is one System32 directory
-        containing 32bit applications and that's all. On a 64bit OS, there's a
-        System32 directory containing 64bit applications and a compatibility
-        one named SysWOW64 (WindowsOnWindows) containing the 32bit version of
-        them. Depending on the Python interpreter's bits, the `sysnative` flag
-        will try to bring the appropriate version of the system directory, more
-        exactly, the physical System32 or SysWOW64 found on disk. On a WOW case
-        (32bit interpreter on 64bit OS), a return value of System32 will point
-        to the physical SysWOW64 directory and a return value of Sysnative,
-        which is consolidated by the existence of this alias, will point to the
-        real physical System32 directory found on disk. If the OS is still
-        64bit and there is no WOW case (that means the interpreter is 64bit),
-        the system native concept is out of discussion and each return value
-        will point to the physical location it intends to.
-
-        On a 32bit OS the `sysnative` parameter has no meaning, but on a 64bit
-        one, based on its value, it will provide a real/alias path pointing to
-        system native applications if set to True (64bit programs) and to
-        system compatibility applications if set to False (32bit programs). Its
-        purpose is to provide the correct system paths by taking into account
-        the Python interpreter bits too, because on a 32bit interpreter
-        version, System32 is not the same with the System32 on a 64bit
-        interpreter. Also, using a 64bit interpreter, the Sysnative alias will
-        not work, but the `sysnative` parameter will take care to return
-        SysWOW64 if you explicitly want 32bit applications, by setting it to
-        False.
+        More info about this can be found in documentation.
         """
         if sysnative and self.check_sysnative_dir_exists():
             return self.get_sysnative_dir()
