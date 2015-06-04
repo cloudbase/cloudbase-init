@@ -13,6 +13,7 @@
 #    under the License.
 
 import posixpath
+import re
 
 from oauthlib import oauth1
 from oslo.config import cfg
@@ -108,23 +109,25 @@ class MaaSHttpService(base.BaseMetadataService):
 
     def get_host_name(self):
         return self._get_cache_data('%s/meta-data/local-hostname' %
-                                    self._metadata_version)
+                                    self._metadata_version, decode=True)
 
     def get_instance_id(self):
         return self._get_cache_data('%s/meta-data/instance-id' %
-                                    self._metadata_version)
-
-    def _get_list_from_text(self, text, delimiter):
-        return [v + delimiter for v in text.split(delimiter)]
+                                    self._metadata_version, decode=True)
 
     def get_public_keys(self):
         return self._get_cache_data('%s/meta-data/public-keys' %
-                                    self._metadata_version).splitlines()
+                                    self._metadata_version,
+                                    decode=True).splitlines()
 
     def get_client_auth_certs(self):
-        return self._get_list_from_text(
-            self._get_cache_data('%s/meta-data/x509' % self._metadata_version),
-            "%s\n" % x509constants.PEM_FOOTER)
+        certs_data = self._get_cache_data('%s/meta-data/x509' %
+                                          self._metadata_version,
+                                          decode=True)
+        pattern = r"{begin}[\s\S]+?{end}".format(
+            begin=x509constants.PEM_HEADER,
+            end=x509constants.PEM_FOOTER)
+        return re.findall(pattern, certs_data)
 
     def get_user_data(self):
         return self._get_cache_data('%s/user-data' % self._metadata_version)

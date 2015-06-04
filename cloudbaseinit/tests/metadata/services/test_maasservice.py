@@ -148,7 +148,8 @@ class MaaSHttpServiceTest(unittest.TestCase):
         response = self._maasservice.get_host_name()
         mock_get_cache_data.assert_called_once_with(
             '%s/meta-data/local-hostname' %
-            self._maasservice._metadata_version)
+            self._maasservice._metadata_version,
+            decode=True)
         self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
@@ -156,12 +157,9 @@ class MaaSHttpServiceTest(unittest.TestCase):
     def test_get_instance_id(self, mock_get_cache_data):
         response = self._maasservice.get_instance_id()
         mock_get_cache_data.assert_called_once_with(
-            '%s/meta-data/instance-id' % self._maasservice._metadata_version)
+            '%s/meta-data/instance-id' % self._maasservice._metadata_version,
+            decode=True)
         self.assertEqual(mock_get_cache_data.return_value, response)
-
-    def test_get_list_from_text(self):
-        response = self._maasservice._get_list_from_text('fake:text', ':')
-        self.assertEqual(['fake:', 'text:'], response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
@@ -174,21 +172,26 @@ class MaaSHttpServiceTest(unittest.TestCase):
         mock_get_cache_data.return_value = public_key
         response = self._maasservice.get_public_keys()
         mock_get_cache_data.assert_called_with(
-            '%s/meta-data/public-keys' % self._maasservice._metadata_version)
+            '%s/meta-data/public-keys' % self._maasservice._metadata_version,
+            decode=True)
         self.assertEqual(public_keys, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
-                "._get_list_from_text")
-    @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
-    def test_get_client_auth_certs(self, mock_get_cache_data,
-                                   mock_get_list_from_text):
+    def test_get_client_auth_certs(self, mock_get_cache_data):
+        certs = [
+            "{begin}\n{cert}\n{end}".format(
+                begin=x509constants.PEM_HEADER,
+                end=x509constants.PEM_FOOTER,
+                cert=cert)
+            for cert in ("first cert", "second cert")
+        ]
+        mock_get_cache_data.return_value = "\n".join(certs) + "\n"
         response = self._maasservice.get_client_auth_certs()
         mock_get_cache_data.assert_called_with(
-            '%s/meta-data/x509' % self._maasservice._metadata_version)
-        mock_get_list_from_text.assert_called_once_with(
-            mock_get_cache_data(), "%s\n" % x509constants.PEM_FOOTER)
-        self.assertEqual(mock_get_list_from_text.return_value, response)
+            '%s/meta-data/x509' % self._maasservice._metadata_version,
+            decode=True)
+        self.assertEqual(certs, response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")

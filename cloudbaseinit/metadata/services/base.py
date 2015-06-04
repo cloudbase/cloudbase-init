@@ -20,6 +20,7 @@ import time
 from oslo.config import cfg
 
 from cloudbaseinit.openstack.common import log as logging
+from cloudbaseinit.utils import encoding
 
 
 opts = [
@@ -88,13 +89,17 @@ class BaseMetadataService(object):
                 else:
                     raise
 
-    def _get_cache_data(self, path):
-        if path in self._cache:
+    def _get_cache_data(self, path, decode=False):
+        """Get meta data with caching and decoding support."""
+        key = (path, decode)
+        if key in self._cache:
             LOG.debug("Using cached copy of metadata: '%s'" % path)
-            return self._cache[path]
+            return self._cache[key]
         else:
             data = self._exec_with_retry(lambda: self._get_data(path))
-            self._cache[path] = data
+            if decode:
+                data = encoding.get_as_string(data)
+            self._cache[key] = data
             return data
 
     def get_instance_id(self):

@@ -99,7 +99,8 @@ class EC2ServiceTest(unittest.TestCase):
     def test_get_host_name(self, mock_get_cache_data):
         response = self._service.get_host_name()
         mock_get_cache_data.assert_called_once_with(
-            '%s/meta-data/local-hostname' % self._service._metadata_version)
+            '%s/meta-data/local-hostname' % self._service._metadata_version,
+            decode=True)
         self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
@@ -107,7 +108,8 @@ class EC2ServiceTest(unittest.TestCase):
     def test_get_instance_id(self, mock_get_cache_data):
         response = self._service.get_instance_id()
         mock_get_cache_data.assert_called_once_with(
-            '%s/meta-data/instance-id' % self._service._metadata_version)
+            '%s/meta-data/instance-id' % self._service._metadata_version,
+            decode=True)
         self.assertEqual(mock_get_cache_data.return_value, response)
 
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
@@ -117,10 +119,11 @@ class EC2ServiceTest(unittest.TestCase):
         response = self._service.get_public_keys()
         expected = [
             mock.call('%s/meta-data/public-keys' %
-                      self._service._metadata_version),
+                      self._service._metadata_version,
+                      decode=True),
             mock.call('%(version)s/meta-data/public-keys/%('
                       'idx)s/openssh-key' %
                       {'version': self._service._metadata_version,
-                       'idx': 'key'})]
+                       'idx': 'key'}, decode=True)]
         self.assertEqual(expected, mock_get_cache_data.call_args_list)
         self.assertEqual(['fake key'], response)

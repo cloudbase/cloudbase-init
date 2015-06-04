@@ -20,7 +20,6 @@ import uuid
 
 import six
 
-from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import cryptoapi
 from cloudbaseinit.utils import x509constants
 
@@ -205,13 +204,17 @@ class CryptoAPICertManager(object):
                 free(subject_encoded)
 
     def _get_cert_base64(self, cert_data):
-        base64_cert_data = encoding.get_as_string(cert_data)
-        if base64_cert_data.startswith(x509constants.PEM_HEADER):
-            base64_cert_data = base64_cert_data[len(x509constants.PEM_HEADER):]
-        if base64_cert_data.endswith(x509constants.PEM_FOOTER):
-            base64_cert_data = base64_cert_data[:len(base64_cert_data) -
-                                                len(x509constants.PEM_FOOTER)]
-        return base64_cert_data.replace("\n", "")
+        """Remove certificate header and footer and also new lines."""
+        # It's assured that the certificate is already a string.
+        removal = [
+            x509constants.PEM_HEADER,
+            x509constants.PEM_FOOTER,
+            "\r",
+            "\n"
+        ]
+        for remove in removal:
+            cert_data = cert_data.replace(remove, "")
+        return cert_data
 
     def import_cert(self, cert_data, machine_keyset=True,
                     store_name=STORE_NAME_MY):

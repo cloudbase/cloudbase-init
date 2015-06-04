@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import socket
 import unittest
 
@@ -149,12 +150,17 @@ class CloudStackTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._get_cache_data')
-    def _test_cache_response(self, mock_get_cache_data, method, metadata):
+    def _test_cache_response(self, mock_get_cache_data, method, metadata,
+                             decode=True):
         mock_get_cache_data.side_effect = [mock.sentinel.response]
         response = method()
 
         self.assertEqual(mock.sentinel.response, response)
-        mock_get_cache_data.assert_called_once_with(metadata)
+        cache_assert = functools.partial(
+            mock_get_cache_data.assert_called_once_with,
+            metadata)
+        if decode:
+            cache_assert(decode=decode)
 
     def test_get_instance_id(self):
         self._test_cache_response(method=self._service.get_instance_id,
@@ -166,7 +172,7 @@ class CloudStackTest(unittest.TestCase):
 
     def test_get_user_data(self):
         self._test_cache_response(method=self._service.get_user_data,
-                                  metadata='../user-data')
+                                  metadata='../user-data', decode=False)
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._get_cache_data')

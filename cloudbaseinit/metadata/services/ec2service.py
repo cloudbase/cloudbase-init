@@ -78,25 +78,25 @@ class EC2Service(base.BaseMetadataService):
 
     def get_host_name(self):
         return self._get_cache_data('%s/meta-data/local-hostname' %
-                                    self._metadata_version)
+                                    self._metadata_version, decode=True)
 
     def get_instance_id(self):
         return self._get_cache_data('%s/meta-data/instance-id' %
-                                    self._metadata_version)
+                                    self._metadata_version, decode=True)
 
     def get_public_keys(self):
         ssh_keys = []
 
         keys_info = self._get_cache_data(
             '%s/meta-data/public-keys' %
-            self._metadata_version).split("\n")
+            self._metadata_version, decode=True).splitlines()
 
         for key_info in keys_info:
             (idx, key_name) = key_info.split('=')
 
             ssh_key = self._get_cache_data(
                 '%(version)s/meta-data/public-keys/%(idx)s/openssh-key' %
-                {'version': self._metadata_version, 'idx': idx})
+                {'version': self._metadata_version, 'idx': idx}, decode=True)
             ssh_keys.append(ssh_key.strip())
 
         return ssh_keys

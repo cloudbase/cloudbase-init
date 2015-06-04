@@ -285,7 +285,6 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         fake_cert_data += x509constants.PEM_HEADER + '\n'
         fake_cert_data += 'fake cert' + '\n'
         fake_cert_data += x509constants.PEM_FOOTER
-        fake_cert_data = fake_cert_data.encode()
 
         response = self._x509_manager._get_cert_base64(fake_cert_data)
         self.assertEqual('fake cert', response)

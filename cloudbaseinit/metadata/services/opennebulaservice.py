@@ -146,7 +146,7 @@ class OpenNebulaService(base.BaseMetadataService):
             raise base.NotExistingMetadataException(msg)
         return self._dict_content[name]
 
-    def _get_cache_data(self, names, iid=None):
+    def _get_cache_data(self, names, iid=None, decode=False):
         # Solves caching issues when working with
         # multiple names (lists not hashable).
         # This happens because the caching function used
@@ -160,7 +160,8 @@ class OpenNebulaService(base.BaseMetadataService):
                 names[ind] = value.format(iid=iid)
         for name in names:
             try:
-                return super(OpenNebulaService, self)._get_cache_data(name)
+                return super(OpenNebulaService, self)._get_cache_data(
+                    name, decode=decode)
             except base.NotExistingMetadataException:
                 pass
         msg = "None of {} metadata was found".format(", ".join(names))
@@ -192,14 +193,13 @@ class OpenNebulaService(base.BaseMetadataService):
         return INSTANCE_ID
 
     def get_host_name(self):
-        return encoding.get_as_string(self._get_cache_data(HOST_NAME))
+        return self._get_cache_data(HOST_NAME, decode=True)
 
     def get_user_data(self):
         return self._get_cache_data(USER_DATA)
 
     def get_public_keys(self):
-        return encoding.get_as_string(
-            self._get_cache_data(PUBLIC_KEY)).splitlines()
+        return self._get_cache_data(PUBLIC_KEY, decode=True).splitlines()
 
     def get_network_details(self):
         """Return a list of NetworkDetails objects.
@@ -215,19 +215,17 @@ class OpenNebulaService(base.BaseMetadataService):
         for iid in range(ncount):
             try:
                 # get existing values
-                mac = encoding.get_as_string(
-                    self._get_cache_data(MAC, iid=iid)).upper()
-                address = encoding.get_as_string(self._get_cache_data(ADDRESS,
-                                                                      iid=iid))
+                mac = self._get_cache_data(MAC, iid=iid, decode=True).upper()
+                address = self._get_cache_data(ADDRESS, iid=iid, decode=True)
                 # try to find/predict and compute the rest
                 try:
-                    gateway = encoding.get_as_string(
-                        self._get_cache_data(GATEWAY, iid=iid))
+                    gateway = self._get_cache_data(GATEWAY, iid=iid,
+                                                   decode=True)
                 except base.NotExistingMetadataException:
                     gateway = None
                 try:
-                    netmask = encoding.get_as_string(
-                        self._get_cache_data(NETMASK, iid=iid))
+                    netmask = self._get_cache_data(NETMASK, iid=iid,
+                                                   decode=True)
                 except base.NotExistingMetadataException:
                     if not gateway:
                         raise
@@ -244,8 +242,8 @@ class OpenNebulaService(base.BaseMetadataService):
                     broadcast=broadcast,
                     gateway=gateway,
                     gateway6=None,
-                    dnsnameservers=encoding.get_as_string(
-                        self._get_cache_data(DNSNS, iid=iid)).split(" ")
+                    dnsnameservers=self._get_cache_data(
+                        DNSNS, iid=iid, decode=True).split(" ")
                 )
             except base.NotExistingMetadataException:
                 LOG.debug("Incomplete NIC details")

@@ -14,6 +14,11 @@
 
 import six
 
+from cloudbaseinit.openstack.common import log as logging
+
+
+LOG = logging.getLogger(__name__)
+
 
 def get_as_string(value):
     if value is None or isinstance(value, six.text_type):
@@ -22,7 +27,9 @@ def get_as_string(value):
         try:
             return value.decode()
         except Exception:
-            pass
+            # This is important, because None will be returned,
+            # but not that serious to raise an exception.
+            LOG.error("Couldn't decode: %r", value)
 
 
 def write_file(target_path, data, mode='wb'):
@@ -31,13 +38,3 @@ def write_file(target_path, data, mode='wb'):
 
     with open(target_path, mode) as f:
         f.write(data)
-
-
-def read_file(target_path, mode='rb'):
-    with open(target_path, mode) as f:
-        data = f.read()
-
-    if 'b' in mode:
-        data = data.decode()
-
-    return data

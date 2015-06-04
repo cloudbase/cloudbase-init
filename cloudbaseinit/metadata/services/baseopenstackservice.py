@@ -51,9 +51,9 @@ class BaseOpenStackService(base.BaseMetadataService):
     def _get_meta_data(self, version='latest'):
         path = posixpath.normpath(
             posixpath.join('openstack', version, 'meta_data.json'))
-        data = self._get_cache_data(path)
+        data = self._get_cache_data(path, decode=True)
         if data:
-            return json.loads(encoding.get_as_string(data))
+            return json.loads(data)
 
     def get_instance_id(self):
         return self._get_meta_data().get('uuid')
@@ -136,10 +136,10 @@ class BaseOpenStackService(base.BaseMetadataService):
         if not certs:
             # Look if the user_data contains a PEM certificate
             try:
-                user_data = self.get_user_data()
+                user_data = self.get_user_data().strip()
                 if user_data.startswith(
                         x509constants.PEM_HEADER.encode()):
-                    certs.append(user_data)
+                    certs.append(encoding.get_as_string(user_data))
             except base.NotExistingMetadataException:
                 LOG.debug("user_data metadata not present")
 

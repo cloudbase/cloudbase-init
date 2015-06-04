@@ -70,11 +70,11 @@ class TestBaseOpenStackService(unittest.TestCase):
     @mock.patch(MODPATH +
                 ".BaseOpenStackService._get_cache_data")
     def test_get_meta_data(self, mock_get_cache_data):
-        mock_get_cache_data.return_value = b'{"fake": "data"}'
+        mock_get_cache_data.return_value = '{"fake": "data"}'
         response = self._service._get_meta_data(
             version='fake version')
         path = posixpath.join('openstack', 'fake version', 'meta_data.json')
-        mock_get_cache_data.assert_called_with(path)
+        mock_get_cache_data.assert_called_with(path, decode=True)
         self.assertEqual({"fake": "data"}, response)
 
     @mock.patch(MODPATH +
@@ -151,7 +151,7 @@ class TestBaseOpenStackService(unittest.TestCase):
         if isinstance(ret_value, bytes) and ret_value.startswith(
                 x509constants.PEM_HEADER.encode()):
             mock_get_user_data.assert_called_once_with()
-            self.assertEqual([ret_value], response)
+            self.assertEqual([ret_value.decode()], response)
         elif ret_value is base.NotExistingMetadataException:
             self.assertFalse(response)
         else:

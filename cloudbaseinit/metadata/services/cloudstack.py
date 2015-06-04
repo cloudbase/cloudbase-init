@@ -21,6 +21,7 @@ from six.moves import urllib
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils import encoding
 
 LOG = logging.getLogger(__name__)
 
@@ -104,11 +105,11 @@ class CloudStack(base.BaseMetadataService):
 
     def get_instance_id(self):
         """Instance name of the virtual machine."""
-        return self._get_cache_data('instance-id')
+        return self._get_cache_data('instance-id', decode=True)
 
     def get_host_name(self):
         """Hostname of the virtual machine."""
-        return self._get_cache_data('local-hostname')
+        return self._get_cache_data('local-hostname', decode=True)
 
     def get_user_data(self):
         """User data for this virtual machine."""
@@ -117,7 +118,9 @@ class CloudStack(base.BaseMetadataService):
     def get_public_keys(self):
         """Available ssh public keys."""
         ssh_keys = []
-        for ssh_key in self._get_cache_data('public-keys').splitlines():
+        ssh_chunks = self._get_cache_data('public-keys',
+                                          decode=True).splitlines()
+        for ssh_key in ssh_chunks:
             ssh_key = ssh_key.strip()
             if not ssh_key:
                 continue
@@ -155,14 +158,13 @@ class CloudStack(base.BaseMetadataService):
 
                 if response.status != 200:
                     LOG.warning("Getting password failed: %(status)s "
-                                "%(reason)s - %(message)s",
+                                "%(reason)s - %(message)r",
                                 {"status": response.status,
                                  "reason": response.reason,
                                  "message": response.read()})
                     continue
 
-                content = response.read()
-                content = content.strip()
+                content = response.read().strip()
                 if not content:
                     LOG.warning("The Password Server did not have any "
                                 "password for the current instance.")
@@ -180,7 +182,7 @@ class CloudStack(base.BaseMetadataService):
 
                 LOG.info("The password server return a valid password "
                          "for the current instance.")
-                password = content.decode()
+                password = encoding.get_as_string(content)
                 break
 
         return password
@@ -201,14 +203,14 @@ class CloudStack(base.BaseMetadataService):
             response = connection.getresponse()
             if response.status != 200:
                 LOG.warning("Removing password failed: %(status)s "
-                            "%(reason)s - %(message)s",
+                            "%(reason)s - %(message)r",
                             {"status": response.status,
                              "reason": response.reason,
                              "message": response.read()})
                 continue
 
             content = response.read()
-            if content.decode() != BAD_REQUEST:
+            if content != BAD_REQUEST:    # comparing bytes with bytes
                 LOG.info("The password was removed from the Password Server.")
                 break
         else:
