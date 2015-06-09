@@ -1,4 +1,4 @@
-# Copyright 2012 Cloudbase Solutions Srl
+# Copyright 2015 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,23 +14,25 @@
 
 from oslo_log import log as oslo_logging
 
-from cloudbaseinit.osutils import factory as osutils_factory
-from cloudbaseinit.plugins.common import base
+from cloudbaseinit.osutils import factory
+from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
+    base
+)
 from cloudbaseinit.utils import hostname
+
 
 LOG = oslo_logging.getLogger(__name__)
 
 
-class SetHostNamePlugin(base.BasePlugin):
-    def execute(self, service, shared_data):
-        osutils = osutils_factory.get_os_utils()
-        metadata_host_name = service.get_host_name()
+class SetHostnamePlugin(base.BaseCloudConfigPlugin):
+    """Change the hostname for the underlying platform.
 
-        if not metadata_host_name:
-            LOG.debug('Hostname not found in metadata')
-            return base.PLUGIN_EXECUTION_DONE, False
+    If the timezone is changed a restart will be required.
 
-        (_, reboot_required) = hostname.set_hostname(
-            osutils, metadata_host_name)
+    """
 
-        return base.PLUGIN_EXECUTION_DONE, reboot_required
+    def process(self, data):
+        LOG.info("Changing hostname to %r", data)
+        osutils = factory.get_os_utils()
+        _, reboot_required = hostname.set_hostname(osutils, data)
+        return reboot_required

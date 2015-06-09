@@ -42,6 +42,8 @@ TAG_REGEX = {
     )
 }
 
+NO_REBOOT = 0
+
 # important return values range
 RET_START = 1001
 RET_END = 1003

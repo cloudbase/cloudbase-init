@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_log import log as oslo_logging
 import yaml
 
+from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     factory
@@ -37,7 +38,6 @@ OPTS = [
 CONF = cfg.CONF
 CONF.register_opts(OPTS)
 DEFAULT_ORDER_VALUE = 999
-REBOOT = 1001
 
 
 class CloudConfigError(Exception):
@@ -80,7 +80,7 @@ class CloudConfigPluginExecutor(object):
 
     def execute(self):
         """Call each plugin, in the order requested by the user."""
-        reboot = 0
+        reboot = execcmd.NO_REBOOT
         plugins = factory.load_plugins()
         for plugin_name, value in self._expected_plugins:
             method = plugins.get(plugin_name)
@@ -91,7 +91,7 @@ class CloudConfigPluginExecutor(object):
             try:
                 requires_reboot = method(value)
                 if requires_reboot:
-                    reboot = REBOOT
+                    reboot = execcmd.RET_END
             except Exception:
                 LOG.exception("Processing plugin %s failed", plugin_name)
         return reboot
