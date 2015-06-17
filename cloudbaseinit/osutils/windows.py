@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import contextlib
 import ctypes
 from ctypes import wintypes
 import os
@@ -32,7 +32,6 @@ import wmi
 from cloudbaseinit import exception
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
-from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import network
 from cloudbaseinit.utils.windows import privilege
 from cloudbaseinit.utils.windows import timezone
@@ -739,61 +738,68 @@ class WindowsUtils(base.BaseOSUtils):
         else:
             return (None, None)
 
-    def _get_ipv4_routing_table(self):
-        routing_table = []
-
-        heap = kernel32.GetProcessHeap()
-
-        size = wintypes.ULONG(ctypes.sizeof(Win32_MIB_IPFORWARDTABLE))
-        p = kernel32.HeapAlloc(heap, 0, ctypes.c_size_t(size.value))
-        if not p:
+    @staticmethod
+    def _heap_alloc(heap, size):
+        table_mem = kernel32.HeapAlloc(heap, 0, ctypes.c_size_t(size.value))
+        if not table_mem:
             raise exception.CloudbaseInitException(
                 'Unable to allocate memory for the IP forward table')
+        return table_mem
+
+    @contextlib.contextmanager
+    def _get_forward_table(self):
+        heap = kernel32.GetProcessHeap()
+        forward_table_size = ctypes.sizeof(Win32_MIB_IPFORWARDTABLE)
+        size = wintypes.ULONG(forward_table_size)
+        table_mem = self._heap_alloc(heap, size)
+
         p_forward_table = ctypes.cast(
-            p, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
+            table_mem, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
 
         try:
             err = iphlpapi.GetIpForwardTable(p_forward_table,
                                              ctypes.byref(size), 0)
             if err == self.ERROR_INSUFFICIENT_BUFFER:
                 kernel32.HeapFree(heap, 0, p_forward_table)
-                p = kernel32.HeapAlloc(heap, 0, ctypes.c_size_t(size.value))
-                if not p:
-                    raise exception.CloudbaseInitException(
-                        'Unable to allocate memory for the IP forward table')
+                table_mem = self._heap_alloc(heap, size)
                 p_forward_table = ctypes.cast(
-                    p, ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
+                    table_mem,
+                    ctypes.POINTER(Win32_MIB_IPFORWARDTABLE))
+                err = iphlpapi.GetIpForwardTable(p_forward_table,
+                                                 ctypes.byref(size), 0)
 
-            err = iphlpapi.GetIpForwardTable(p_forward_table,
-                                             ctypes.byref(size), 0)
-            if err != self.ERROR_NO_DATA:
-                if err:
-                    raise exception.CloudbaseInitException(
-                        'Unable to get IP forward table. Error: %s' % err)
+            if err and err != kernel32.ERROR_NO_DATA:
+                raise exception.CloudbaseInitException(
+                    'Unable to get IP forward table. Error: %s' % err)
 
-                forward_table = p_forward_table.contents
-                table = ctypes.cast(
-                    ctypes.addressof(forward_table.table),
-                    ctypes.POINTER(Win32_MIB_IPFORWARDROW *
-                                   forward_table.dwNumEntries)).contents
-
-                i = 0
-                while i < forward_table.dwNumEntries:
-                    row = table[i]
-                    routing_table.append((
-                        encoding.get_as_string(Ws2_32.inet_ntoa(
-                            row.dwForwardDest)),
-                        encoding.get_as_string(Ws2_32.inet_ntoa(
-                            row.dwForwardMask)),
-                        encoding.get_as_string(Ws2_32.inet_ntoa(
-                            row.dwForwardNextHop)),
-                        row.dwForwardIfIndex,
-                        row.dwForwardMetric1))
-                    i += 1
-
-            return routing_table
+            yield p_forward_table
         finally:
             kernel32.HeapFree(heap, 0, p_forward_table)
+
+    def _get_ipv4_routing_table(self):
+        routing_table = []
+        with self._get_forward_table() as p_forward_table:
+            forward_table = p_forward_table.contents
+            table = ctypes.cast(
+                ctypes.addressof(forward_table.table),
+                ctypes.POINTER(Win32_MIB_IPFORWARDROW *
+                               forward_table.dwNumEntries)).contents
+
+            for row in table:
+                destination = Ws2_32.inet_ntoa(
+                    row.dwForwardDest).decode()
+                netmask = Ws2_32.inet_ntoa(
+                    row.dwForwardMask).decode()
+                gateway = Ws2_32.inet_ntoa(
+                    row.dwForwardNextHop).decode()
+                routing_table.append((
+                    destination,
+                    netmask,
+                    gateway,
+                    row.dwForwardIfIndex,
+                    row.dwForwardMetric1))
+
+        return routing_table
 
     def check_static_route_exists(self, destination):
         return len([r for r in self._get_ipv4_routing_table()

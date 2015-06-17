@@ -83,6 +83,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self.windows_utils.WindowsError = mock.MagicMock()
 
         self._winutils = self.windows_utils.WindowsUtils()
+        self._kernel32 = self._windll_mock.kernel32
+        self._iphlpapi = self._windll_mock.iphlpapi
 
     def tearDown(self):
         self._module_patcher.stop()
@@ -1538,3 +1540,152 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             mock.sentinel.windows_timezone)
         mock_timezone.Timezone.return_value.set.assert_called_once_with(
             self._winutils)
+
+    def _test__heap_alloc(self, fail):
+        mock_heap = mock.Mock()
+        mock_size = mock.Mock()
+
+        if fail:
+            self._kernel32.HeapAlloc.return_value = None
+
+            with self.assertRaises(exception.CloudbaseInitException) as cm:
+                self._winutils._heap_alloc(mock_heap, mock_size)
+
+            self.assertEqual('Unable to allocate memory for the IP '
+                             'forward table',
+                             str(cm.exception))
+        else:
+            result = self._winutils._heap_alloc(mock_heap, mock_size)
+            self.assertEqual(self._kernel32.HeapAlloc.return_value, result)
+
+        self._kernel32.HeapAlloc.assert_called_once_with(
+            mock_heap, 0, self._ctypes_mock.c_size_t(mock_size.value))
+
+    def test__heap_alloc_error(self):
+        self._test__heap_alloc(fail=True)
+
+    def test__heap_alloc_no_error(self):
+        self._test__heap_alloc(fail=False)
+
+    def test__get_forward_table_no_memory(self):
+        self._winutils._heap_alloc = mock.Mock()
+        error_msg = 'Unable to allocate memory for the IP forward table'
+        exc = exception.CloudbaseInitException(error_msg)
+        self._winutils._heap_alloc.side_effect = exc
+
+        with self.assertRaises(exception.CloudbaseInitException) as cm:
+            with self._winutils._get_forward_table():
+                pass
+
+        self.assertEqual(error_msg, str(cm.exception))
+        self._winutils._heap_alloc.assert_called_once_with(
+            self._kernel32.GetProcessHeap.return_value,
+            self._ctypes_mock.wintypes.ULONG.return_value)
+
+    def test__get_forward_table_insufficient_buffer_no_memory(self):
+        self._kernel32.HeapAlloc.side_effect = (mock.sentinel.table_mem, None)
+        self._iphlpapi.GetIpForwardTable.return_value = (
+            self._winutils.ERROR_INSUFFICIENT_BUFFER)
+
+        with self.assertRaises(exception.CloudbaseInitException):
+            with self._winutils._get_forward_table():
+                pass
+
+        table = self._ctypes_mock.cast.return_value
+        self._iphlpapi.GetIpForwardTable.assert_called_once_with(
+            table,
+            self._ctypes_mock.byref.return_value, 0)
+        heap_calls = [
+            mock.call(self._kernel32.GetProcessHeap.return_value, 0, table),
+            mock.call(self._kernel32.GetProcessHeap.return_value, 0, table)
+        ]
+        self.assertEqual(heap_calls, self._kernel32.HeapFree.mock_calls)
+
+    def _test__get_forward_table(self, reallocation=False,
+                                 insufficient_buffer=False,
+                                 fail=False):
+        if fail:
+            with self.assertRaises(exception.CloudbaseInitException) as cm:
+                with self._winutils._get_forward_table():
+                    pass
+
+            msg = ('Unable to get IP forward table. Error: %s'
+                   % mock.sentinel.error)
+            self.assertEqual(msg, str(cm.exception))
+        else:
+            with self._winutils._get_forward_table() as table:
+                pass
+            pointer = self._ctypes_mock.POINTER(
+                self._iphlpapi.Win32_MIB_IPFORWARDTABLE)
+            expected_forward_table = self._ctypes_mock.cast(
+                self._kernel32.HeapAlloc.return_value, pointer)
+            self.assertEqual(expected_forward_table, table)
+
+        heap_calls = [
+            mock.call(self._kernel32.GetProcessHeap.return_value, 0,
+                      self._ctypes_mock.cast.return_value)
+        ]
+        forward_calls = [
+            mock.call(self._ctypes_mock.cast.return_value,
+                      self._ctypes_mock.byref.return_value, 0),
+        ]
+        if insufficient_buffer:
+            # We expect two calls for GetIpForwardTable
+            forward_calls.append(forward_calls[0])
+        if reallocation:
+            heap_calls.append(heap_calls[0])
+        self.assertEqual(heap_calls, self._kernel32.HeapFree.mock_calls)
+        self.assertEqual(forward_calls,
+                         self._iphlpapi.GetIpForwardTable.mock_calls)
+
+    def test__get_forward_table_sufficient_buffer(self):
+        self._iphlpapi.GetIpForwardTable.return_value = None
+        self._test__get_forward_table()
+
+    def test__get_forward_table_insufficient_buffer_reallocate(self):
+        self._kernel32.HeapAlloc.side_effect = (
+            mock.sentinel.table_mem, mock.sentinel.table_mem)
+        self._iphlpapi.GetIpForwardTable.side_effect = (
+            self._winutils.ERROR_INSUFFICIENT_BUFFER, None)
+
+        self._test__get_forward_table(reallocation=True,
+                                      insufficient_buffer=True)
+
+    def test__get_forward_table_insufficient_buffer_other_error(self):
+        self._kernel32.HeapAlloc.side_effect = (
+            mock.sentinel.table_mem, mock.sentinel.table_mem)
+        self._iphlpapi.GetIpForwardTable.side_effect = (
+            self._winutils.ERROR_INSUFFICIENT_BUFFER, mock.sentinel.error)
+
+        self._test__get_forward_table(reallocation=True,
+                                      insufficient_buffer=True,
+                                      fail=True)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                '_get_forward_table')
+    def test_routes(self, mock_forward_table):
+        def _same(arg):
+            return arg._mock_name.encode()
+
+        route = mock.MagicMock()
+        mock_cast_result = mock.Mock()
+        mock_cast_result.contents = [route]
+        self._ctypes_mock.cast.return_value = mock_cast_result
+        self.windows_utils.Ws2_32.inet_ntoa.side_effect = _same
+        route.dwForwardIfIndex = 'dwForwardIfIndex'
+        route.dwForwardProto = 'dwForwardProto'
+        route.dwForwardMetric1 = 'dwForwardMetric1'
+        routes = self._winutils._get_ipv4_routing_table()
+
+        mock_forward_table.assert_called_once_with()
+        enter = mock_forward_table.return_value.__enter__
+        enter.assert_called_once_with()
+        exit_ = mock_forward_table.return_value.__exit__
+        exit_.assert_called_once_with(None, None, None)
+        self.assertEqual(1, len(routes))
+        given_route = routes[0]
+        self.assertEqual('dwForwardDest', given_route[0])
+        self.assertEqual('dwForwardMask', given_route[1])
+        self.assertEqual('dwForwardNextHop', given_route[2])
+        self.assertEqual('dwForwardIfIndex', given_route[3])
+        self.assertEqual('dwForwardMetric1', given_route[4])
