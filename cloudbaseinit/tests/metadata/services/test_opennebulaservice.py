@@ -17,10 +17,7 @@ import re
 import textwrap
 import unittest
 
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
+import mock
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import opennebulaservice
@@ -31,7 +28,7 @@ ADDRESS = "192.168.122.101"
 NETMASK = "255.255.255.0"
 BROADCAST = "192.168.122.255"
 GATEWAY = "192.168.122.1"
-DNSNS = "8.8.8.8"
+DNSNS = "8.8.8.8 8.8.4.4"
 PUBLIC_KEY = ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDJitRvac/fr1jWrZw"
               "j6mgDxlrBN2xAtKExtm5cPkexQUuxTma61ZijP/aWiQg9Q93baSwsBi"
               "IPM0SO1ro0szv84cC9GmSHWVOnCVWGY3nojplqL5VfV9NDLlmSceFc5"
@@ -129,26 +126,30 @@ class TestOpenNebulaService(_TestOpenNebulaService):
             VAR1='1'
             var2='abcdef'
             VAR_VAR3='aaa.bbb.123.ccc'
+            # suddenly, a comment
             VaR4='aaa
             bbb
             x -- c
             d: e
             '
+            ivar=10
         """)
-        if crlf:
-            content = content.replace("\n", "\r\n")
         if comment:
             content += "# A simple comment\n"
-        pairs = self._service._parse_shell_variables(content)
+        if crlf:
+            content = content.replace("\n", "\r\n")
+        pairs = self._service._parse_shell_variables(content.encode())
         _pairs = {
-            "VAR1": "1",
-            "var2": "abcdef",
-            "VAR_VAR3": "aaa.bbb.123.ccc",
-            "VaR4": "aaa\nbbb\nx -- c\nd: e\n"
+            "VAR1": b"1",
+            "var2": b"abcdef",
+            "VAR_VAR3": b"aaa.bbb.123.ccc",
+            "VaR4": b"aaa\nbbb\nx -- c\nd: e\n",
+            "ivar": 10
         }
         if crlf:
             for key, value in _pairs.items():
-                _pairs[key] = value.replace("\n", "\r\n")
+                if isinstance(value, bytes):
+                    _pairs[key] = value.replace(b"\n", b"\r\n")
         self.assertEqual(_pairs, pairs)
 
     def test_parse_shell_variables(self):
@@ -233,7 +234,7 @@ class TestOpenNebulaService(_TestOpenNebulaService):
         self._test_load(level=3)
 
     @mock.patch("six.moves.builtins.open",
-                new=mock.mock_open(read_data=CONTEXT))
+                new=mock.mock_open(read_data=CONTEXT.encode()))
     def test_get_data(self):
         eclass = base.NotExistingMetadataException
         with self.assertRaises(eclass):
@@ -241,9 +242,9 @@ class TestOpenNebulaService(_TestOpenNebulaService):
         self._service._context_path = "path"
         with self.assertRaises(eclass):
             self._service._get_data("smt")
-        open.assert_called_once_with("path", "r")
+        open.assert_called_once_with("path", "rb")
         var = opennebulaservice.ADDRESS[0].format(iid=0)
-        ret = self._service._get_data(var)
+        ret = self._service._get_data(var).decode()
         self.assertEqual(ADDRESS, ret)
 
 
@@ -254,7 +255,7 @@ class TestLoadedOpenNebulaService(_TestOpenNebulaService):
         self.load_context()
 
     def load_context(self, context=CONTEXT):
-        self._service._raw_content = context
+        self._service._raw_content = context.encode()
         vardict = self._service._parse_shell_variables(
             self._service._raw_content
         )
@@ -265,7 +266,7 @@ class TestLoadedOpenNebulaService(_TestOpenNebulaService):
         with self.assertRaises(base.NotExistingMetadataException):
             self._service._get_cache_data(names)
         names.append(opennebulaservice.ADDRESS[0].format(iid=0))
-        ret = self._service._get_cache_data(names)
+        ret = self._service._get_cache_data(names).decode()
         self.assertEqual(ADDRESS, ret)
 
     def test_get_instance_id(self):
@@ -282,7 +283,7 @@ class TestLoadedOpenNebulaService(_TestOpenNebulaService):
 
     def test_get_user_data(self):
         self.assertEqual(
-            USER_DATA,
+            USER_DATA.encode(),
             self._service.get_user_data()
         )
 

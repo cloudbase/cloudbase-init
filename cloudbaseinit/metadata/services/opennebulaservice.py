@@ -25,6 +25,7 @@ import six
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils import encoding
 
 
 LOG = logging.getLogger(__name__)
@@ -74,26 +75,24 @@ class OpenNebulaService(base.BaseMetadataService):
 
         This is a dummy approach, because it works only with simple literals.
         """
-        crlf_sep = "\r\n"
-        sep = "\n"
-        if crlf_sep in content:
-            sep = crlf_sep
         # preprocess the content
         lines = []
-        for line in content.split(sep):
-            if not line or line.startswith("#"):
+        for line in content.splitlines():
+            if not line or line.startswith(b"#"):
                 continue
             lines.append(line)
         # for cleaner pattern matching
-        lines.append("__REGEX_DUMMY__='__regex_dummy__'")
+        lines.append(b"__REGEX_DUMMY__='__regex_dummy__'")
+        sep = b"\r\n" if b"\r\n" in content else b"\n"
         new_content = sep.join(lines)
         # get pairs
         pairs = {}
-        pattern = (r"(?P<key>\w+)=(['\"](?P<str_value>[\s\S]+?)['\"]|"
-                   r"(?P<int_value>\d+))(?=\s+\w+=)")
+        pattern = (br"(?P<key>\w+)=(['\"](?P<str_value>[\s\S]+?)['\"]|"
+                   br"(?P<int_value>\d+))(?=\s+\w+=)")
         for match in re.finditer(pattern, new_content):
-            pairs[match.group("key")] = (match.group("str_value") or
-                                         int(match.group("int_value")))
+            key = encoding.get_as_string(match.group("key"))
+            pairs[key] = (match.group("str_value") or
+                          int(match.group("int_value")))
         return pairs
 
     @staticmethod
@@ -131,7 +130,7 @@ class OpenNebulaService(base.BaseMetadataService):
                 msg = "No metadata file path found"
                 LOG.debug(msg)
                 raise base.NotExistingMetadataException(msg)
-            with open(self._context_path, "r") as fin:
+            with open(self._context_path, "rb") as fin:
                 self._raw_content = fin.read()
             # fill the dict with values
             vardict = OpenNebulaService._parse_shell_variables(
@@ -189,13 +188,14 @@ class OpenNebulaService(base.BaseMetadataService):
         return INSTANCE_ID
 
     def get_host_name(self):
-        return self._get_cache_data(HOST_NAME)
+        return encoding.get_as_string(self._get_cache_data(HOST_NAME))
 
     def get_user_data(self):
         return self._get_cache_data(USER_DATA)
 
     def get_public_keys(self):
-        return self._get_cache_data(PUBLIC_KEY).splitlines()
+        return encoding.get_as_string(
+            self._get_cache_data(PUBLIC_KEY)).splitlines()
 
     def get_network_details(self):
         """Return a list of NetworkDetails objects.
@@ -211,15 +211,19 @@ class OpenNebulaService(base.BaseMetadataService):
         for iid in range(ncount):
             try:
                 # get existing values
-                mac = self._get_cache_data(MAC, iid=iid).upper()
-                address = self._get_cache_data(ADDRESS, iid=iid)
+                mac = encoding.get_as_string(
+                    self._get_cache_data(MAC, iid=iid)).upper()
+                address = encoding.get_as_string(self._get_cache_data(ADDRESS,
+                                                                      iid=iid))
                 # try to find/predict and compute the rest
                 try:
-                    gateway = self._get_cache_data(GATEWAY, iid=iid)
+                    gateway = encoding.get_as_string(
+                        self._get_cache_data(GATEWAY, iid=iid))
                 except base.NotExistingMetadataException:
                     gateway = None
                 try:
-                    netmask = self._get_cache_data(NETMASK, iid=iid)
+                    netmask = encoding.get_as_string(
+                        self._get_cache_data(NETMASK, iid=iid))
                 except base.NotExistingMetadataException:
                     if not gateway:
                         raise
@@ -236,8 +240,8 @@ class OpenNebulaService(base.BaseMetadataService):
                     broadcast=broadcast,
                     gateway=gateway,
                     gateway6=None,
-                    dnsnameservers=self._get_cache_data(DNSNS,
-                                                        iid=iid).split(" ")
+                    dnsnameservers=encoding.get_as_string(
+                        self._get_cache_data(DNSNS, iid=iid)).split(" ")
                 )
             except base.NotExistingMetadataException:
                 LOG.debug("Incomplete NIC details")
