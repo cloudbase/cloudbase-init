@@ -55,8 +55,6 @@ class UserDataPlugin(base.BasePlugin):
 
     def _parse_mime(self, user_data):
         user_data_str = encoding.get_as_string(user_data)
-        LOG.debug('User data content:\n%s' % user_data_str)
-
         return email.message_from_string(user_data_str).walk()
 
     def _process_user_data(self, user_data):
