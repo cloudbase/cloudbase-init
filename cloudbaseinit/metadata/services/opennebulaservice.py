@@ -123,8 +123,8 @@ class OpenNebulaService(base.BaseMetadataService):
         broadcast = socket.inet_ntoa(struct.pack("!L", broadcast_ulong))
         return broadcast
 
-    def _get_data(self, name):
-        # get the content if it's not already retrieved
+    def _parse_context(self):
+        # Get the content if it's not already retrieved and parse it.
         if not self._raw_content:
             if not self._context_path:
                 msg = "No metadata file path found"
@@ -137,7 +137,9 @@ class OpenNebulaService(base.BaseMetadataService):
                 self._raw_content
             )
             self._dict_content.update(vardict)
-        # return the requested value
+
+    def _get_data(self, name):
+        # Return the requested field's value or raise an error if not found.
         if name not in self._dict_content:
             msg = "Metadata {} not found".format(name)
             LOG.debug(msg)
@@ -179,6 +181,8 @@ class OpenNebulaService(base.BaseMetadataService):
                          {"label": label, "drive": drive,
                           "file_path": file_path})
                 self._context_path = file_path
+                # Load and parse the file on-site.
+                self._parse_context()
                 return True
         LOG.error("No drive or context file found")
         return False

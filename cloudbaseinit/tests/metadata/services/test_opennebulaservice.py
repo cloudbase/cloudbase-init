@@ -119,6 +119,8 @@ class _TestOpenNebulaService(unittest.TestCase):
         self._service = opennebulaservice.OpenNebulaService()
 
 
+@mock.patch("six.moves.builtins.open",
+            new=mock.mock_open(read_data=CONTEXT.encode()))
 class TestOpenNebulaService(_TestOpenNebulaService):
 
     def _test_parse_shell_variables(self, crlf=False, comment=False):
@@ -233,16 +235,19 @@ class TestOpenNebulaService(_TestOpenNebulaService):
     def test_load_relevant_drive(self):
         self._test_load(level=3)
 
-    @mock.patch("six.moves.builtins.open",
-                new=mock.mock_open(read_data=CONTEXT.encode()))
-    def test_get_data(self):
-        eclass = base.NotExistingMetadataException
-        with self.assertRaises(eclass):
-            self._service._get_data("smt")
+    def test_parse_context(self):
+        with self.assertRaises(base.NotExistingMetadataException):
+            self._service._parse_context()
         self._service._context_path = "path"
-        with self.assertRaises(eclass):
+        self._service._parse_context()
+        open.assert_called_with("path", "rb")
+        self.assertTrue(self._service._dict_content)
+
+    def test_get_data(self):
+        self._service._context_path = "path"
+        self._service._parse_context()
+        with self.assertRaises(base.NotExistingMetadataException):
             self._service._get_data("smt")
-        open.assert_called_once_with("path", "rb")
         var = opennebulaservice.ADDRESS[0].format(iid=0)
         ret = self._service._get_data(var).decode()
         self.assertEqual(ADDRESS, ret)
