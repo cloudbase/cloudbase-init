@@ -263,6 +263,9 @@ class WindowsUtils(base.BaseOSUtils):
     ERROR_OLD_WIN_VERSION = 1150
     ERROR_NO_MORE_FILES = 18
 
+    ADS_UF_PASSWORD_EXPIRED = 0x800000
+    PASSWORD_CHANGED_FLAG = 1
+
     INVALID_HANDLE_VALUE = 0xFFFFFFFF
 
     FILE_SHARE_READ = 1
@@ -1108,3 +1111,11 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "The given timezone name is unrecognised: %r" % timezone_name)
         timezone.Timezone(windows_name).set(self)
+
+    def change_password_next_logon(self, username):
+        """Force the given user to change the password at next logon."""
+        user = self._get_adsi_object(object_name=username,
+                                     object_type='user')
+        user.Put('PasswordExpired', self.PASSWORD_CHANGED_FLAG)
+        user.Put('UserFlags', self.ADS_UF_PASSWORD_EXPIRED)
+        user.SetInfo()

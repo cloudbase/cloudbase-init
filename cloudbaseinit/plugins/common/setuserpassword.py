@@ -50,18 +50,20 @@ class SetUserPasswordPlugin(base.BasePlugin):
             return list(public_keys)[0]
 
     def _get_password(self, service, shared_data):
+        injected = False
         if CONF.inject_user_password:
             password = service.get_admin_password()
         else:
             password = None
 
         if password:
+            injected = True
             LOG.warn('Using admin_pass metadata user password. Consider '
                      'changing it as soon as possible')
         else:
             password = shared_data.get(constants.SHARED_DATA_PASSWORD)
 
-        return password
+        return password, injected
 
     def _set_metadata_password(self, password, service):
         if service.is_password_set:
@@ -93,7 +95,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
             LOG.info('Updating password is not required.')
             return None
 
-        password = self._get_password(service, shared_data)
+        password, injected = self._get_password(service, shared_data)
         if not password:
             LOG.debug('Generating a random user password')
             maximum_length = osutils.get_maximum_password_length()
@@ -101,7 +103,15 @@ class SetUserPasswordPlugin(base.BasePlugin):
                 maximum_length)
 
         osutils.set_user_password(user_name, password)
+        self.post_set_password(user_name, password,
+                               password_injected=injected)
         return password
+
+    def post_set_password(self, username, password, password_injected=False):
+        """Executes post set password logic.
+
+        This is called by :meth:`execute` after the password was set.
+        """
 
     def execute(self, service, shared_data):
         # TODO(alexpilotti): The username selection logic must be set in the
