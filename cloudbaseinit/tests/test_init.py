@@ -23,6 +23,7 @@ from oslo.config import cfg
 
 from cloudbaseinit import init
 from cloudbaseinit.plugins.common import base
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
@@ -135,6 +136,7 @@ class InitManagerTest(unittest.TestCase):
     def test_check_plugin_os_requirements_other_requirenments(self):
         self._test_check_plugin_os_requirements(('linux', (5, 2)))
 
+    @mock.patch('cloudbaseinit.version.get_version')
     @mock.patch('cloudbaseinit.init.InitManager'
                 '._check_plugin_os_requirements')
     @mock.patch('cloudbaseinit.init.InitManager._exec_plugin')
@@ -144,16 +146,28 @@ class InitManagerTest(unittest.TestCase):
     def test_configure_host(self, mock_get_metadata_service,
                             mock_get_os_utils, mock_load_plugins,
                             mock_exec_plugin,
-                            mock_check_os_requirements):
+                            mock_check_os_requirements,
+                            mock_get_version):
+        instance_id = 'fake id'
+        name = 'fake name'
+        version = 'version'
+        mock_get_version.return_value = version
         fake_service = mock.MagicMock()
         fake_plugin = mock.MagicMock()
         mock_load_plugins.return_value = [fake_plugin]
         mock_get_os_utils.return_value = self.osutils
         mock_get_metadata_service.return_value = fake_service
-        fake_service.get_name.return_value = 'fake name'
-        fake_service.get_instance_id.return_value = 'fake id'
+        fake_service.get_name.return_value = name
+        fake_service.get_instance_id.return_value = instance_id
+        expected_logging = [
+            'Cloudbase-Init version: %s' % version,
+            'Metadata service loaded: %r' % name,
+            'Instance id: %s' % instance_id
+        ]
 
-        self._init.configure_host()
+        with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
+            self._init.configure_host()
+        self.assertEqual(expected_logging, snatcher.output)
 
         self.osutils.wait_for_boot_completion.assert_called_once_with()
         mock_get_metadata_service.assert_called_once_with()
