@@ -15,6 +15,7 @@
 import os
 import pkgutil
 import tempfile
+import textwrap
 import unittest
 
 try:
@@ -26,6 +27,7 @@ from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import userdata
 from cloudbaseinit.tests.metadata import fake_json_response
+from cloudbaseinit.tests import testutils
 
 
 class FakeService(object):
@@ -101,15 +103,25 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('email.message_from_string')
     @mock.patch('cloudbaseinit.utils.encoding.get_as_string')
-    def test_parse_mime(self, mock_get_as_string, mock_message_from_string):
-        fake_user_data = 'fake data'
+    def test_parse_mime(self, mock_get_as_string,
+                        mock_message_from_string):
+        fake_user_data = textwrap.dedent('''
+        -----BEGIN CERTIFICATE-----
+        MIIDGTCCAgGgAwIBAgIJAN5fj7R5dNrMMA0GCSqGSIb3DQEBCwUAMCExHzAdBgNV
+        BAMTFmNsb3VkYmFzZS1pbml0LWV4YW1wbGUwHhcNMTUwNDA4MTIyNDI1WhcNMjUw
+        ''')
+        expected_logging = ['User data content:\n%s' % fake_user_data]
+        mock_get_as_string.return_value = fake_user_data
 
-        response = self._userdata._parse_mime(user_data=fake_user_data)
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdata') as snatcher:
+            response = self._userdata._parse_mime(user_data=fake_user_data)
 
         mock_get_as_string.assert_called_once_with(fake_user_data)
         mock_message_from_string.assert_called_once_with(
             mock_get_as_string.return_value)
         self.assertEqual(response, mock_message_from_string().walk())
+        self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.userdataplugins.factory.'
                 'load_plugins')
@@ -277,6 +289,27 @@ class UserDataPluginTest(unittest.TestCase):
         mock_get_plugin_return_value.assert_called_once_with(
             mock_execute_user_data_script())
         self.assertEqual(mock_get_plugin_return_value.return_value, response)
+
+    @mock.patch('cloudbaseinit.plugins.common.userdatautils'
+                '.execute_user_data_script')
+    def test_process_non_multipart_dont_process_x509(
+            self, mock_execute_user_data_script):
+        user_data = textwrap.dedent('''
+        -----BEGIN CERTIFICATE-----
+        MIIC9zCCAd8CAgPoMA0GCSqGSIb3DQEBBQUAMBsxGTAXBgNVBAMUEHVidW50dUBs
+        b2NhbGhvc3QwHhcNMTUwNjE1MTAyODUxWhcNMjUwNjEyMTAyODUxWjAbMRkwFwYD
+        -----END CERTIFICATE-----
+        ''').encode()
+        with testutils.LogSnatcher('cloudbaseinit.plugins.'
+                                   'common.userdata') as snatcher:
+            status, reboot = self._userdata._process_non_multi_part(
+                user_data=user_data)
+
+        expected_logging = ['Found X509 certificate in userdata']
+        self.assertFalse(mock_execute_user_data_script.called)
+        self.assertEqual(expected_logging, snatcher.output)
+        self.assertEqual(1, status)
+        self.assertFalse(reboot)
 
     @mock.patch('cloudbaseinit.plugins.common.userdataplugins.factory.'
                 'load_plugins')

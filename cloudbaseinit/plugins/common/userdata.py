@@ -23,6 +23,7 @@ from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common.userdataplugins import factory
 from cloudbaseinit.plugins.common import userdatautils
 from cloudbaseinit.utils import encoding
+from cloudbaseinit.utils import x509constants
 
 
 LOG = logging.getLogger(__name__)
@@ -54,8 +55,10 @@ class UserDataPlugin(base.BasePlugin):
 
         return user_data
 
-    def _parse_mime(self, user_data):
+    @staticmethod
+    def _parse_mime(user_data):
         user_data_str = encoding.get_as_string(user_data)
+        LOG.debug('User data content:\n%s', user_data_str)
         return email.message_from_string(user_data_str).walk()
 
     def _process_user_data(self, user_data):
@@ -144,10 +147,13 @@ class UserDataPlugin(base.BasePlugin):
         handler_func(None, "__end__", None, None)
 
     def _process_non_multi_part(self, user_data):
+        ret_val = None
         if user_data.startswith(b'#cloud-config'):
             user_data_plugins = factory.load_plugins()
             cloud_config_plugin = user_data_plugins.get('text/cloud-config')
             ret_val = cloud_config_plugin.process_non_multipart(user_data)
+        elif user_data.strip().startswith(x509constants.PEM_HEADER.encode()):
+            LOG.debug('Found X509 certificate in userdata')
         else:
             ret_val = userdatautils.execute_user_data_script(user_data)
 
