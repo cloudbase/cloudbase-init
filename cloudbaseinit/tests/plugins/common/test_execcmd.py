@@ -22,6 +22,7 @@ try:
 except ImportError:
     import mock
 
+from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.tests import testutils
 
@@ -163,3 +164,15 @@ class TestExecCmd(unittest.TestCase):
 
     def test_process_ec2_order(self, _):
         self._test_process_ec2()
+
+    def test_get_plugin_return_value(self, _):
+        ret_val_map = {
+            0: (base.PLUGIN_EXECUTION_DONE, False),
+            1: (base.PLUGIN_EXECUTION_DONE, False),
+            "invalid": (base.PLUGIN_EXECUTION_DONE, False),
+            1001: (base.PLUGIN_EXECUTION_DONE, True),
+            1002: (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False),
+            1003: (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, True),
+        }
+        for ret_val, expect in ret_val_map.items():
+            self.assertEqual(expect, execcmd.get_plugin_return_value(ret_val))

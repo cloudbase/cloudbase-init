@@ -156,8 +156,8 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
                 '._add_part_handlers')
-    @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
-                '._get_plugin_return_value')
+    @mock.patch('cloudbaseinit.plugins.common.execcmd'
+                '.get_plugin_return_value')
     def _test_process_part(self, mock_get_plugin_return_value,
                            mock_add_part_handlers,
                            handler_func, user_data_plugin, content_type):
@@ -267,8 +267,8 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.common.userdatautils'
                 '.execute_user_data_script')
-    @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
-                '._get_plugin_return_value')
+    @mock.patch('cloudbaseinit.plugins.common.execcmd'
+                '.get_plugin_return_value')
     def test_process_non_multi_part(self, mock_get_plugin_return_value,
                                     mock_execute_user_data_script):
         user_data = b'fake'
@@ -280,8 +280,8 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.common.userdataplugins.factory.'
                 'load_plugins')
-    @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
-                '._get_plugin_return_value')
+    @mock.patch('cloudbaseinit.plugins.common.execcmd'
+                '.get_plugin_return_value')
     def test_process_non_multi_part_cloud_config(
             self, mock_get_plugin_return_value, mock_load_plugins):
         user_data = b'#cloud-config'

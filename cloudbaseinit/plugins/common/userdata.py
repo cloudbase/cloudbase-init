@@ -19,6 +19,7 @@ import io
 from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common import base
+from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common.userdataplugins import factory
 from cloudbaseinit.plugins.common import userdatautils
 from cloudbaseinit.utils import encoding
@@ -114,7 +115,7 @@ class UserDataPlugin(base.BasePlugin):
                        'filename': part.get_filename()})
             LOG.exception(ex)
 
-        return self._get_plugin_return_value(ret_val)
+        return execcmd.get_plugin_return_value(ret_val)
 
     def _add_part_handlers(self, user_data_plugins, user_handlers,
                            new_user_handlers):
@@ -142,22 +143,6 @@ class UserDataPlugin(base.BasePlugin):
         LOG.debug("Calling part handler \"__end__\" event")
         handler_func(None, "__end__", None, None)
 
-    def _get_plugin_return_value(self, ret_val):
-        plugin_status = base.PLUGIN_EXECUTION_DONE
-        reboot = False
-
-        try:
-            ret_val = int(ret_val)
-        except (ValueError, TypeError):
-            ret_val = 0
-
-        if ret_val and 1001 <= ret_val <= 1003:
-            reboot = bool(ret_val & 1)
-            if ret_val & 2:
-                plugin_status = base.PLUGIN_EXECUTE_ON_NEXT_BOOT
-
-        return (plugin_status, reboot)
-
     def _process_non_multi_part(self, user_data):
         if user_data.startswith(b'#cloud-config'):
             user_data_plugins = factory.load_plugins()
@@ -166,4 +151,4 @@ class UserDataPlugin(base.BasePlugin):
         else:
             ret_val = userdatautils.execute_user_data_script(user_data)
 
-        return self._get_plugin_return_value(ret_val)
+        return execcmd.get_plugin_return_value(ret_val)
