@@ -35,10 +35,10 @@ class UserDataPlugin(base.BasePlugin):
         try:
             user_data = service.get_user_data()
         except metadata_services_base.NotExistingMetadataException:
-            return (base.PLUGIN_EXECUTION_DONE, False)
+            return base.PLUGIN_EXECUTION_DONE, False
 
         if not user_data:
-            return (base.PLUGIN_EXECUTION_DONE, False)
+            return base.PLUGIN_EXECUTION_DONE, False
 
         LOG.debug('User data content length: %d' % len(user_data))
         user_data = self._check_gzip_compression(user_data)
@@ -76,7 +76,7 @@ class UserDataPlugin(base.BasePlugin):
                 for handler_func in list(set(user_handlers.values())):
                     self._end_part_process_event(handler_func)
 
-            return (plugin_status, reboot)
+            return plugin_status, reboot
         else:
             return self._process_non_multi_part(user_data)
 

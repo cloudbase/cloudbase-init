@@ -65,7 +65,7 @@ class NTPClientPlugin(base.BasePlugin):
 
             if not ntp_option_data:
                 LOG.debug("Could not obtain the NTP configuration via DHCP")
-                return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+                return base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False
 
             ntp_hosts = self._unpack_ntp_hosts(ntp_option_data)
 
@@ -74,4 +74,4 @@ class NTPClientPlugin(base.BasePlugin):
 
             LOG.info('NTP client configured. Server(s): %s' % ntp_hosts)
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return base.PLUGIN_EXECUTION_DONE, False

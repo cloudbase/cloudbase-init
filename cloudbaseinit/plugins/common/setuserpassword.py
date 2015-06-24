@@ -129,6 +129,6 @@ class SetUserPasswordPlugin(base.BasePlugin):
             # If the metadata provider can update the password, the plugin
             # must run at every boot in order to update the password if
             # it was changed.
-            return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+            return base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False
         else:
-            return (base.PLUGIN_EXECUTION_DONE, False)
+            return base.PLUGIN_EXECUTION_DONE, False

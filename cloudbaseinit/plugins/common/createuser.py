@@ -88,4 +88,4 @@ class BaseCreateUserPlugin(base.BasePlugin):
             except Exception:
                 LOG.exception('Cannot add user to group "%s"', group_name)
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return base.PLUGIN_EXECUTION_DONE, False

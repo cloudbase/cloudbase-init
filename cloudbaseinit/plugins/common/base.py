@@ -22,7 +22,7 @@ class BasePlugin(object):
         return self.__class__.__name__
 
     def get_os_requirements(self):
-        return (None, None)
+        return None, None
 
     def execute(self, service, shared_data):
         pass

@@ -107,4 +107,4 @@ class PhysicalDisk(object):
         if not ret_val:
             raise exception.WindowsCloudbaseInitException(
                 "Read exception: %r")
-        return (buf, bytes_read.value)
+        return buf, bytes_read.value

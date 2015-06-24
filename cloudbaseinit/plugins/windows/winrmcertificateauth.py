@@ -53,7 +53,7 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
         # as it is currently not needed by other plugins
         shared_data[constants.SHARED_DATA_PASSWORD] = None
 
-        return (user_name, password)
+        return user_name, password
 
     def execute(self, service, shared_data):
         user_name, password = self._get_credentials(service, shared_data)
@@ -62,7 +62,7 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
         if not certs_data:
             LOG.info("WinRM certificate authentication cannot be configured "
                      "as a certificate has not been provided in the metadata")
-            return (base.PLUGIN_EXECUTION_DONE, False)
+            return base.PLUGIN_EXECUTION_DONE, False
 
         osutils = osutils_factory.get_os_utils()
         security_utils = security.WindowsSecurityUtils()
@@ -112,4 +112,4 @@ class ConfigWinRMCertificateAuthPlugin(base.BasePlugin):
                 LOG.debug("Enabling UAC remote restrictions")
                 security_utils.set_uac_remote_restrictions(enable=True)
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return base.PLUGIN_EXECUTION_DONE, False

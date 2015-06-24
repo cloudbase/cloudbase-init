@@ -71,14 +71,14 @@ def _parse_dhcp_reply(data, id_req):
     message_type = struct.unpack('b', data[0:1])[0]
 
     if message_type != 2:
-        return (False, {})
+        return False, {}
 
     id_reply = struct.unpack('!L', data[4:8])[0]
     if id_reply != id_req:
-        return (False, {})
+        return False, {}
 
     if data[236:240] != _DHCP_COOKIE:
-        return (False, {})
+        return False, {}
 
     options = {}
 
@@ -91,7 +91,7 @@ def _parse_dhcp_reply(data, id_req):
         options[id_option] = data[i: i + option_data_len]
         i += option_data_len
 
-    return (True, options)
+    return True, options
 
 
 def _get_mac_address_by_local_ip(ip_addr):

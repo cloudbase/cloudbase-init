@@ -65,7 +65,7 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
         security_utils = security.WindowsSecurityUtils()
 
         if not self._check_winrm_service(osutils):
-            return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+            return base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False
 
         # On Windows Vista, 2008, 2008 R2 and 7, changing the configuration of
         # the winrm service will fail with an "Access is denied" error if the
@@ -110,4 +110,4 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
                 LOG.debug("Enabling UAC remote restrictions")
                 security_utils.set_uac_remote_restrictions(enable=True)
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return base.PLUGIN_EXECUTION_DONE, False

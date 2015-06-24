@@ -32,7 +32,7 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
         public_keys = service.get_public_keys()
         if not public_keys:
             LOG.debug('Public keys not found in metadata')
-            return (base.PLUGIN_EXECUTION_DONE, False)
+            return base.PLUGIN_EXECUTION_DONE, False
 
         username = CONF.username
 
@@ -55,4 +55,4 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
                 # All public keys are space-stripped.
                 f.write(public_key + "\n")
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return base.PLUGIN_EXECUTION_DONE, False

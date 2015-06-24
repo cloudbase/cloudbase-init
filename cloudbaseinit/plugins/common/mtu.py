@@ -52,4 +52,4 @@ class MTUPlugin(base.BasePlugin):
                         LOG.debug('Could not obtain the MTU configuration '
                                   'via DHCP for interface "%s"' % mac_address)
 
-        return (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False)
+        return base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False

@@ -67,4 +67,4 @@ class WindowsLicensingPlugin(base.BasePlugin):
             activation_result = self._run_slmgr(osutils, ['/ato'])
             LOG.debug("Activation result:\n%s" % activation_result)
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return base.PLUGIN_EXECUTION_DONE, False

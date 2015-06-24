@@ -389,7 +389,7 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.WindowsCloudbaseInitException(
                 "Cannot get user SID: %r")
 
-        return (sid, domainName.value)
+        return sid, domainName.value
 
     def add_user_to_local_group(self, username, groupname):
 
@@ -734,9 +734,9 @@ class WindowsUtils(base.BaseOSUtils):
         default_routes = [r for r in self._get_ipv4_routing_table()
                           if r[0] == '0.0.0.0']
         if default_routes:
-            return (default_routes[0][3], default_routes[0][2])
+            return default_routes[0][3], default_routes[0][2]
         else:
-            return (None, None)
+            return None, None
 
     @staticmethod
     def _heap_alloc(heap, size):

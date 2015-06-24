@@ -46,7 +46,7 @@ class BaseOSUtils(object):
             out = out.decode(sys.stdout.encoding)
             err = err.decode(sys.stdout.encoding)
 
-        return (out, err, p.returncode)
+        return out, err, p.returncode
 
     def sanitize_shell_input(self, value):
         raise NotImplementedError()

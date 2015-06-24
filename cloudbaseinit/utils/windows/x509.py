@@ -285,7 +285,7 @@ class CryptoAPICertManager(object):
                 upn = upn_ar.value
 
             thumbprint = self._get_cert_thumprint(cert_context_p)
-            return (thumbprint, upn)
+            return thumbprint, upn
         finally:
             if cert_context_p:
                 cryptoapi.CertFreeCertificateContext(cert_context_p)
