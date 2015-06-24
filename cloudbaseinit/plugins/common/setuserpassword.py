@@ -49,7 +49,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
         if public_keys:
             return list(public_keys)[0]
 
-    def _get_password(self, service, osutils, shared_data):
+    def _get_password(self, service, shared_data):
         if CONF.inject_user_password:
             password = service.get_admin_password()
         else:
@@ -93,7 +93,7 @@ class SetUserPasswordPlugin(base.BasePlugin):
             LOG.info('Updating password is not required.')
             return None
 
-        password = self._get_password(service, osutils, shared_data)
+        password = self._get_password(service, shared_data)
         if not password:
             LOG.debug('Generating a random user password')
             maximum_length = osutils.get_maximum_password_length()

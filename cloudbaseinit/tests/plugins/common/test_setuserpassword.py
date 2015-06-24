@@ -81,12 +81,10 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                 mock.sentinel.create_user_password)
 
         mock_service = mock.MagicMock()
-        mock_osutils = mock.MagicMock()
         mock_service.get_admin_password.return_value = expected_password
 
         with testutils.ConfPatcher('inject_user_password', inject_password):
             response = self._setpassword_plugin._get_password(mock_service,
-                                                              mock_osutils,
                                                               shared_data)
         if inject_password:
             mock_service.get_admin_password.assert_called_with()
@@ -188,7 +186,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         if not can_update_password or is_password_changed:
             mock_get_password.assert_called_once_with(
-                mock_service, mock_osutils, mock.sentinel.shared_data)
+                mock_service, mock.sentinel.shared_data)
 
         self.assertEqual(expected_password, response)
         self.assertEqual(expected_logging, snatcher.output)
