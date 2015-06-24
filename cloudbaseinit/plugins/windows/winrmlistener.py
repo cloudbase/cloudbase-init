@@ -22,8 +22,6 @@ from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
 
-LOG = logging.getLogger(__name__)
-
 opts = [
     cfg.BoolOpt('winrm_enable_basic_auth', default=True,
                 help='Enables basic authentication for the WinRM '
