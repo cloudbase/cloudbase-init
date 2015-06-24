@@ -30,7 +30,6 @@ FORMATS = {
 
 def exec_file(file_path):
     ret_val = 0
-    out = err = None
     ext = os.path.splitext(file_path)[1][1:].lower()
     command = FORMATS.get(ext)
     if not command:
