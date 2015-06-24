@@ -33,14 +33,6 @@ from cloudbaseinit.openstack.common import log as logging
 
 CONF = cfg.CONF
 
-__all__ = (
-    'create_tempfile',
-    'create_tempdir',
-    'LogSnatcher',
-    'CloudbaseInitTestBase',
-    'ConfPatcher',
-)
-
 
 @contextlib.contextmanager
 def create_tempdir():

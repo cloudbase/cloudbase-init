@@ -17,11 +17,6 @@ import abc
 import six
 
 
-__all__ = (
-    'BaseCloudConfigPlugin',
-)
-
-
 @six.add_metaclass(abc.ABCMeta)
 class BaseCloudConfigPlugin(object):
     """Base plugin class for cloud-config plugins."""
