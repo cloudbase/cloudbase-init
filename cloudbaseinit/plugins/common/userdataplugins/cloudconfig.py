@@ -37,6 +37,7 @@ OPTS = [
 CONF = cfg.CONF
 CONF.register_opts(OPTS)
 DEFAULT_ORDER_VALUE = 999
+REBOOT = 1001
 
 
 class CloudConfigError(Exception):
@@ -79,7 +80,7 @@ class CloudConfigPluginExecutor(object):
 
     def execute(self):
         """Call each plugin, in the order requested by the user."""
-
+        reboot = 0
         plugins = factory.load_plugins()
         for plugin_name, value in self._expected_plugins:
             method = plugins.get(plugin_name)
@@ -88,9 +89,12 @@ class CloudConfigPluginExecutor(object):
                 continue
 
             try:
-                method(value)
+                requires_reboot = method(value)
+                if requires_reboot:
+                    reboot = REBOOT
             except Exception:
                 LOG.exception("Processing plugin %s failed", plugin_name)
+        return reboot
 
 
 class CloudConfigPlugin(base.BaseUserDataPlugin):
@@ -99,14 +103,18 @@ class CloudConfigPlugin(base.BaseUserDataPlugin):
         super(CloudConfigPlugin, self).__init__("text/cloud-config")
 
     def process_non_multipart(self, part):
-        """Process the given data, if it can be loaded through yaml."""
+        """Process the given data, if it can be loaded through yaml.
+
+        If any plugin requires a reboot, it will return a particular
+        value, which will be processed on a higher level.
+        """
         try:
             executor = CloudConfigPluginExecutor.from_yaml(part)
         except CloudConfigError:
             LOG.error("Could not process the type %r", type(part))
         else:
-            executor.execute()
+            return executor.execute()
 
     def process(self, part):
         payload = part.get_payload()
-        self.process_non_multipart(payload)
+        return self.process_non_multipart(payload)

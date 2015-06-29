@@ -267,38 +267,32 @@ class UserDataPluginTest(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.plugins.common.userdatautils'
                 '.execute_user_data_script')
-    @mock.patch('cloudbaseinit.plugins.common.execcmd'
-                '.get_plugin_return_value')
-    def test_process_non_multi_part(self, mock_get_plugin_return_value,
-                                    mock_execute_user_data_script):
+    def test_process_non_multi_part(self, mock_execute_user_data_script):
         user_data = b'fake'
-        response = self._userdata._process_non_multi_part(user_data=user_data)
+        status, reboot = self._userdata._process_non_multi_part(
+            user_data=user_data)
         mock_execute_user_data_script.assert_called_once_with(user_data)
-        mock_get_plugin_return_value.assert_called_once_with(
-            mock_execute_user_data_script())
-        self.assertEqual(mock_get_plugin_return_value.return_value, response)
+        self.assertEqual(status, 1)
+        self.assertFalse(reboot)
 
     @mock.patch('cloudbaseinit.plugins.common.userdataplugins.factory.'
                 'load_plugins')
-    @mock.patch('cloudbaseinit.plugins.common.execcmd'
-                '.get_plugin_return_value')
-    def test_process_non_multi_part_cloud_config(
-            self, mock_get_plugin_return_value, mock_load_plugins):
+    def test_process_non_multi_part_cloud_config(self, mock_load_plugins):
         user_data = b'#cloud-config'
         mock_return_value = mock.sentinel.return_value
         mock_cloud_config_plugin = mock.Mock()
         mock_cloud_config_plugin.process.return_value = mock_return_value
-        mock_get_plugin_return_value.return_value = mock_return_value
         mock_load_plugins.return_value = {
             'text/cloud-config': mock_cloud_config_plugin}
-        return_value = self._userdata._process_non_multi_part(
+        status, reboot = self._userdata._process_non_multi_part(
             user_data=user_data)
 
         mock_load_plugins.assert_called_once_with()
         (mock_cloud_config_plugin
          .process_non_multipart
          .assert_called_once_with(user_data))
-        self.assertEqual(mock_return_value, return_value)
+        self.assertEqual(status, 1)
+        self.assertFalse(reboot)
 
 
 class TestCloudConfig(unittest.TestCase):
@@ -321,10 +315,13 @@ class TestCloudConfig(unittest.TestCase):
                                                    b64_binary=b64_binary,
                                                    gzip=gz,
                                                    gzip_binary=gz_binary))
-        self.plugin.execute(service, {})
+        status, reboot = self.plugin.execute(service, {})
 
         for path in (b64, b64_binary, gz, gz_binary):
             self.assertTrue(os.path.exists(path),
                             "Path {} should exist.".format(path))
             with open(path) as stream:
                 self.assertEqual('42', stream.read())
+
+        self.assertEqual(status, 1)
+        self.assertFalse(reboot)
