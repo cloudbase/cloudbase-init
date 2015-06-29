@@ -21,6 +21,7 @@ from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugins_base
 from cloudbaseinit.plugins.common import factory as plugins_factory
+from cloudbaseinit import version
 
 opts = [
     cfg.BoolOpt('allow_reboot', default=True, help='Allows OS reboots '
@@ -94,6 +95,8 @@ class InitManager(object):
         return supported
 
     def configure_host(self):
+        LOG.info('Cloudbase-Init version: %s', version.get_version())
+
         osutils = osutils_factory.get_os_utils()
         osutils.wait_for_boot_completion()
 
