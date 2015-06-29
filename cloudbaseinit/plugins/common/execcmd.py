@@ -21,6 +21,7 @@ import uuid
 
 from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.plugins.common import base
 
 
 LOG = logging.getLogger(__name__)
@@ -39,6 +40,10 @@ TAG_REGEX = {
         "ps1"
     )
 }
+
+# important return values range
+RET_START = 1001
+RET_END = 1003
 
 
 def _ec2_find_sections(data):
@@ -72,6 +77,23 @@ def _split_sections(multicmd):
         else:
             command = PowershellSysnative.from_data(code)
         yield command
+
+
+def get_plugin_return_value(ret_val):
+    plugin_status = base.PLUGIN_EXECUTION_DONE
+    reboot = False
+
+    try:
+        ret_val = int(ret_val)
+    except (ValueError, TypeError):
+        ret_val = 0
+
+    if ret_val and RET_START <= ret_val <= RET_END:
+        reboot = bool(ret_val & 1)
+        if ret_val & 2:
+            plugin_status = base.PLUGIN_EXECUTE_ON_NEXT_BOOT
+
+    return plugin_status, reboot
 
 
 class BaseCommand(object):

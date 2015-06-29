@@ -43,20 +43,30 @@ class LocalScriptsPluginTests(unittest.TestCase):
             sorted(os.path.join(fake_path, f) for f in fake_file_list),
             response)
 
+    @mock.patch('cloudbaseinit.plugins.common.execcmd'
+                '.get_plugin_return_value')
     @testutils.ConfPatcher('local_scripts_path',
                            mock.sentinel.mock_local_scripts_path)
     @mock.patch('cloudbaseinit.plugins.common.localscripts'
                 '.LocalScriptsPlugin._get_files_in_dir')
     @mock.patch('cloudbaseinit.plugins.common.fileexecutils.exec_file')
-    def test_execute(self, mock_exec_file, mock_get_files_in_dir):
+    def test_execute(self, mock_exec_file, mock_get_files_in_dir,
+                     mock_get_plugin_return_value):
         mock_service = mock.MagicMock()
         fake_path = os.path.join('fake', 'path')
 
-        mock_get_files_in_dir.return_value = [fake_path]
+        mock_get_files_in_dir.return_value = [fake_path] * 2
+        mock_exec_file.side_effect = [1001, 1002]
+        mock_get_plugin_return_value.side_effect = [
+            (base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False),
+            (base.PLUGIN_EXECUTION_DONE, True),
+        ]
 
         response = self._localscripts.execute(mock_service, shared_data=None)
 
         mock_get_files_in_dir.assert_called_once_with(
             mock.sentinel.mock_local_scripts_path)
-        mock_exec_file.assert_called_once_with(fake_path)
-        self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
+        mock_exec_file.assert_called_with(fake_path)
+        mock_get_plugin_return_value.assert_any_call(1001)
+        mock_get_plugin_return_value.assert_any_call(1002)
+        self.assertEqual((base.PLUGIN_EXECUTE_ON_NEXT_BOOT, True), response)

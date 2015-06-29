@@ -17,6 +17,7 @@ import os
 from oslo.config import cfg
 
 from cloudbaseinit.plugins.common import base
+from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common import fileexecutils
 
 opts = [
@@ -36,8 +37,17 @@ class LocalScriptsPlugin(base.BasePlugin):
                        if os.path.isfile(os.path.join(path, f))])
 
     def execute(self, service, shared_data):
+        plugin_status = base.PLUGIN_EXECUTION_DONE
+        reboot = False
+
         if CONF.local_scripts_path:
             for file_path in self._get_files_in_dir(CONF.local_scripts_path):
-                fileexecutils.exec_file(file_path)
+                ret_val = fileexecutils.exec_file(file_path)
+                new_plugin_status, new_reboot = \
+                    execcmd.get_plugin_return_value(ret_val)
+                plugin_status = max(plugin_status, new_plugin_status)
+                reboot = reboot or new_reboot
+                if reboot:
+                    break
 
-        return (base.PLUGIN_EXECUTION_DONE, False)
+        return plugin_status, reboot
