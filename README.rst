@@ -71,8 +71,8 @@ plugin.
 +------------+--------------------------------+------------------+
 
 
-cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sets the cloud user's password. If a password has been provided in the
 metadata during boot (user_data) it will be used, otherwise a random password
@@ -80,11 +80,17 @@ will be generated, encrypted with the user's SSH public key and posted to the
 metadata provider (currently supported only by the OpenStack HTTP metadata
 provider).
 
-+------------------------+-------------------------------------------------------------------------------------+---------+
-| Option                 | Description                                                                         | Default |
-+========================+=====================================================================================+=========+
-| *inject_user_password* | Can be set to false to avoid the injection of the password provided in the metadata | *True*  |
-+------------------------+-------------------------------------------------------------------------------------+---------+
++-------------------------+-------------------------------------------------------------------------------------+---------------------------+
+| Option                  | Description                                                                         |         Default           |
++=========================+=====================================================================================+===========================+
+| *inject_user_password*  | Can be set to false to avoid the injection of the password provided in the metadata |         *True*            |
++-------------------------+-------------------------------------------------------------------------------------+---------------------------+
+|                         | Can control what happens with the password at the next logon. If this option        |                           |
+|                         | is set to `always`, the user will be forced to change the password at the next      |                           |
+| *first_logon_behaviour* | logon. If it is set to `clear_text_injected_only`, the user will be forced to       | *clear_text_injected_only*|
+|                         | change the password only if the password is a clear text password, coming from the  |                           |
+|                         | metadata. The last option is `no`, when the user is never forced.                   |                           |
++-------------------------+-------------------------------------------------------------------------------------+---------------------------+
 
 
 cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin
@@ -109,7 +115,7 @@ cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin
 Creates an "authorized_keys" file in the user's home directory containing the
 SSH keys provided in the metadata.
 It is needed by the
-*cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin* plugin.
+*cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin* plugin.
 
 
 cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin

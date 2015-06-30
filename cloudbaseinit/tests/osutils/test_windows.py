@@ -1689,3 +1689,18 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self.assertEqual('dwForwardNextHop', given_route[2])
         self.assertEqual('dwForwardIfIndex', given_route[3])
         self.assertEqual('dwForwardMetric1', given_route[4])
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                '_get_adsi_object')
+    def test_change_password_next_logon(self, mock_get_adsi_object):
+        self._winutils.change_password_next_logon(mock.sentinel.username)
+
+        mock_get_adsi_object.called_once_with(mock.sentinel.username)
+        user = mock_get_adsi_object.return_value
+        expected_put_call = [
+            mock.call('PasswordExpired',
+                      self._winutils.PASSWORD_CHANGED_FLAG),
+            mock.call('UserFlags', self._winutils.ADS_UF_PASSWORD_EXPIRED)
+        ]
+        self.assertEqual(expected_put_call, user.Put.mock_calls)
+        user.SetInfo.assert_called_once_with()

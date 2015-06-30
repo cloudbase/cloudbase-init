@@ -88,9 +88,10 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                                                               shared_data)
         if inject_password:
             mock_service.get_admin_password.assert_called_with()
+            expected_password = (expected_password, True)
         else:
             self.assertFalse(mock_service.get_admin_password.called)
-            expected_password = mock.sentinel.create_user_password
+            expected_password = (mock.sentinel.create_user_password, False)
 
         self.assertEqual(expected_password, response)
 
@@ -155,25 +156,29 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
+                'SetUserPasswordPlugin.post_set_password')
+    @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
                 'SetUserPasswordPlugin._get_password')
-    def _test_set_password(self, mock_get_password, password,
-                           can_update_password, is_password_changed):
+    def _test_set_password(self, mock_get_password, mock_post_set_password,
+                           password, can_update_password,
+                           is_password_changed, injected=False):
         expected_password = password
         expected_logging = []
+        user = 'fake_user'
 
-        mock_get_password.return_value = password
+        mock_get_password.return_value = (password, injected)
 
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         mock_osutils.get_maximum_password_length.return_value = None
-        mock_osutils.generate_random_password.return_value = 'fake-password'
+        mock_osutils.generate_random_password.return_value = expected_password
         mock_service.can_update_password = can_update_password
         mock_service.is_password_changed.return_value = is_password_changed
 
         with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'setuserpassword') as snatcher:
             response = self._setpassword_plugin._set_password(
-                mock_service, mock_osutils, 'fake_user',
+                mock_service, mock_osutils, user,
                 mock.sentinel.shared_data)
 
         if can_update_password and not is_password_changed:
@@ -182,7 +187,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         if not password:
             expected_logging.append('Generating a random user password')
-            expected_password = 'fake-password'
+            expected_password = password
 
         if not can_update_password or is_password_changed:
             mock_get_password.assert_called_once_with(
@@ -190,6 +195,9 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         self.assertEqual(expected_password, response)
         self.assertEqual(expected_logging, snatcher.output)
+        if password and can_update_password and is_password_changed:
+            mock_post_set_password.assert_called_once_with(
+                user, expected_password, password_injected=injected)
 
     def test_set_password(self):
         self._test_set_password(password='Password',
