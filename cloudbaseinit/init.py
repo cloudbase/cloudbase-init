@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import sys
 
 from oslo.config import cfg
@@ -29,6 +30,10 @@ opts = [
     cfg.BoolOpt('stop_service_on_exit', default=True, help='In case of '
                 'execution as a service, specifies if the service '
                 'must be gracefully stopped before exiting'),
+    cfg.BoolOpt('check_latest_version', default=True, help='Check if '
+                'there is a newer version of cloudbase-init available. '
+                'If this option is activated, a log message will be '
+                'emitted if there is a newer version available.')
 ]
 
 CONF = cfg.CONF
@@ -94,6 +99,13 @@ class InitManager(object):
                               'supported' % plugin_name)
         return supported
 
+    @staticmethod
+    def _check_latest_version():
+        if CONF.check_latest_version:
+            log_version = functools.partial(
+                LOG.info, 'Found new version of cloudbase-init %s')
+            version.check_latest_version(log_version)
+
     def configure_host(self):
         LOG.info('Cloudbase-Init version: %s', version.get_version())
 
@@ -103,6 +115,8 @@ class InitManager(object):
         service = metadata_factory.get_metadata_service()
         LOG.info('Metadata service loaded: \'%s\'' %
                  service.get_name())
+
+        self._check_latest_version()
 
         instance_id = service.get_instance_id()
         LOG.debug('Instance id: %s', instance_id)

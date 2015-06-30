@@ -136,6 +136,7 @@ class InitManagerTest(unittest.TestCase):
     def test_check_plugin_os_requirements_other_requirenments(self):
         self._test_check_plugin_os_requirements(('linux', (5, 2)))
 
+    @mock.patch('cloudbaseinit.init.InitManager._check_latest_version')
     @mock.patch('cloudbaseinit.version.get_version')
     @mock.patch('cloudbaseinit.init.InitManager'
                 '._check_plugin_os_requirements')
@@ -147,7 +148,8 @@ class InitManagerTest(unittest.TestCase):
                              mock_get_os_utils, mock_load_plugins,
                              mock_exec_plugin,
                              mock_check_os_requirements,
-                             mock_get_version, expected_logging,
+                             mock_get_version, mock_check_latest_version,
+                             expected_logging,
                              version, name, instance_id, reboot=True):
 
         mock_get_version.return_value = version
@@ -175,6 +177,7 @@ class InitManagerTest(unittest.TestCase):
             self.osutils.reboot.assert_called_once_with()
         else:
             self.assertFalse(self.osutils.reboot.called)
+        mock_check_latest_version.assert_called_once_with()
 
     def _test_configure_host_with_logging(self, extra_logging, reboot=True):
         instance_id = 'fake id'
@@ -209,3 +212,22 @@ class InitManagerTest(unittest.TestCase):
     def test_configure_host_reboot(self):
         self._test_configure_host_with_logging(
             extra_logging=['Rebooting'])
+
+    @testutils.ConfPatcher('check_latest_version', False)
+    @mock.patch('cloudbaseinit.version.check_latest_version')
+    def test_configure_host(self, mock_check_last_version):
+        self._init._check_latest_version()
+
+        self.assertFalse(mock_check_last_version.called)
+
+    @testutils.ConfPatcher('check_latest_version', True)
+    @mock.patch('functools.partial')
+    @mock.patch('cloudbaseinit.version.check_latest_version')
+    def test_configure_host_with_version_check(self, mock_check_last_version,
+                                               mock_partial):
+        self._init._check_latest_version()
+
+        mock_check_last_version.assert_called_once_with(
+            mock_partial.return_value)
+        mock_partial.assert_called_once_with(
+            init.LOG.info, 'Found new version of cloudbase-init %s')
