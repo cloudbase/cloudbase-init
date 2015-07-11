@@ -143,14 +143,13 @@ class InitManagerTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.plugins.common.factory.load_plugins')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.metadata.factory.get_metadata_service')
-    def test_configure_host(self, mock_get_metadata_service,
-                            mock_get_os_utils, mock_load_plugins,
-                            mock_exec_plugin,
-                            mock_check_os_requirements,
-                            mock_get_version):
-        instance_id = 'fake id'
-        name = 'fake name'
-        version = 'version'
+    def _test_configure_host(self, mock_get_metadata_service,
+                             mock_get_os_utils, mock_load_plugins,
+                             mock_exec_plugin,
+                             mock_check_os_requirements,
+                             mock_get_version, expected_logging,
+                             version, name, instance_id, reboot=True):
+
         mock_get_version.return_value = version
         fake_service = mock.MagicMock()
         fake_plugin = mock.MagicMock()
@@ -159,11 +158,6 @@ class InitManagerTest(unittest.TestCase):
         mock_get_metadata_service.return_value = fake_service
         fake_service.get_name.return_value = name
         fake_service.get_instance_id.return_value = instance_id
-        expected_logging = [
-            'Cloudbase-Init version: %s' % version,
-            'Metadata service loaded: %r' % name,
-            'Instance id: %s' % instance_id
-        ]
 
         with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
             self._init.configure_host()
@@ -175,6 +169,43 @@ class InitManagerTest(unittest.TestCase):
         mock_check_os_requirements.assert_called_once_with(self.osutils,
                                                            fake_plugin)
         mock_exec_plugin.assert_called_once_with(self.osutils, fake_service,
-                                                 fake_plugin, 'fake id', {})
+                                                 fake_plugin, instance_id, {})
         fake_service.cleanup.assert_called_once_with()
-        self.osutils.reboot.assert_called_once_with()
+        if reboot:
+            self.osutils.reboot.assert_called_once_with()
+        else:
+            self.assertFalse(self.osutils.reboot.called)
+
+    def _test_configure_host_with_logging(self, extra_logging, reboot=True):
+        instance_id = 'fake id'
+        name = 'fake name'
+        version = 'version'
+        expected_logging = [
+            'Cloudbase-Init version: %s' % version,
+            'Metadata service loaded: %r' % name,
+            'Instance id: %s' % instance_id,
+        ]
+        self._test_configure_host(
+            expected_logging=expected_logging + extra_logging,
+            version=version, name=name, instance_id=instance_id,
+            reboot=reboot)
+
+    @testutils.ConfPatcher('allow_reboot', False)
+    @testutils.ConfPatcher('stop_service_on_exit', False)
+    def test_configure_host_no_reboot_no_service_stopping(self):
+        self._test_configure_host_with_logging(
+            reboot=False,
+            extra_logging=['Plugins execution done'])
+
+    @testutils.ConfPatcher('allow_reboot', False)
+    @testutils.ConfPatcher('stop_service_on_exit', True)
+    def test_configure_host_no_reboot_allow_service_stopping(self):
+        self._test_configure_host_with_logging(
+            reboot=False,
+            extra_logging=['Plugins execution done',
+                           'Stopping Cloudbase-Init service'])
+
+    @testutils.ConfPatcher('allow_reboot', True)
+    def test_configure_host_reboot(self):
+        self._test_configure_host_with_logging(
+            extra_logging=['Rebooting'])

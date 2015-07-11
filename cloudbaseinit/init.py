@@ -124,8 +124,12 @@ class InitManager(object):
 
         if reboot_required and CONF.allow_reboot:
             try:
+                LOG.info("Rebooting")
                 osutils.reboot()
             except Exception as ex:
                 LOG.error('reboot failed with error \'%s\'' % ex)
-        elif CONF.stop_service_on_exit:
-            osutils.terminate()
+        else:
+            LOG.info("Plugins execution done")
+            if CONF.stop_service_on_exit:
+                LOG.info("Stopping Cloudbase-Init service")
+                osutils.terminate()
