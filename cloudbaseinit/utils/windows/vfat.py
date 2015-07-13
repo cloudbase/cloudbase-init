@@ -49,12 +49,12 @@ def is_vfat_drive(osutils, drive_path):
 
     out, err, exit_code = osutils.execute_process(args, shell=False)
     if exit_code:
-        LOG.warning("Could not retrieve label for VFAT drive path %r",
-                    drive_path)
-        LOG.warning("mlabel failed with error %r", err)
+        LOG.debug("Could not retrieve label for VFAT drive path %r",
+                  drive_path)
+        LOG.debug("mlabel failed with error %r", err)
         return False
 
-    LOG.info("Obtained label information for drive %r: %r", drive_path, out)
+    LOG.debug("Obtained label information for drive %r: %r", drive_path, out)
     out = out.decode().strip()
     match = VOLUME_LABEL_REGEX.search(out)
     return match.group(1) == CONFIG_DRIVE_LABEL
