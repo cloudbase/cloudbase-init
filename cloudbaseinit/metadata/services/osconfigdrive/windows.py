@@ -12,13 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import ctypes
+
+import itertools
 import os
 import shutil
+import struct
 import tempfile
 import uuid
 
-from ctypes import wintypes
 from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
@@ -27,6 +28,7 @@ from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import vfat
+
 
 opts = [
     cfg.StrOpt('bsdtar_path', default='bsdtar.exe',
@@ -39,83 +41,73 @@ CONF.register_opts(opts)
 
 LOG = oslo_logging.getLogger(__name__)
 
+CONFIG_DRIVE_LABEL = 'config-2'
+MAX_SECTOR_SIZE = 4096
+# Absolute offset values and the ISO magic string.
+OFFSET_BOOT_RECORD = 0x8000
+OFFSET_ISO_ID = OFFSET_BOOT_RECORD + 1
+ISO_ID = b'CD001'
+# Little-endian unsigned short size values.
+OFFSET_VOLUME_SIZE = OFFSET_BOOT_RECORD + 80
+OFFSET_BLOCK_SIZE = OFFSET_BOOT_RECORD + 128
+PEEK_SIZE = 2
+
 
 class WindowsConfigDriveManager(base.BaseConfigDriveManager):
 
-    def _get_config_drive_cdrom_mount_point(self):
-        osutils = osutils_factory.get_os_utils()
+    def __init__(self):
+        super(WindowsConfigDriveManager, self).__init__()
+        self._osutils = osutils_factory.get_os_utils()
 
-        for drive in osutils.get_cdrom_drives():
-            label = osutils.get_volume_label(drive)
-            if label == "config-2" and \
-                os.path.exists(os.path.join(drive,
-                                            'openstack\\latest\\'
-                                            'meta_data.json')):
-                return drive
-        return None
+    def _check_for_config_drive(self, drive):
+        label = self._osutils.get_volume_label(drive)
+        if label and label.lower() == CONFIG_DRIVE_LABEL and \
+            os.path.exists(os.path.join(drive,
+                                        'openstack\\latest\\'
+                                        'meta_data.json')):
+            LOG.info('Config Drive found on %s', drive)
+            return True
+        return False
 
-    def _c_char_array_to_c_ushort(self, buf, offset):
-        low = ctypes.cast(buf[offset],
-                          ctypes.POINTER(wintypes.WORD)).contents
-        high = ctypes.cast(buf[offset + 1],
-                           ctypes.POINTER(wintypes.WORD)).contents
-        return (high.value << 8) + low.value
-
-    def _get_iso_disk_size(self, phys_disk):
-        geom = phys_disk.get_geometry()
-
-        if geom.MediaType != disk.Win32_DiskGeometry.FixedMedia:
+    def _get_iso_file_size(self, device):
+        if not device.fixed:
             return None
 
-        disk_size = geom.Cylinders * geom.TracksPerCylinder * \
-            geom.SectorsPerTrack * geom.BytesPerSector
-
-        boot_record_off = 0x8000
-        id_off = 1
-        volume_size_off = 80
-        block_size_off = 128
-        iso_id = b'CD001'
-
-        offset = boot_record_off // geom.BytesPerSector * geom.BytesPerSector
-        bytes_to_read = geom.BytesPerSector
-
-        if disk_size <= offset + bytes_to_read:
+        if not device.size > (OFFSET_BLOCK_SIZE + PEEK_SIZE):
             return None
 
-        phys_disk.seek(offset)
-        (buf, bytes_read) = phys_disk.read(bytes_to_read)
-
-        buf_off = boot_record_off - offset + id_off
-        if iso_id != buf[buf_off: buf_off + len(iso_id)]:
+        off = device.seek(OFFSET_ISO_ID)
+        magic = device.read(len(ISO_ID), skip=OFFSET_ISO_ID - off)
+        if ISO_ID != magic:
             return None
 
-        buf_off = boot_record_off - offset + volume_size_off
-        num_blocks = self._c_char_array_to_c_ushort(buf, buf_off)
+        off = device.seek(OFFSET_VOLUME_SIZE)
+        volume_size_bytes = device.read(PEEK_SIZE,
+                                        skip=OFFSET_VOLUME_SIZE - off)
+        off = device.seek(OFFSET_BLOCK_SIZE)
+        block_size_bytes = device.read(PEEK_SIZE,
+                                       skip=OFFSET_BLOCK_SIZE - off)
+        volume_size = struct.unpack("<H", volume_size_bytes)[0]
+        block_size = struct.unpack("<H", block_size_bytes)[0]
 
-        buf_off = boot_record_off - offset + block_size_off
-        block_size = self._c_char_array_to_c_ushort(buf, buf_off)
+        return volume_size * block_size
 
-        return num_blocks * block_size
-
-    def _write_iso_file(self, phys_disk, path, iso_file_size):
-        with open(path, 'wb') as f:
-            geom = phys_disk.get_geometry()
+    def _write_iso_file(self, device, iso_file_path, iso_file_size):
+        with open(iso_file_path, 'wb') as stream:
             offset = 0
-            # Get a multiple of the sector byte size
-            bytes_to_read = 4096 // geom.BytesPerSector * geom.BytesPerSector
-
+            # Read multiples of the sector size bytes
+            # until the entire ISO content is written.
             while offset < iso_file_size:
-                phys_disk.seek(offset)
-                bytes_to_read = min(bytes_to_read, iso_file_size - offset)
-                (buf, bytes_read) = phys_disk.read(bytes_to_read)
-                f.write(buf)
-                offset += bytes_read
+                real_offset = device.seek(offset)
+                bytes_to_read = min(MAX_SECTOR_SIZE, iso_file_size - offset)
+                data = device.read(bytes_to_read, skip=offset - real_offset)
+                stream.write(data)
+                offset += bytes_to_read
 
-    def _extract_iso_files(self, osutils, iso_file_path, target_path):
-        os.makedirs(target_path)
-
-        args = [CONF.bsdtar_path, '-xf', iso_file_path, '-C', target_path]
-        (out, err, exit_code) = osutils.execute_process(args, False)
+    def _extract_files_from_iso(self, iso_file_path):
+        args = [CONF.bsdtar_path, '-xf', iso_file_path,
+                '-C', self.target_path]
+        (out, err, exit_code) = self._osutils.execute_process(args, False)
 
         if exit_code:
             raise exception.CloudbaseInitException(
@@ -125,72 +117,104 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                     'exit_code': exit_code,
                     'out': out, 'err': err})
 
-    def _extract_iso_disk_file(self, osutils, iso_file_path):
-        iso_disk_found = False
-        for path in osutils.get_physical_disks():
-            phys_disk = disk.PhysicalDisk(path)
-            try:
-                phys_disk.open()
-                iso_file_size = self._get_iso_disk_size(phys_disk)
-                if iso_file_size:
-                    LOG.debug('ISO9660 disk found on raw HDD: %s' % path)
-                    self._write_iso_file(phys_disk, iso_file_path,
-                                         iso_file_size)
-                    iso_disk_found = True
-                    break
-            except Exception:
-                # Ignore exception
-                pass
-            finally:
-                phys_disk.close()
-        return iso_disk_found
-
-    def _get_conf_drive_from_vfat(self, target_path):
-        osutils = osutils_factory.get_os_utils()
-        for drive_path in osutils.get_physical_disks():
-            if vfat.is_vfat_drive(osutils, drive_path):
-                LOG.info('Config Drive found on disk %r', drive_path)
-                os.makedirs(target_path)
-                vfat.copy_from_vfat_drive(osutils, drive_path, target_path)
-                return True
-
-    def get_config_drive_files(self, target_path, check_raw_hhd=True,
-                               check_cdrom=True, check_vfat=True):
-        config_drive_found = False
-
-        if check_vfat:
-            LOG.debug('Looking for Config Drive in VFAT filesystems')
-            config_drive_found = self._get_conf_drive_from_vfat(target_path)
-
-        if not config_drive_found and check_raw_hhd:
-            LOG.debug('Looking for Config Drive in raw HDDs')
-            config_drive_found = self._get_conf_drive_from_raw_hdd(
-                target_path)
-
-        if not config_drive_found and check_cdrom:
-            LOG.debug('Looking for Config Drive in cdrom drives')
-            config_drive_found = self._get_conf_drive_from_cdrom_drive(
-                target_path)
-        return config_drive_found
-
-    def _get_conf_drive_from_cdrom_drive(self, target_path):
-        cdrom_mount_point = self._get_config_drive_cdrom_mount_point()
-        if cdrom_mount_point:
-            shutil.copytree(cdrom_mount_point, target_path)
-            return True
-        return False
-
-    def _get_conf_drive_from_raw_hdd(self, target_path):
-        config_drive_found = False
+    def _extract_iso_from_devices(self, devices):
+        """Search across multiple devices for a raw ISO."""
+        extracted = False
         iso_file_path = os.path.join(tempfile.gettempdir(),
                                      str(uuid.uuid4()) + '.iso')
-        try:
-            osutils = osutils_factory.get_os_utils()
 
-            if self._extract_iso_disk_file(osutils, iso_file_path):
-                self._extract_iso_files(osutils, iso_file_path, target_path)
-                config_drive_found = True
-        finally:
-            if os.path.exists(iso_file_path):
-                os.remove(iso_file_path)
-        return config_drive_found
+        for device in devices:
+            try:
+                with device:
+                    iso_file_size = self._get_iso_file_size(device)
+                    if iso_file_size:
+                        LOG.info('ISO9660 disk found on %s', device)
+                        self._write_iso_file(device, iso_file_path,
+                                             iso_file_size)
+                        self._extract_files_from_iso(iso_file_path)
+                        extracted = True
+                        break
+            except Exception as exc:
+                LOG.warning('ISO extraction failed on %(device)s with '
+                            '%(error)r', {"device": device, "error": exc})
+
+        if os.path.isfile(iso_file_path):
+            os.remove(iso_file_path)
+        return extracted
+
+    def _get_config_drive_from_cdrom_drive(self):
+        for drive_letter in self._osutils.get_cdrom_drives():
+            if self._check_for_config_drive(drive_letter):
+                os.rmdir(self.target_path)
+                shutil.copytree(drive_letter, self.target_path)
+                return True
+
+        return False
+
+    def _get_config_drive_from_raw_hdd(self):
+        disks = map(disk.Disk, self._osutils.get_physical_disks())
+        return self._extract_iso_from_devices(disks)
+
+    def _get_config_drive_from_vfat(self):
+        for drive_path in self._osutils.get_physical_disks():
+            if vfat.is_vfat_drive(self._osutils, drive_path):
+                LOG.info('Config Drive found on disk %r', drive_path)
+                vfat.copy_from_vfat_drive(self._osutils, drive_path,
+                                          self.target_path)
+                return True
+        return False
+
+    def _get_config_drive_from_partition(self):
+        for disk_path in self._osutils.get_physical_disks():
+            physical_drive = disk.Disk(disk_path)
+            with physical_drive:
+                partitions = physical_drive.partitions()
+            extracted = self._extract_iso_from_devices(partitions)
+            if extracted:
+                return True
+        return False
+
+    def _get_config_drive_from_volume(self):
+        """Look through all the volumes for config drive."""
+        volumes = self._osutils.get_volumes()
+        for volume in volumes:
+            if self._check_for_config_drive(volume):
+                os.rmdir(self.target_path)
+                shutil.copytree(volume, self.target_path)
+                return True
+        return False
+
+    def _get_config_drive_files(self, cd_type, cd_location):
+        get_config_drive = self.config_drive_type_location.get(
+            "{}_{}".format(cd_location, cd_type))
+        if get_config_drive:
+            return get_config_drive()
+        else:
+            LOG.debug("Irrelevant type %(type)s in %(location)s location; "
+                      "skip",
+                      {"type": cd_type, "location": cd_location})
+        return False
+
+    def get_config_drive_files(self, searched_types=None,
+                               searched_locations=None):
+        searched_types = searched_types or []
+        searched_locations = searched_locations or []
+
+        for cd_type, cd_location in itertools.product(searched_types,
+                                                      searched_locations):
+            LOG.debug('Looking for Config Drive %(type)s in %(location)s',
+                      {"type": cd_type, "location": cd_location})
+            if self._get_config_drive_files(cd_type, cd_location):
+                return True
+
+        return False
+
+    @property
+    def config_drive_type_location(self):
+        return {
+            "cdrom_iso": self._get_config_drive_from_cdrom_drive,
+            "hdd_iso": self._get_config_drive_from_raw_hdd,
+            "hdd_vfat": self._get_config_drive_from_vfat,
+            "partition_iso": self._get_config_drive_from_partition,
+            "partition_vfat": self._get_config_drive_from_volume,
+        }

@@ -12,7 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import importlib
+import itertools
 import os
 import unittest
 
@@ -28,380 +30,266 @@ from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
+OPEN = mock.mock_open()
+
 
 class TestWindowsConfigDriveManager(unittest.TestCase):
 
     def setUp(self):
-        self._ctypes_mock = mock.MagicMock()
-
-        self._module_patcher = mock.patch.dict('sys.modules',
-                                               {'ctypes': self._ctypes_mock})
-
+        module_path = "cloudbaseinit.metadata.services.osconfigdrive.windows"
+        mock_ctypes = mock.MagicMock()
+        mock_ctypes.wintypes = mock.MagicMock()
+        self._module_patcher = mock.patch.dict(
+            'sys.modules',
+            {'disk': mock.Mock(),
+             'ctypes': mock_ctypes,
+             'winioctlcon': mock.Mock()})
         self._module_patcher.start()
+        self.addCleanup(self._module_patcher.stop)
+        self.conf_module = importlib.import_module(module_path)
 
-        self.windows = importlib.import_module(
-            "cloudbaseinit.metadata.services.osconfigdrive.windows")
-        self.physical_disk = importlib.import_module(
-            "cloudbaseinit.utils.windows.disk")
+        self.conf_module.osutils_factory = mock.Mock()
+        self.conf_module.disk.Disk = mock.MagicMock()
+        self.conf_module.tempfile = mock.Mock()
+        self.mock_gettempdir = self.conf_module.tempfile.gettempdir
+        self.mock_gettempdir.return_value = "tempdir"
+        self.conf_module.uuid = mock.Mock()
+        self.mock_uuid4 = self.conf_module.uuid.uuid4
+        self.mock_uuid4.return_value = "uuid"
+        self._config_manager = self.conf_module.WindowsConfigDriveManager()
+        self.addCleanup(os.rmdir, self._config_manager.target_path)
+        self.osutils = mock.Mock()
+        self._config_manager._osutils = self.osutils
+        self.snatcher = testutils.LogSnatcher(module_path)
 
-        self.physical_disk.Win32_DiskGeometry = mock.MagicMock()
-        self.windows.disk.PhysicalDisk = mock.MagicMock()
-
-        self._config_manager = self.windows.WindowsConfigDriveManager()
-
-    def tearDown(self):
-        self._module_patcher.stop()
-
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('os.path.exists')
-    def _test_get_config_drive_cdrom_mount_point(self, mock_join,
-                                                 mock_get_os_utils, exists):
-        mock_osutils = mock.MagicMock()
-        mock_get_os_utils.return_value = mock_osutils
-        mock_osutils.get_cdrom_drives.return_value = ['fake drive']
-        mock_osutils.get_volume_label.return_value = 'config-2'
-        mock_join.return_value = exists
+    def _test_check_for_config_drive(self, mock_exists, exists=True,
+                                     label="config-2", fail=False):
+        drive = "C:\\"
+        self.osutils.get_volume_label.return_value = label
+        mock_exists.return_value = exists
 
-        response = self._config_manager._get_config_drive_cdrom_mount_point()
+        with self.snatcher:
+            response = self._config_manager._check_for_config_drive(drive)
 
-        mock_osutils.get_cdrom_drives.assert_called_once_with()
-        mock_osutils.get_volume_label.assert_called_once_with('fake drive')
+        self.osutils.get_volume_label.assert_called_once_with(drive)
+        if exists and not fail:
+            self.assertEqual(["Config Drive found on C:\\"],
+                             self.snatcher.output)
+        self.assertEqual(not fail, response)
 
-        if exists:
-            self.assertEqual('fake drive', response)
-        else:
+    def test_check_for_config_drive_exists(self):
+        self._test_check_for_config_drive()
+
+    def test_check_for_config_drive_exists_upper_label(self):
+        self._test_check_for_config_drive(label="CONFIG-2")
+
+    def test_check_for_config_drive_missing(self):
+        self._test_check_for_config_drive(exists=False, fail=True)
+
+    def test_check_for_config_drive_wrong_label(self):
+        self._test_check_for_config_drive(label="config-3", fail=True)
+
+    def _test_get_iso_file_size(self, fixed=True, small=False,
+                                found_iso=True):
+        device = mock.Mock()
+        device.fixed = fixed
+        device.size = (self.conf_module.OFFSET_BLOCK_SIZE +
+                       self.conf_module.PEEK_SIZE + int(not small))
+        iso_id = self.conf_module.ISO_ID
+        if not found_iso:
+            iso_id = b"pwned"
+        iso_off = self.conf_module.OFFSET_ISO_ID - 1
+        volume_off = self.conf_module.OFFSET_VOLUME_SIZE - 1
+        block_off = self.conf_module.OFFSET_BLOCK_SIZE - 1
+        volume_bytes = b'd\x00'      # 100
+        block_bytes = b'\x00\x02'    # 512
+        device.seek.side_effect = [iso_off, volume_off, block_off]
+        device.read.side_effect = [iso_id, volume_bytes, block_bytes]
+
+        response = self._config_manager._get_iso_file_size(device)
+        if not fixed or small or not found_iso:
             self.assertIsNone(response)
+            return
 
-    def test_get_config_drive_cdrom_mount_point_exists_true(self):
-        self._test_get_config_drive_cdrom_mount_point(exists=True)
+        seek_calls = [
+            mock.call(self.conf_module.OFFSET_ISO_ID),
+            mock.call(self.conf_module.OFFSET_VOLUME_SIZE),
+            mock.call(self.conf_module.OFFSET_BLOCK_SIZE)]
+        read_calls = [
+            mock.call(len(iso_id),
+                      skip=self.conf_module.OFFSET_ISO_ID - iso_off),
+            mock.call(self.conf_module.PEEK_SIZE,
+                      skip=self.conf_module.OFFSET_VOLUME_SIZE - volume_off),
+            mock.call(self.conf_module.PEEK_SIZE,
+                      skip=self.conf_module.OFFSET_BLOCK_SIZE - block_off)]
+        device.seek.assert_has_calls(seek_calls)
+        device.read.assert_has_calls(read_calls)
+        self.assertEqual(100 * 512, response)
 
-    def test_get_config_drive_cdrom_mount_point_exists_false(self):
-        self._test_get_config_drive_cdrom_mount_point(exists=False)
+    def test_get_iso_file_size_not_fixed(self):
+        self._test_get_iso_file_size(fixed=False)
 
-    def test_c_char_array_to_c_ushort(self):
-        mock_buf = mock.MagicMock()
-        contents = self._ctypes_mock.cast.return_value.contents
+    def test_get_iso_file_size_small(self):
+        self._test_get_iso_file_size(small=True)
 
-        response = self._config_manager._c_char_array_to_c_ushort(mock_buf, 1)
+    def test_get_iso_file_size_not_found(self):
+        self._test_get_iso_file_size(found_iso=False)
 
-        self.assertEqual(2, self._ctypes_mock.cast.call_count)
-        self._ctypes_mock.POINTER.assert_called_with(
-            self._ctypes_mock.wintypes.WORD)
+    def test_get_iso_file_size(self):
+        self._test_get_iso_file_size()
 
-        self._ctypes_mock.cast.assert_called_with(
-            mock_buf.__getitem__(), self._ctypes_mock.POINTER.return_value)
+    @mock.patch("six.moves.builtins.open", new=OPEN)
+    def test_write_iso_file(self):
+        file_path = "fake\\path"
+        file_size = 100 * 512
+        sector_size = self.conf_module.MAX_SECTOR_SIZE
+        offsets = list(range(0, file_size, sector_size))
+        remain = file_size % sector_size
+        reads = ([b"\x00" * sector_size] *
+                 (len(offsets) - int(bool(remain))) +
+                 ([b"\x00" * remain] if remain else []))
 
-        self.assertEqual(contents.value.__lshift__().__add__(), response)
+        device = mock.Mock()
+        device_seek_calls = [mock.call(off) for off in offsets]
+        device_read_calls = [
+            mock.call(min(sector_size, file_size - off), skip=0)
+            for off in offsets]
+        stream_write_calls = [mock.call(read) for read in reads]
+        device.seek.side_effect = offsets
+        device.read.side_effect = reads
 
-    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._c_char_array_to_c_ushort')
-    def _test_get_iso_disk_size(self, mock_c_char_array_to_c_ushort,
-                                media_type, value, iso_id,
-                                bytes_per_sector=2):
-        if media_type == "fixed":
-            media_type = self.physical_disk.Win32_DiskGeometry.FixedMedia
+        self._config_manager._write_iso_file(device, file_path, file_size)
+        device.seek.assert_has_calls(device_seek_calls)
+        device.read.assert_has_calls(device_read_calls)
+        OPEN.return_value.write.assert_has_calls(stream_write_calls)
 
-        boot_record_off = 0x8000
-        volume_size_off = 80
-        block_size_off = 128
-
-        mock_phys_disk = mock.MagicMock()
-        mock_buff = mock.MagicMock()
-        mock_geom = mock.MagicMock()
-
-        mock_phys_disk.get_geometry.return_value = mock_geom
-
-        mock_geom.MediaType = media_type
-        mock_geom.Cylinders = value
-        mock_geom.TracksPerCylinder = 2
-        mock_geom.SectorsPerTrack = 2
-        mock_geom.BytesPerSector = bytes_per_sector
-
-        mock_phys_disk.read.return_value = (mock_buff, 'fake value')
-
-        mock_buff.__getitem__.return_value = iso_id
-        mock_c_char_array_to_c_ushort.return_value = 100
-
-        disk_size = mock_geom.Cylinders * mock_geom.TracksPerCylinder * \
-            mock_geom.SectorsPerTrack * mock_geom.BytesPerSector
-
-        offset = boot_record_off // mock_geom.BytesPerSector * \
-            mock_geom.BytesPerSector
-
-        buf_off_volume = boot_record_off - offset + volume_size_off
-        buf_off_block = boot_record_off - offset + block_size_off
-
-        response = self._config_manager._get_iso_disk_size(mock_phys_disk)
-
-        mock_phys_disk.get_geometry.assert_called_once_with()
-        if media_type != self.physical_disk.Win32_DiskGeometry.FixedMedia:
-            self.assertIsNone(response)
-
-        elif disk_size <= offset + mock_geom.BytesPerSector:
-            self.assertIsNone(response)
-
-        else:
-            mock_phys_disk.seek.assert_called_once_with(offset)
-            mock_phys_disk.read.assert_called_once_with(
-                mock_geom.BytesPerSector)
-
-            if iso_id != 'CD001':
-                self.assertIsNone(response)
-            else:
-                mock_c_char_array_to_c_ushort.assert_has_calls(
-                    mock.call(mock_buff, buf_off_volume),
-                    mock.call(mock_buff, buf_off_block))
-                self.assertEqual(10000, response)
-
-    def test_test_get_iso_disk_size(self):
-        self._test_get_iso_disk_size(
-            media_type="fixed",
-            value=100, iso_id='CD001')
-
-    def test_test_get_iso_disk_size_other_media_type(self):
-        self._test_get_iso_disk_size(media_type="other", value=100,
-                                     iso_id='CD001')
-
-    def test_test_get_iso_disk_size_other_disk_size_too_small(self):
-        self._test_get_iso_disk_size(
-            media_type="fixed",
-            value=0, iso_id='CD001')
-
-    def test_test_get_iso_disk_size_other_id(self):
-        self._test_get_iso_disk_size(
-            media_type="fixed",
-            value=100, iso_id='other id')
-
-    def test_test_get_iso_disk_size_bigger_offset(self):
-        self._test_get_iso_disk_size(
-            media_type="other media", value=100, iso_id='other id',
-            bytes_per_sector=2000)
-
-    def test_write_iso_file(self, bytes_per_sector=40):
-        mock_buff = mock.MagicMock()
-        mock_geom = mock.MagicMock()
-        mock_geom.BytesPerSector = 2
-
-        mock_phys_disk = mock.MagicMock()
-        mock_phys_disk.read.return_value = (mock_buff, 10)
-
-        fake_path = os.path.join('fake', 'path')
-
-        mock_phys_disk.get_geometry.return_value = mock_geom
-        with mock.patch('six.moves.builtins.open', mock.mock_open(),
-                        create=True) as f:
-            self._config_manager._write_iso_file(mock_phys_disk, fake_path,
-                                                 4098)
-            f().write.assert_called_with(mock_buff)
-
-        seek_calls = [mock.call(value) for value in range(0, 4098, 10)]
-        read_calls = (
-            [mock.call(4096)] +
-            [mock.call(value) for value in range(4088, 0, -10)]
-        )
-        self.assertEqual(seek_calls, mock_phys_disk.seek.mock_calls)
-        self.assertEqual(read_calls, mock_phys_disk.read.mock_calls)
-
-    @mock.patch('os.makedirs')
-    def _test_extract_iso_files(self, mock_makedirs, exit_code):
+    def _test_extract_files_from_iso(self, exit_code):
         fake_path = os.path.join('fake', 'path')
         fake_target_path = os.path.join(fake_path, 'target')
+        self._config_manager.target_path = fake_target_path
         args = [CONF.bsdtar_path, '-xf', fake_path, '-C', fake_target_path]
-        mock_os_utils = mock.MagicMock()
 
-        mock_os_utils.execute_process.return_value = ('fake out', 'fake err',
-                                                      exit_code)
+        self.osutils.execute_process.return_value = ('fake out', 'fake err',
+                                                     exit_code)
         if exit_code:
             self.assertRaises(exception.CloudbaseInitException,
-                              self._config_manager._extract_iso_files,
-                              mock_os_utils, fake_path, fake_target_path)
+                              self._config_manager._extract_files_from_iso,
+                              fake_path)
         else:
-            self._config_manager._extract_iso_files(mock_os_utils, fake_path,
-                                                    fake_target_path)
+            self._config_manager._extract_files_from_iso(fake_path)
 
-        mock_os_utils.execute_process.assert_called_once_with(args, False)
-        mock_makedirs.assert_called_once_with(fake_target_path)
+        self.osutils.execute_process.assert_called_once_with(args, False)
 
-    def test_extract_iso_files(self):
-        self._test_extract_iso_files(exit_code=None)
+    def test_extract_files_from_iso(self):
+        self._test_extract_files_from_iso(exit_code=0)
 
-    def test_extract_iso_files_exception(self):
-        self._test_extract_iso_files(exit_code=1)
+    def test_extract_files_from_iso_fail(self):
+        self._test_extract_files_from_iso(exit_code=1)
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._get_iso_disk_size')
+                'WindowsConfigDriveManager._extract_files_from_iso')
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._write_iso_file')
-    def _test_extract_iso_disk_file(self, mock_write_iso_file,
-                                    mock_get_iso_disk_size, exception):
-
-        mock_osutils = mock.MagicMock()
-        fake_path = os.path.join('fake', 'path')
-        fake_path_physical = os.path.join(fake_path, 'physical')
-
-        mock_osutils.get_physical_disks.return_value = [fake_path_physical]
-        mock_get_iso_disk_size.return_value = 'fake iso size'
-
-        mock_PhysDisk = self.windows.disk.PhysicalDisk.return_value
-
-        if exception:
-            mock_PhysDisk.open.side_effect = [Exception]
-
-        response = self._config_manager._extract_iso_disk_file(
-            osutils=mock_osutils, iso_file_path=fake_path)
-
-        if not exception:
-            mock_get_iso_disk_size.assert_called_once_with(
-                mock_PhysDisk)
-            mock_write_iso_file.assert_called_once_with(
-                mock_PhysDisk, fake_path, 'fake iso size')
-
-            self.windows.disk.PhysicalDisk.assert_called_once_with(
-                fake_path_physical)
-            mock_osutils.get_physical_disks.assert_called_once_with()
-
-            mock_PhysDisk.open.assert_called_once_with()
-            mock_PhysDisk.close.assert_called_once_with()
-
-            self.assertTrue(response)
-        else:
-            self.assertFalse(response)
-
-    def test_extract_iso_disk_file_disk_found(self):
-        self._test_extract_iso_disk_file(exception=False)
-
-    def test_extract_iso_disk_file_disk_not_found(self):
-        self._test_extract_iso_disk_file(exception=True)
-
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._get_conf_drive_from_raw_hdd')
-    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._get_conf_drive_from_cdrom_drive')
-    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._get_conf_drive_from_vfat')
-    def _test_get_config_drive_files(self,
-                                     mock_get_conf_drive_from_vfat,
-                                     mock_get_conf_drive_from_cdrom_drive,
-                                     mock_get_conf_drive_from_raw_hdd,
-                                     raw_hdd_found=False,
-                                     cdrom_drive_found=False,
-                                     vfat_found=False):
+                'WindowsConfigDriveManager._get_iso_file_size')
+    def _test_extract_iso_from_devices(self, mock_get_iso_file_size,
+                                       mock_write_iso_file,
+                                       mock_extract_files_from_iso,
+                                       found=True):
+        # For every device (mock) in the list of available devices:
+        #   first - skip (no size)
+        #   second - error (throws Exception)
+        #   third - extract (is ok)
+        #   fourth - unreachable (already found ok device)
+        size = 100 * 512
+        devices = [mock.MagicMock() for _ in range(4)]
+        devices[1].__enter__.side_effect = [Exception]
+        rest = [size] if found else [None]
+        mock_get_iso_file_size.side_effect = [None] + rest * 2
+        file_path = os.path.join("tempdir", "uuid.iso")
 
-        fake_path = os.path.join('fake', 'path')
-        mock_get_conf_drive_from_raw_hdd.return_value = raw_hdd_found
-        mock_get_conf_drive_from_cdrom_drive.return_value = cdrom_drive_found
-        mock_get_conf_drive_from_vfat.return_value = vfat_found
+        with self.snatcher:
+            response = self._config_manager._extract_iso_from_devices(devices)
+        self.mock_gettempdir.assert_called_once_with()
+        mock_get_iso_file_size.assert_has_calls([
+            mock.call(devices[0]), mock.call(devices[2])])
+        expected_log = [
+            "ISO extraction failed on %(device)s with %(error)r" %
+            {"device": devices[1], "error": Exception()}]
+        if found:
+            mock_write_iso_file.assert_called_once_with(devices[2],
+                                                        file_path, size)
+            mock_extract_files_from_iso.assert_called_once_with(file_path)
+            expected_log.append("ISO9660 disk found on %s" % devices[2])
+        self.assertEqual(expected_log, self.snatcher.output)
+        self.assertEqual(found, response)
 
-        response = self._config_manager.get_config_drive_files(
-            target_path=fake_path)
+    def test_extract_iso_from_devices_not_found(self):
+        self._test_extract_iso_from_devices(found=False)
 
-        if vfat_found:
-            mock_get_conf_drive_from_vfat.assert_called_once_with(fake_path)
-            self.assertFalse(mock_get_conf_drive_from_raw_hdd.called)
-            self.assertFalse(mock_get_conf_drive_from_cdrom_drive.called)
-        elif cdrom_drive_found:
-            mock_get_conf_drive_from_vfat.assert_called_once_with(fake_path)
-            mock_get_conf_drive_from_cdrom_drive.assert_called_once_with(
-                fake_path)
-            mock_get_conf_drive_from_raw_hdd.assert_called_once_with(
-                fake_path)
-        elif raw_hdd_found:
-            mock_get_conf_drive_from_vfat.assert_called_once_with(fake_path)
-            mock_get_conf_drive_from_raw_hdd.assert_called_once_with(
-                fake_path)
-            self.assertFalse(mock_get_conf_drive_from_cdrom_drive.called)
-        self.assertTrue(response)
-
-    def test_get_config_drive_files(self):
-        self._test_get_config_drive_files(raw_hdd_found=True)
-        self._test_get_config_drive_files(cdrom_drive_found=True)
-        self._test_get_config_drive_files(vfat_found=True)
+    def test_extract_iso_from_devices(self):
+        self._test_extract_iso_from_devices()
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager.'
-                '_get_config_drive_cdrom_mount_point')
+                '_check_for_config_drive')
     @mock.patch('shutil.copytree')
-    def _test_get_conf_drive_from_cdrom_drive(self, mock_copytree,
-                                              mock_get_config_cdrom_mount,
-                                              mount_point):
-        fake_path = os.path.join('fake', 'path')
-        mock_get_config_cdrom_mount.return_value = mount_point
+    @mock.patch('os.rmdir')
+    def _test_get_config_drive_from_cdrom_drive(self, mock_os_rmdir,
+                                                mock_copytree,
+                                                mock_check_for_config_drive,
+                                                found=True):
+        drives = ["C:\\", "M:\\", "I:\\", "N:\\"]
+        self.osutils.get_cdrom_drives.return_value = drives
+        checks = [False, False, True, False]
+        if not found:
+            checks[2] = False
+        mock_check_for_config_drive.side_effect = checks
 
-        response = self._config_manager._get_conf_drive_from_cdrom_drive(
-            fake_path)
+        response = self._config_manager._get_config_drive_from_cdrom_drive()
 
-        mock_get_config_cdrom_mount.assert_called_once_with()
+        self.osutils.get_cdrom_drives.assert_called_once_with()
+        idx = 3 if found else 4
+        check_calls = [mock.call(drive) for drive in drives[:idx]]
+        mock_check_for_config_drive.assert_has_calls(check_calls)
+        if found:
+            mock_os_rmdir.assert_called_once_with(
+                self._config_manager.target_path)
+            mock_copytree.assert_called_once_with(
+                drives[2], self._config_manager.target_path)
 
-        if mount_point:
-            mock_copytree.assert_called_once_with(mount_point, fake_path)
-            self.assertTrue(response)
-        else:
-            self.assertFalse(response)
+        self.assertEqual(found, response)
 
-    def test_get_conf_drive_from_cdrom_drive_with_mountpoint(self):
-        self._test_get_conf_drive_from_cdrom_drive(
-            mount_point='fake mount point')
+    def test_get_config_drive_from_cdrom_drive_not_found(self):
+        self._test_get_config_drive_from_cdrom_drive(found=False)
 
-    def test_get_conf_drive_from_cdrom_drive_without_mountpoint(self):
-        self._test_get_conf_drive_from_cdrom_drive(
-            mount_point=None)
+    def test_get_config_drive_from_cdrom_drive(self):
+        self._test_get_config_drive_from_cdrom_drive()
 
-    @mock.patch('os.remove')
-    @mock.patch('os.path.exists')
-    @mock.patch('tempfile.gettempdir')
-    @mock.patch('uuid.uuid4')
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._extract_iso_disk_file')
-    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
-                'WindowsConfigDriveManager._extract_iso_files')
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    def _test_get_conf_drive_from_raw_hdd(self, mock_get_os_utils,
-                                          mock_extract_iso_files,
-                                          mock_extract_iso_disk_file,
-                                          mock_uuid4, mock_gettempdir,
-                                          mock_exists, mock_remove,
-                                          found_drive):
-        fake_target_path = os.path.join('fake', 'path')
-        fake_iso_path = os.path.join('fake_dir', 'fake_id' + '.iso')
+                'WindowsConfigDriveManager.'
+                '_extract_iso_from_devices')
+    @mock.patch("six.moves.builtins.map")
+    def test_get_config_drive_from_raw_hdd(self, mock_map,
+                                           mock_extract_iso_from_devices):
+        Disk = self.conf_module.disk.Disk
+        paths = [mock.Mock() for _ in range(3)]
+        self.osutils.get_physical_disks.return_value = paths
+        mock_extract_iso_from_devices.return_value = True
 
-        mock_uuid4.return_value = 'fake_id'
-        mock_gettempdir.return_value = 'fake_dir'
-        mock_extract_iso_disk_file.return_value = found_drive
-        mock_exists.return_value = found_drive
+        response = self._config_manager._get_config_drive_from_raw_hdd()
+        mock_map.assert_called_once_with(Disk, paths)
+        self.osutils.get_physical_disks.assert_called_once_with()
+        mock_extract_iso_from_devices.assert_called_once_with(
+            mock_map.return_value)
+        self.assertTrue(response)
 
-        response = self._config_manager._get_conf_drive_from_raw_hdd(
-            fake_target_path)
-
-        mock_get_os_utils.assert_called_once_with()
-        mock_gettempdir.assert_called_once_with()
-        mock_extract_iso_disk_file.assert_called_once_with(
-            mock_get_os_utils(), fake_iso_path)
-        if found_drive:
-            mock_extract_iso_files.assert_called_once_with(
-                mock_get_os_utils(), fake_iso_path, fake_target_path)
-            mock_exists.assert_called_once_with(fake_iso_path)
-            mock_remove.assert_called_once_with(fake_iso_path)
-            self.assertTrue(response)
-        else:
-            self.assertFalse(response)
-
-    def test_get_conf_drive_from_raw_hdd_found_drive(self):
-        self._test_get_conf_drive_from_raw_hdd(found_drive=True)
-
-    def test_get_conf_drive_from_raw_hdd_no_drive_found(self):
-        self._test_get_conf_drive_from_raw_hdd(found_drive=False)
-
-    @mock.patch('os.makedirs')
     @mock.patch('cloudbaseinit.utils.windows.vfat.copy_from_vfat_drive')
     @mock.patch('cloudbaseinit.utils.windows.vfat.is_vfat_drive')
-    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    def test_get_conf_drive_from_vfat(self, mock_get_os_utils,
-                                      mock_is_vfat_drive,
-                                      mock_copy_from_vfat_drive,
-                                      mock_os_makedirs):
-
-        mock_osutils = mock_get_os_utils.return_value
-        mock_osutils.get_physical_disks.return_value = (
+    def test_get_config_drive_from_vfat(self, mock_is_vfat_drive,
+                                        mock_copy_from_vfat_drive):
+        self.osutils.get_physical_disks.return_value = (
             mock.sentinel.drive1,
             mock.sentinel.drive2,
         )
@@ -409,24 +297,160 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
         with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
                                    'osconfigdrive.windows') as snatcher:
-            response = self._config_manager._get_conf_drive_from_vfat(
-                mock.sentinel.target_path)
+            response = self._config_manager._get_config_drive_from_vfat()
 
         self.assertTrue(response)
-        mock_osutils.get_physical_disks.assert_called_once_with()
+        self.osutils.get_physical_disks.assert_called_once_with()
 
         expected_is_vfat_calls = [
-            mock.call(mock_osutils, mock.sentinel.drive1),
-            mock.call(mock_osutils, mock.sentinel.drive2),
+            mock.call(self.osutils, mock.sentinel.drive1),
+            mock.call(self.osutils, mock.sentinel.drive2),
         ]
         self.assertEqual(expected_is_vfat_calls, mock_is_vfat_drive.mock_calls)
         mock_copy_from_vfat_drive.assert_called_once_with(
-            mock_osutils,
+            self.osutils,
             mock.sentinel.drive2,
-            mock.sentinel.target_path)
+            self._config_manager.target_path)
 
         expected_logging = [
             'Config Drive found on disk %r' % mock.sentinel.drive2,
         ]
         self.assertEqual(expected_logging, snatcher.output)
-        mock_os_makedirs.assert_called_once_with(mock.sentinel.target_path)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_extract_iso_from_devices')
+    def _test_get_config_drive_from_partition(self,
+                                              mock_extract_iso_from_devices,
+                                              found=True):
+        paths = [mock.Mock() for _ in range(3)]
+        self.osutils.get_physical_disks.return_value = paths
+        disks = list(map(self.conf_module.disk.Disk, paths))
+        mock_extract_iso_from_devices.side_effect = [False, found, found]
+        idx = 3 - int(found)
+        extract_calls = [mock.call(disk.partitions())
+                         for disk in disks[:idx]]
+
+        response = self._config_manager._get_config_drive_from_partition()
+        self.osutils.get_physical_disks.assert_called_once_with()
+        mock_extract_iso_from_devices.assert_has_calls(extract_calls)
+        self.assertEqual(found, response)
+
+    def test_get_config_drive_from_partition_not_found(self):
+        self._test_get_config_drive_from_partition(found=False)
+
+    def test_get_config_drive_from_partition(self):
+        self._test_get_config_drive_from_partition()
+
+    @mock.patch('os.rmdir')
+    @mock.patch('shutil.copytree')
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_check_for_config_drive')
+    def _test_get_config_drive_from_volume(self, mock_check_for_config_drive,
+                                           mock_copytree, mock_os_rmdir,
+                                           found=True):
+        volumes = [mock.Mock() for _ in range(3)]
+        self.osutils.get_volumes.return_value = volumes
+        checks = [False, found, found]
+        mock_check_for_config_drive.side_effect = checks
+        idx = 3 - int(found)
+        check_calls = [mock.call(volume) for volume in volumes[:idx]]
+
+        response = self._config_manager._get_config_drive_from_volume()
+        self.osutils.get_volumes.assert_called_once_with()
+        mock_check_for_config_drive.assert_has_calls(check_calls)
+        if found:
+            mock_os_rmdir.assert_called_once_with(
+                self._config_manager.target_path)
+            mock_copytree.assert_called_once_with(
+                volumes[1], self._config_manager.target_path)
+        self.assertEqual(found, response)
+
+    def test_get_config_drive_from_volume_not_found(self):
+        self._test_get_config_drive_from_volume(found=False)
+
+    def test_get_config_drive_from_volume(self):
+        self._test_get_config_drive_from_volume()
+
+    def _test__get_config_drive_files(self, cd_type, cd_location,
+                                      func, found=True):
+        response = self._config_manager._get_config_drive_files(cd_type,
+                                                                cd_location)
+        if found:
+            if func:
+                func.assert_called_once_with()
+                self.assertEqual(func.return_value, response)
+        else:
+            self.assertFalse(response)
+
+    def test__get_config_drive_files_not_found(self):
+        self._test__get_config_drive_files(None, None, None, found=False)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_from_cdrom_drive')
+    def test__get_config_drive_files_cdrom_iso(self, func):
+        self._test__get_config_drive_files(
+            "iso", "cdrom", func)
+
+    def test__get_config_drive_files_cdrom_vfat(self):
+        self._test__get_config_drive_files(
+            "vfat", "cdrom", None)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_from_raw_hdd')
+    def test__get_config_drive_files_hdd_iso(self, func):
+        self._test__get_config_drive_files(
+            "iso", "hdd", func)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_from_vfat')
+    def test__get_config_drive_files_hdd_vfat(self, func):
+        self._test__get_config_drive_files(
+            "vfat", "hdd", func)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_from_partition')
+    def test__get_config_drive_files_partition_iso(self, func):
+        self._test__get_config_drive_files(
+            "iso", "partition", func)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_from_volume')
+    def test__get_config_drive_files_partition_vfat(self, func):
+        self._test__get_config_drive_files(
+            "vfat", "partition", func)
+
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_files')
+    def _test_get_config_drive_files(self, mock_get_config_drive_files,
+                                     found=True):
+        check_types = ["iso", "vfat"] if found else []
+        check_locations = ["cdrom", "hdd", "partition"]
+        product = list(itertools.product(check_types, check_locations))
+        product_calls = [mock.call(cd_type, cd_location)
+                         for cd_type, cd_location in product]
+        mock_get_config_drive_files.side_effect = \
+            [False] * (len(product_calls) - 1) + [True]
+        expected_log = ["Looking for Config Drive %(type)s in %(location)s" %
+                        {"type": cd_type, "location": cd_location}
+                        for cd_type, cd_location in product]
+
+        with self.snatcher:
+            response = self._config_manager.get_config_drive_files(
+                check_types, check_locations)
+        mock_get_config_drive_files.assert_has_calls(product_calls)
+        self.assertEqual(expected_log, self.snatcher.output)
+        self.assertEqual(found, response)
+
+    def test_get_config_drive_files_not_found(self):
+        self._test_get_config_drive_files(found=False)
+
+    def test_get_config_drive_files(self):
+        self._test_get_config_drive_files()

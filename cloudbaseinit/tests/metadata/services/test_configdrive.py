@@ -12,23 +12,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import importlib
 import os
 import unittest
-import uuid
 
 try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 
-CONF = cfg.CONF
+from cloudbaseinit import exception
+from cloudbaseinit.tests import testutils
 
 
-class ConfigDriveServiceTest(unittest.TestCase):
+class TestConfigDriveService(unittest.TestCase):
 
     def setUp(self):
+        module_path = "cloudbaseinit.metadata.services.configdrive"
         self._win32com_mock = mock.MagicMock()
         self._ctypes_mock = mock.MagicMock()
         self._ctypes_util_mock = mock.MagicMock()
@@ -43,35 +44,66 @@ class ConfigDriveServiceTest(unittest.TestCase):
              'win32com.client': self._win32com_client_mock,
              'pywintypes': self._pywintypes_mock})
         self._module_patcher.start()
+        self.addCleanup(self._module_patcher.stop)
 
-        configdrive = importlib.import_module('cloudbaseinit.metadata.services'
-                                              '.configdrive')
-        self._config_drive = configdrive.ConfigDriveService()
+        self.configdrive_module = importlib.import_module(module_path)
+        self._config_drive = self.configdrive_module.ConfigDriveService()
+        self.snatcher = testutils.LogSnatcher(module_path)
 
-    def tearDown(self):
-        self._module_patcher.stop()
+    def _test_preprocess_options(self, fail=False):
+        if fail:
+            with testutils.ConfPatcher("config_drive_types",
+                                       ["vfat", "ntfs"]):
+                with self.assertRaises(exception.CloudbaseInitException):
+                    self._config_drive._preprocess_options()
+            with testutils.ConfPatcher("config_drive_locations",
+                                       ["device"]):
+                with self.assertRaises(exception.CloudbaseInitException):
+                    self._config_drive._preprocess_options()
+            return
+        options = {
+            "config_drive_raw_hhd": False,
+            "config_drive_cdrom": False,
+            "config_drive_vfat": True,
+            # Deprecated options above.
+            "config_drive_types": ["vfat", "iso"],
+            "config_drive_locations": ["partition"]
+        }
+        contexts = [testutils.ConfPatcher(key, value)
+                    for key, value in options.items()]
+        with contexts[0], contexts[1], contexts[2], \
+                contexts[3], contexts[4]:
+            self._config_drive._preprocess_options()
+            self.assertEqual({"vfat", "iso"},
+                             self._config_drive._searched_types)
+            self.assertEqual({"hdd", "partition"},
+                             self._config_drive._searched_locations)
 
-    @mock.patch('tempfile.gettempdir')
+    def test_preprocess_options_fail(self):
+        self._test_preprocess_options(fail=True)
+
+    def test_preprocess_options(self):
+        self._test_preprocess_options()
+
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.factory.'
                 'get_config_drive_manager')
-    def test_load(self, mock_get_config_drive_manager,
-                  mock_gettempdir):
+    def test_load(self, mock_get_config_drive_manager):
         mock_manager = mock.MagicMock()
         mock_manager.get_config_drive_files.return_value = True
+        fake_path = "fake\\fake_id"
+        mock_manager.target_path = fake_path
         mock_get_config_drive_manager.return_value = mock_manager
-        mock_gettempdir.return_value = 'fake'
-        uuid.uuid4 = mock.MagicMock(return_value='fake_id')
-        fake_path = os.path.join('fake', str('fake_id'))
+        expected_log = [
+            "Metadata copied to folder: %r" % fake_path]
 
-        response = self._config_drive.load()
+        with self.snatcher:
+            response = self._config_drive.load()
 
-        mock_gettempdir.assert_called_once_with()
         mock_get_config_drive_manager.assert_called_once_with()
         mock_manager.get_config_drive_files.assert_called_once_with(
-            fake_path,
-            check_raw_hhd=CONF.config_drive_raw_hhd,
-            check_cdrom=CONF.config_drive_cdrom,
-            check_vfat=CONF.config_drive_vfat)
+            searched_types=self.configdrive_module.CD_TYPES,
+            searched_locations=self.configdrive_module.CD_LOCATIONS)
+        self.assertEqual(expected_log, self.snatcher.output)
         self.assertTrue(response)
         self.assertEqual(fake_path, self._config_drive._metadata_path)
 
@@ -85,10 +117,19 @@ class ConfigDriveServiceTest(unittest.TestCase):
             self.assertEqual('fake data', response)
             mock_join.assert_called_with(
                 self._config_drive._metadata_path, fake_path)
+            mock_normpath.assert_called_once_with(mock_join.return_value)
 
     @mock.patch('shutil.rmtree')
     def test_cleanup(self, mock_rmtree):
         fake_path = os.path.join('fake', 'path')
         self._config_drive._metadata_path = fake_path
-        self._config_drive.cleanup()
+        mock_mgr = mock.Mock()
+        self._config_drive._mgr = mock_mgr
+        mock_mgr.target_path = fake_path
+        with self.snatcher:
+            self._config_drive.cleanup()
+        self.assertEqual(["Deleting metadata folder: %r" % fake_path],
+                         self.snatcher.output)
+        mock_rmtree.assert_called_once_with(fake_path,
+                                            ignore_errors=True)
         self.assertEqual(None, self._config_drive._metadata_path)

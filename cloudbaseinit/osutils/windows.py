@@ -33,6 +33,7 @@ import wmi
 
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import base
+from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import network
 from cloudbaseinit.utils.windows import privilege
 from cloudbaseinit.utils.windows import timezone
@@ -116,31 +117,10 @@ class Win32_OSVERSIONINFOEX_W(ctypes.Structure):
     ]
 
 
-class GUID(ctypes.Structure):
-    _fields_ = [
-        ("data1", ctypes.wintypes.DWORD),
-        ("data2", ctypes.wintypes.WORD),
-        ("data3", ctypes.wintypes.WORD),
-        ("data4", ctypes.c_byte * 8)]
-
-    def __init__(self, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8):
-        self.data1 = l
-        self.data2 = w1
-        self.data3 = w2
-        self.data4[0] = b1
-        self.data4[1] = b2
-        self.data4[2] = b3
-        self.data4[3] = b4
-        self.data4[4] = b5
-        self.data4[5] = b6
-        self.data4[6] = b7
-        self.data4[7] = b8
-
-
 class Win32_SP_DEVICE_INTERFACE_DATA(ctypes.Structure):
     _fields_ = [
         ('cbSize', wintypes.DWORD),
-        ('InterfaceClassGuid', GUID),
+        ('InterfaceClassGuid', disk.GUID),
         ('Flags', wintypes.DWORD),
         ('Reserved', ctypes.POINTER(wintypes.ULONG))
     ]
@@ -218,7 +198,7 @@ iphlpapi.GetIpForwardTable.restype = wintypes.DWORD
 
 Ws2_32.inet_ntoa.restype = ctypes.c_char_p
 
-setupapi.SetupDiGetClassDevsW.argtypes = [ctypes.POINTER(GUID),
+setupapi.SetupDiGetClassDevsW.argtypes = [ctypes.POINTER(disk.GUID),
                                           wintypes.LPCWSTR,
                                           wintypes.HANDLE,
                                           wintypes.DWORD]
@@ -227,7 +207,7 @@ setupapi.SetupDiGetClassDevsW.restype = wintypes.HANDLE
 setupapi.SetupDiEnumDeviceInterfaces.argtypes = [
     wintypes.HANDLE,
     wintypes.LPVOID,
-    ctypes.POINTER(GUID),
+    ctypes.POINTER(disk.GUID),
     wintypes.DWORD,
     ctypes.POINTER(Win32_SP_DEVICE_INTERFACE_DATA)]
 setupapi.SetupDiEnumDeviceInterfaces.restype = wintypes.BOOL
@@ -250,8 +230,8 @@ VER_BUILDNUMBER = 4
 
 VER_GREATER_EQUAL = 3
 
-GUID_DEVINTERFACE_DISK = GUID(0x53f56307, 0xb6bf, 0x11d0, 0x94, 0xf2,
-                              0x00, 0xa0, 0xc9, 0x1e, 0xfb, 0x8b)
+GUID_DEVINTERFACE_DISK = disk.GUID(0x53f56307, 0xb6bf, 0x11d0, 0x94, 0xf2,
+                                   0x00, 0xa0, 0xc9, 0x1e, 0xfb, 0x8b)
 
 
 class WindowsUtils(base.BaseOSUtils):
@@ -466,7 +446,7 @@ class WindowsUtils(base.BaseOSUtils):
                                 'Microsoft\\Windows NT\\CurrentVersion\\'
                                 'ProfileList\\%s' % user_sid) as key:
                 return winreg.QueryValueEx(key, 'ProfileImagePath')[0]
-        LOG.debug('Home directory not found for user \'%s\'' % username)
+        LOG.debug('Home directory not found for user %r', username)
         return None
 
     def sanitize_shell_input(self, value):
@@ -686,7 +666,7 @@ class WindowsUtils(base.BaseOSUtils):
                         break
                     time.sleep(1)
                     LOG.info('Waiting for sysprep completion. '
-                             'GeneralizationState: %d' % gen_state)
+                             'GeneralizationState: %d', gen_state)
         except WindowsError as ex:
             if ex.winerror == 2:
                 LOG.debug('Sysprep data not found in the registry, '
@@ -722,7 +702,7 @@ class WindowsUtils(base.BaseOSUtils):
                                                'ret_val': ret_val})
 
     def start_service(self, service_name):
-        LOG.debug('Starting service %s' % service_name)
+        LOG.debug('Starting service %s', service_name)
         service = self._get_service(service_name)
         (ret_val,) = service.StartService()
         if ret_val != 0:
@@ -732,7 +712,7 @@ class WindowsUtils(base.BaseOSUtils):
                                  'ret_val': ret_val})
 
     def stop_service(self, service_name):
-        LOG.debug('Stopping service %s' % service_name)
+        LOG.debug('Stopping service %s', service_name)
         service = self._get_service(service_name)
         (ret_val,) = service.StopService()
         if ret_val != 0:
@@ -988,6 +968,33 @@ class WindowsUtils(base.BaseOSUtils):
             setupapi.SetupDiDestroyDeviceInfoList(handle_disks)
 
         return physical_disks
+
+    def get_volumes(self):
+        """Retrieve a list with all the volumes found on all disks."""
+        volumes = []
+        volume = ctypes.create_unicode_buffer(chr(0) * self.MAX_PATH)
+
+        handle_volumes = kernel32.FindFirstVolumeW(volume, self.MAX_PATH)
+        if handle_volumes == self.INVALID_HANDLE_VALUE:
+            raise exception.WindowsCloudbaseInitException(
+                "FindFirstVolumeW failed: %r")
+
+        try:
+            while True:
+                volumes.append(volume.value)
+                found = kernel32.FindNextVolumeW(handle_volumes, volume,
+                                                 self.MAX_PATH)
+                if not found:
+                    errno = ctypes.GetLastError()
+                    if errno == self.ERROR_NO_MORE_FILES:
+                        break
+                    else:
+                        raise exception.WindowsCloudbaseInitException(
+                            "FindNextVolumeW failed: %r")
+        finally:
+            kernel32.FindVolumeClose(handle_volumes)
+
+        return volumes
 
     def _get_fw_protocol(self, protocol):
         if protocol == self.PROTOCOL_TCP:
