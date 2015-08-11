@@ -15,9 +15,10 @@
 import imp
 import os
 
-from cloudbaseinit.openstack.common import log as logging
+from oslo_log import log as oslo_logging
 
-LOG = logging.getLogger(__name__)
+
+LOG = oslo_logging.getLogger(__name__)
 
 
 class ClassLoader(object):

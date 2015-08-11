@@ -16,8 +16,9 @@ import email
 import gzip
 import io
 
+from oslo_log import log as oslo_logging
+
 from cloudbaseinit.metadata.services import base as metadata_services_base
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common.userdataplugins import factory
@@ -26,7 +27,7 @@ from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import x509constants
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 class UserDataPlugin(base.BasePlugin):

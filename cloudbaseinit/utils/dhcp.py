@@ -19,7 +19,8 @@ import socket
 import struct
 import time
 
-from cloudbaseinit.openstack.common import log as logging
+from oslo_log import log as oslo_logging
+
 
 _DHCP_COOKIE = b'\x63\x82\x53\x63'
 _OPTION_END = b'\xff'
@@ -27,7 +28,7 @@ _OPTION_END = b'\xff'
 OPTION_MTU = 26
 OPTION_NTP_SERVERS = 42
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 def _get_dhcp_request_data(id_req, mac_address, requested_options,

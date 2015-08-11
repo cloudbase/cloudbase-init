@@ -15,10 +15,10 @@
 import os
 import re
 
-from cloudbaseinit import exception
-from cloudbaseinit.openstack.common import log as logging
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
-from oslo.config import cfg
+from cloudbaseinit import exception
 
 
 opts = [
@@ -30,7 +30,7 @@ opts = [
 CONF = cfg.CONF
 CONF.register_opts(opts)
 CONFIG_DRIVE_LABEL = 'config-2'
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 VOLUME_LABEL_REGEX = re.compile("Volume label is (.*?)$")
 
 

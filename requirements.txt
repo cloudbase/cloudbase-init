@@ -1,9 +1,10 @@
-pbr>=0.10,<1.0
+pbr>=1.3
 iso8601
 eventlet
 netaddr>=0.7.6
 pyserial
 oslo.config
+oslo.log
 six>=1.7.0
 Babel>=1.3
 oauthlib

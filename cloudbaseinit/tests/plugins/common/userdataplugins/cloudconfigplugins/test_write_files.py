@@ -22,7 +22,7 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from cloudbaseinit import exception
 from cloudbaseinit.plugins.common.userdataplugins import cloudconfig

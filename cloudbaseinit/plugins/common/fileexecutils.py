@@ -14,10 +14,12 @@
 
 import os
 
-from cloudbaseinit.openstack.common import log as logging
+from oslo_log import log as oslo_logging
+
 from cloudbaseinit.plugins.common import execcmd
 
-LOG = logging.getLogger(__name__)
+
+LOG = oslo_logging.getLogger(__name__)
 
 FORMATS = {
     "cmd": execcmd.Shell,

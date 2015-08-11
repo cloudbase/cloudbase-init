@@ -17,12 +17,12 @@ import shutil
 import tempfile
 import uuid
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.metadata.services.osconfigdrive import factory
-from cloudbaseinit.openstack.common import log as logging
 
 opts = [
     cfg.BoolOpt('config_drive_raw_hhd', default=True,
@@ -36,7 +36,7 @@ opts = [
 CONF = cfg.CONF
 CONF.register_opts(opts)
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 class ConfigDriveService(baseopenstackservice.BaseOpenStackService):

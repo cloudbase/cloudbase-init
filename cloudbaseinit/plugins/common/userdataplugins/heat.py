@@ -15,12 +15,12 @@
 
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
 
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common import userdatautils
 from cloudbaseinit.utils import encoding
+
 
 opts = [
     cfg.StrOpt('heat_config_dir', default='C:\\cfn', help='The directory '
@@ -29,8 +29,6 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
-
-LOG = logging.getLogger(__name__)
 
 
 class HeatPlugin(base.BaseUserDataPlugin):

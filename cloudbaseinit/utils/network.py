@@ -18,14 +18,14 @@ import socket
 import struct
 import sys
 
+from oslo_log import log as oslo_logging
 from six.moves.urllib import parse
 from six.moves.urllib import request
 
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 
-LOG = logging.getLogger(__name__)
 
+LOG = oslo_logging.getLogger(__name__)
 MAX_URL_CHECK_RETRIES = 3
 
 

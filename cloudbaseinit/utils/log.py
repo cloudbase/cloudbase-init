@@ -16,9 +16,10 @@ import logging
 import serial
 import six
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import formatters
+from oslo_log import log
 
-from cloudbaseinit.openstack.common import log as openstack_logging
 
 opts = [
     cfg.StrOpt('logging_serial_port_settings', default=None,
@@ -29,9 +30,8 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
-CONF.import_opt('log_date_format', 'cloudbaseinit.openstack.common.log')
-
-LOG = openstack_logging.getLogger(__name__)
+log.register_options(CONF)
+LOG = log.getLogger(__name__)
 
 
 class SerialPortHandler(logging.StreamHandler):
@@ -52,7 +52,6 @@ class SerialPortHandler(logging.StreamHandler):
 
     def __init__(self):
         self._port = None
-
         if CONF.logging_serial_port_settings:
             settings = CONF.logging_serial_port_settings.split(',')
 
@@ -77,15 +76,15 @@ class SerialPortHandler(logging.StreamHandler):
 
 
 def setup(product_name):
-    openstack_logging.setup(product_name)
+    log.setup(CONF, product_name)
 
     if CONF.logging_serial_port_settings:
-        log_root = openstack_logging.getLogger(product_name).logger
+        log_root = log.getLogger(product_name).logger
 
         serialportlog = SerialPortHandler()
         log_root.addHandler(serialportlog)
 
         datefmt = CONF.log_date_format
         serialportlog.setFormatter(
-            openstack_logging.ContextFormatter(project=product_name,
-                                               datefmt=datefmt))
+            formatters.ContextFormatter(project=product_name,
+                                        datefmt=datefmt))

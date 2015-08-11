@@ -16,12 +16,12 @@ import posixpath
 import re
 
 from oauthlib import oauth1
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 from six.moves.urllib import error
 from six.moves.urllib import request
 
 from cloudbaseinit.metadata.services import base
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import x509constants
 
 opts = [
@@ -40,7 +40,7 @@ opts = [
 CONF = cfg.CONF
 CONF.register_opts(opts)
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 class _Realm(str):

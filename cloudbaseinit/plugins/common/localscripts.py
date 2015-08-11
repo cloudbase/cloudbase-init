@@ -14,7 +14,7 @@
 
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import execcmd

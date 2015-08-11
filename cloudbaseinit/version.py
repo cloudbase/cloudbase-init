@@ -15,16 +15,15 @@
 import json
 import threading
 
+from oslo_log import log as oslo_logging
 import pbr.version
 import requests
 import six
 
-from cloudbaseinit.openstack.common import log as logging
-
 
 _UPDATE_CHECK_URL = 'https://www.cloudbase.it/checkupdates.php?p={0}&v={1}'
 _PRODUCT_NAME = 'Cloudbase-Init'
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 def _read_url(url):

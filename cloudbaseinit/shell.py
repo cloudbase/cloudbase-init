@@ -14,7 +14,7 @@
 
 import sys
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from cloudbaseinit import init
 from cloudbaseinit.utils import log as logging

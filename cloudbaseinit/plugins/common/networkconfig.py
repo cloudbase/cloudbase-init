@@ -15,15 +15,16 @@
 
 import re
 
+from oslo_log import log as oslo_logging
+
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base as service_base
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugin_base
 from cloudbaseinit.utils import network
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 # Mandatory network details are marked with True. And
 # if the key is a tuple, then at least one field must exists.

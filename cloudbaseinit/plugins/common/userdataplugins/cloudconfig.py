@@ -13,17 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 import yaml
 
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     factory
 )
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 OPTS = [
     cfg.ListOpt(
         'cloud_config_plugins',

@@ -17,10 +17,10 @@ import gzip
 import io
 import os
 
+from oslo_log import log as oslo_logging
 import six
 
 from cloudbaseinit import exception
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     base
 )
@@ -29,7 +29,7 @@ from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
 DEFAULT_PERMISSIONS = 0o644
 BASE64_MIME = 'application/base64'
 GZIP_MIME = 'application/x-gzip'
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 def _decode_steps(encoding):

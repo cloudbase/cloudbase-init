@@ -20,15 +20,15 @@ import re
 import socket
 import struct
 
+from oslo_log import log as oslo_logging
 import six
 
 from cloudbaseinit.metadata.services import base
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 CONTEXT_FILE = "context.sh"
 INSTANCE_ID = "iid-dsopennebula"

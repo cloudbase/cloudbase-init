@@ -21,7 +21,7 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
+from oslo_config import cfg
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice

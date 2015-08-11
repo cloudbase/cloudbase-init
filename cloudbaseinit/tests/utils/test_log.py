@@ -19,7 +19,7 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo.config import cfg
+from oslo_config import cfg
 import six
 
 CONF = cfg.CONF
@@ -38,6 +38,7 @@ class SerialPortHandlerTests(unittest.TestCase):
 
         self.log = importlib.import_module("cloudbaseinit.utils.log")
 
+        self.log.serial = self._serial
         self._old_value = CONF.get('logging_serial_port_settings')
         CONF.set_override('logging_serial_port_settings', "COM1,115200,N,8")
         self._serial_port_handler = self.log.SerialPortHandler()
@@ -68,16 +69,16 @@ class SerialPortHandlerTests(unittest.TestCase):
         self._serial_port_handler._port.isOpen.assert_called_once_with()
         self._serial_port_handler._port.close.assert_called_once_with()
 
-    @mock.patch('cloudbaseinit.openstack.common.log.setup')
-    @mock.patch('cloudbaseinit.openstack.common.log.getLogger')
+    @mock.patch('oslo_log.log.setup')
+    @mock.patch('oslo_log.log.getLogger')
     @mock.patch('cloudbaseinit.utils.log.SerialPortHandler')
-    @mock.patch('cloudbaseinit.openstack.common.log.ContextFormatter')
+    @mock.patch('oslo_log.formatters.ContextFormatter')
     def test_setup(self, mock_ContextFormatter, mock_SerialPortHandler,
                    mock_getLogger, mock_setup):
 
         self.log.setup(product_name='fake name')
 
-        mock_setup.assert_called_once_with('fake name')
+        mock_setup.assert_called_once_with(self.log.CONF, 'fake name')
         mock_getLogger.assert_called_once_with('fake name')
         mock_getLogger().logger.addHandler.assert_called_once_with(
             mock_SerialPortHandler())

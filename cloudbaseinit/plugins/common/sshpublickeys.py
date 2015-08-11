@@ -14,16 +14,17 @@
 
 import os
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
 from cloudbaseinit import exception
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
 
+
 CONF = cfg.CONF
 CONF.import_opt('username', 'cloudbaseinit.plugins.common.createuser')
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 class SetUserSSHPublicKeysPlugin(base.BasePlugin):

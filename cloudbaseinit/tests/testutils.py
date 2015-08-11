@@ -25,10 +25,10 @@ try:
 except ImportError:
     import mock
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
 from cloudbaseinit import exception
-from cloudbaseinit.openstack.common import log as logging
 
 
 CONF = cfg.CONF
@@ -103,7 +103,7 @@ class LogSnatcher(object):
     def __init__(self, logger_name):
         self._logger_name = logger_name
         self._snatch_handler = SnatchHandler()
-        self._logger = logging.getLogger(self._logger_name)
+        self._logger = oslo_logging.getLogger(self._logger_name)
         self._previous_level = self._logger.logger.getEffectiveLevel()
 
     def __enter__(self):

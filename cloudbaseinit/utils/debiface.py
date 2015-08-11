@@ -15,13 +15,13 @@
 
 import re
 
+from oslo_log import log as oslo_logging
 import six
 
 from cloudbaseinit.metadata.services import base as service_base
-from cloudbaseinit.openstack.common import log as logging
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 NAME = "name"
 MAC = "mac"

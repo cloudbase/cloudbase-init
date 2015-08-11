@@ -20,6 +20,7 @@ import re
 import struct
 import time
 
+from oslo_log import log as oslo_logging
 import pywintypes
 import six
 from six.moves import winreg
@@ -30,14 +31,13 @@ import win32security
 import wmi
 
 from cloudbaseinit import exception
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.osutils import base
 from cloudbaseinit.utils.windows import network
 from cloudbaseinit.utils.windows import privilege
 from cloudbaseinit.utils.windows import timezone
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 AF_INET6 = 23
 UNICAST = 1
 MANUAL = 1

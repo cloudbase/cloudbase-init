@@ -12,14 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from cloudbaseinit.openstack.common import log as logging
+from oslo_log import log as oslo_logging
+
 from cloudbaseinit.osutils import factory
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     base
 )
 
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 
 class SetTimezonePlugin(base.BaseCloudConfigPlugin):

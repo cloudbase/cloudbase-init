@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import classloader
+
 
 opts = [
     cfg.ListOpt(
@@ -45,7 +46,7 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(opts)
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 # Some plugins were moved to plugins.common, in order to
 # better reflect the fact that they are not platform specific.

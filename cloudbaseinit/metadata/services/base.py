@@ -17,9 +17,9 @@ import abc
 import collections
 import time
 
-from oslo.config import cfg
+from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.utils import encoding
 
 
@@ -35,7 +35,7 @@ opts = [
 CONF = cfg.CONF
 CONF.register_opts(opts)
 
-LOG = logging.getLogger(__name__)
+LOG = oslo_logging.getLogger(__name__)
 
 # Both the custom service(s) and the networking plugin
 # should know about the entries of these kind of objects.
@@ -162,8 +162,7 @@ class BaseMetadataService(object):
         return False
 
     def is_password_changed(self):
-        """Check if the metadata provider has a new password for this
-        instance.
+        """Check if the metadata provider has a new password for this instance
 
         :rtype: bool
 

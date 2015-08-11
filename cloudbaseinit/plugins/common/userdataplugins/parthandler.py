@@ -16,11 +16,8 @@
 import os
 import tempfile
 
-from cloudbaseinit.openstack.common import log as logging
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.utils import classloader
-
-LOG = logging.getLogger(__name__)
 
 
 class PartHandlerPlugin(base.BaseUserDataPlugin):
