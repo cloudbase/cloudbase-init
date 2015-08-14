@@ -15,18 +15,25 @@
 import sys
 
 from oslo_config import cfg
+from oslo_log import log as oslo_logging
 
 from cloudbaseinit import init
 from cloudbaseinit.utils import log as logging
 
 CONF = cfg.CONF
 
+LOG = oslo_logging.getLogger(__name__)
+
 
 def main():
     CONF(sys.argv[1:])
     logging.setup('cloudbaseinit')
 
-    init.InitManager().configure_host()
+    try:
+        init.InitManager().configure_host()
+    except Exception as exc:
+        LOG.exception(exc)
+        raise
 
 
 if __name__ == "__main__":
