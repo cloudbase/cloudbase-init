@@ -19,6 +19,7 @@ import time
 
 from oslo_config import cfg
 from oslo_log import log as oslo_logging
+import six
 
 from cloudbaseinit.utils import encoding
 
@@ -60,6 +61,7 @@ class NotExistingMetadataException(Exception):
     pass
 
 
+@six.add_metaclass(abc.ABCMeta)
 class BaseMetadataService(object):
     def __init__(self):
         self._cache = {}
