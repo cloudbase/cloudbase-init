@@ -48,7 +48,7 @@ class NTPClientPlugin(ntpclient.NTPClientPlugin):
                 _W32TIME_SERVICE,
                 osutils.SERVICE_START_MODE_AUTOMATIC)
 
-        if osutils.check_os_version(6, 0):
+        if osutils.check_os_version(6, 1):
             self._set_ntp_trigger_mode(osutils)
 
         svc_status = osutils.get_service_status(_W32TIME_SERVICE)
