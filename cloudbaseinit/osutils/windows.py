@@ -560,7 +560,8 @@ class WindowsUtils(base.BaseOSUtils):
         (ret_val,) = adapter_config.EnableStatic([address], [netmask])
         if ret_val > 1:
             raise exception.CloudbaseInitException(
-                "Cannot set static IP address on network adapter")
+                "Cannot set static IP address on network adapter (%d)",
+                ret_val)
         reboot_required = (ret_val == 1)
 
         if gateway:
@@ -568,7 +569,8 @@ class WindowsUtils(base.BaseOSUtils):
             (ret_val,) = adapter_config.SetGateways([gateway], [1])
             if ret_val > 1:
                 raise exception.CloudbaseInitException(
-                    "Cannot set gateway on network adapter")
+                    "Cannot set gateway on network adapter (%d)",
+                    ret_val)
             reboot_required = reboot_required or ret_val == 1
 
         if dnsnameservers:
@@ -576,7 +578,8 @@ class WindowsUtils(base.BaseOSUtils):
             (ret_val,) = adapter_config.SetDNSServerSearchOrder(dnsnameservers)
             if ret_val > 1:
                 raise exception.CloudbaseInitException(
-                    "Cannot set DNS on network adapter")
+                    "Cannot set DNS on network adapter (%d)",
+                    ret_val)
             reboot_required = reboot_required or ret_val == 1
 
         return reboot_required
