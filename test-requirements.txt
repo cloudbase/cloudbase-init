@@ -2,7 +2,7 @@ hacking<0.11,>=0.10.0
 coverage>=3.6
 fixtures>=0.3.14
 mock>=1.0
-sphinx>=1.1.2,<1.1.999
+sphinx
 oslosphinx
 testtools>=0.9.32
 testrepository>=0.0.18
