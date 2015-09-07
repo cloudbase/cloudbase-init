@@ -345,29 +345,6 @@ class WinRMConfigTests(unittest.TestCase):
                                "cert_thumbprint": None})
 
     @mock.patch('xml.etree.ElementTree.fromstring')
-    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
-                '_get_node_tag')
-    @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
-                '_get_resource')
-    def test_get_auth_config(self, mock_get_resource, mock_get_node_tag,
-                             mock_fromstring):
-        mock_node = mock.MagicMock()
-        mock_node.tag = 'tag'
-        mock_node.text = 'value'
-        fake_tree = [mock_node]
-        mock_get_resource.return_value = 'fake data xml'
-        mock_fromstring.return_value = fake_tree
-        mock_get_node_tag.return_value = 'tag'
-
-        response = self._winrmconfig.get_auth_config()
-
-        mock_get_resource.assert_called_with(
-            self._winrmconfig._SERVICE_AUTH_URI)
-        mock_fromstring.assert_called_once_with('fake data xml')
-        mock_get_node_tag.assert_called_once_with(mock_node.tag)
-        self.assertEqual({'tag': 'value'}, response)
-
-    @mock.patch('xml.etree.ElementTree.fromstring')
     @mock.patch('xml.etree.ElementTree.tostring')
     @mock.patch('cloudbaseinit.utils.windows.winrmconfig.WinRMConfig.'
                 '_get_wsman_session')

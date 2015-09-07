@@ -166,24 +166,6 @@ class WinRMConfig(object):
             '</p:Listener>' % {"enabled": self._get_xml_bool(enabled),
                                "cert_thumbprint": cert_thumbprint})
 
-    def get_auth_config(self):
-        data = {}
-
-        data_xml = self._get_resource(self._SERVICE_AUTH_URI)
-        tree = ElementTree.fromstring(data_xml)
-        for node in tree:
-            tag = self._get_node_tag(node.tag)
-            value_str = node.text.lower()
-            if value_str == "true":
-                value = True
-            elif value_str == "false":
-                value = False
-            else:
-                value = value_str
-            data[tag] = value
-
-        return data
-
     def set_auth_config(self, basic=None, kerberos=None, negotiate=None,
                         certificate=None, credSSP=None,
                         cbt_hardening_level=None):
