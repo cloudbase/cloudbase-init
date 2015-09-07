@@ -21,11 +21,12 @@ import struct
 import time
 
 from oslo_log import log as oslo_logging
-import pywintypes
 import six
 from six.moves import winreg
 from tzlocal import windows_tz
 from win32com import client
+import win32net
+import win32netcon
 import win32process
 import win32security
 import wmi
@@ -254,6 +255,7 @@ GUID_DEVINTERFACE_DISK = GUID(0x53f56307, 0xb6bf, 0x11d0, 0x94, 0xf2,
 
 class WindowsUtils(base.BaseOSUtils):
     NERR_GroupNotFound = 2220
+    NERR_UserNotFound = 2221
     ERROR_ACCESS_DENIED = 5
     ERROR_INSUFFICIENT_BUFFER = 122
     ERROR_NO_DATA = 232
@@ -314,68 +316,68 @@ class WindowsUtils(base.BaseOSUtils):
                 raise exception.WindowsCloudbaseInitException(
                     "Reboot failed: %r")
 
-    def _get_user_wmi_object(self, username):
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        username_san = self._sanitize_wmi_input(username)
-        q = conn.query('SELECT * FROM Win32_Account where name = '
-                       '\'%s\'' % username_san)
-        if len(q) > 0:
-            return q[0]
-        return None
-
     def user_exists(self, username):
-        return self._get_user_wmi_object(username) is not None
-
-    def _get_adsi_object(self, hostname='.', object_name=None,
-                         object_type='computer'):
-        adsi = client.Dispatch("ADsNameSpaces")
-        winnt = adsi.GetObject("", "WinNT:")
-        query = "WinNT://%s" % hostname
-        if object_name:
-            object_name_san = self.sanitize_shell_input(object_name)
-            query += "/%s" % object_name_san
-        query += ",%s" % object_type
-        return winnt.OpenDSObject(query, "", "", 0)
-
-    def _create_or_change_user(self, username, password, create,
-                               password_expires):
         try:
-            if create:
-                host = self._get_adsi_object()
-                user = host.Create('user', username)
-            else:
-                user = self._get_adsi_object(object_name=username,
-                                             object_type='user')
-
-            user.setpassword(password)
-            user.SetInfo()
-
-            self._set_user_password_expiration(username, password_expires)
-        except pywintypes.com_error as ex:
-            if create:
-                msg = "Create user failed: %s"
-            else:
-                msg = "Set user password failed: %s"
-            raise exception.CloudbaseInitException(msg % ex.excepinfo[2])
-
-    def _sanitize_wmi_input(self, value):
-        return value.replace('\'', '\'\'')
-
-    def _set_user_password_expiration(self, username, password_expires):
-        r = self._get_user_wmi_object(username)
-        if not r:
+            self._get_user_info(username, 1)
+            return True
+        except exception.ItemNotFoundException:
+            # User not found
             return False
-        r.PasswordExpires = password_expires
-        r.Put_()
-        return True
 
     def create_user(self, username, password, password_expires=False):
-        self._create_or_change_user(username, password, create=True,
-                                    password_expires=password_expires)
+        user_info = {
+            "name": username,
+            "password": password,
+            "priv": win32netcon.USER_PRIV_USER,
+            "flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT,
+        }
+
+        if not password_expires:
+            user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
+
+        try:
+            win32net.NetUserAdd(None, 1, user_info)
+        except win32net.error as ex:
+            raise exception.CloudbaseInitException(
+                "Create user failed: %s" % ex.args[2])
+
+    def _get_user_info(self, username, level):
+        try:
+            return win32net.NetUserGetInfo(None, username, level)
+        except win32net.error as ex:
+            if ex.args[0] == self.NERR_UserNotFound:
+                raise exception.ItemNotFoundException(
+                    "User not found: %s" % username)
+            else:
+                raise exception.CloudbaseInitException(
+                    "Failed to get user info: %s" % ex.args[2])
 
     def set_user_password(self, username, password, password_expires=False):
-        self._create_or_change_user(username, password, create=False,
-                                    password_expires=password_expires)
+        user_info = self._get_user_info(username, 1)
+        user_info["password"] = password
+
+        if password_expires:
+            user_info["flags"] &= ~win32netcon.UF_DONT_EXPIRE_PASSWD
+        else:
+            user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
+
+        try:
+            win32net.NetUserSetInfo(None, username, 1, user_info)
+        except win32net.error as ex:
+            raise exception.CloudbaseInitException(
+                "Set user password failed: %s" % ex.args[2])
+
+    def change_password_next_logon(self, username):
+        """Force the given user to change the password at next logon."""
+        user_info = self._get_user_info(username, 4)
+        user_info["flags"] &= ~win32netcon.UF_DONT_EXPIRE_PASSWD
+        user_info["password_expired"] = 1
+
+        try:
+            win32net.NetUserSetInfo(None, username, 4, user_info)
+        except win32net.error as ex:
+            raise exception.CloudbaseInitException(
+                "Setting password expiration failed: %s" % ex.args[2])
 
     def _get_user_sid_and_domain(self, username):
         sid = ctypes.create_string_buffer(1024)
@@ -417,10 +419,12 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException('Unknown error')
 
     def get_user_sid(self, username):
-        r = self._get_user_wmi_object(username)
-        if not r:
-            return None
-        return r.SID
+        try:
+            user_info = self._get_user_info(username, 4)
+            return str(user_info["user_sid"])[6:]
+        except exception.ItemNotFoundException:
+            # User not found
+            pass
 
     def create_user_logon_session(self, username, password, domain='.',
                                   load_profile=True):
@@ -1078,11 +1082,3 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "The given timezone name is unrecognised: %r" % timezone_name)
         timezone.Timezone(windows_name).set(self)
-
-    def change_password_next_logon(self, username):
-        """Force the given user to change the password at next login."""
-        user = self._get_adsi_object(object_name=username,
-                                     object_type='user')
-        user.Put('PasswordExpired', self.PASSWORD_CHANGED_FLAG)
-        user.Put('UserFlags', self.ADS_UF_PASSWORD_EXPIRED)
-        user.SetInfo()
