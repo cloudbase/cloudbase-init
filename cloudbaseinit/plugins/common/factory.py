@@ -32,7 +32,7 @@ opts = [
             'SetUserSSHPublicKeysPlugin',
             'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
             'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
-            'cloudbaseinit.plugins.windows.setuserpassword.'
+            'cloudbaseinit.plugins.common.setuserpassword.'
             'SetUserPasswordPlugin',
             'cloudbaseinit.plugins.windows.winrmlistener.'
             'ConfigWinRMListenerPlugin',
@@ -72,8 +72,8 @@ OLD_PLUGINS = {
     'cloudbaseinit.plugins.windows.userdata.UserDataPlugin':
     'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
 
-    'cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin':
-    'cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin',
+    'cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin':
+    'cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin',
 
     'cloudbaseinit.plugins.windows.localscripts.LocalScriptsPlugin':
     'cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin',

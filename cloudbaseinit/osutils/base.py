@@ -114,3 +114,7 @@ class BaseOSUtils(object):
     def set_timezone(self, timezone):
         """Set the timezone for this instance."""
         raise NotImplementedError()
+
+    def change_password_next_logon(self, username):
+        """Force the given user to change his password at the next login."""
+        raise NotImplementedError()

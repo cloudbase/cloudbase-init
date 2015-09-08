@@ -23,12 +23,31 @@ from cloudbaseinit.plugins.common import constants
 from cloudbaseinit.utils import crypt
 
 
+CLEAR_TEXT_INJECTED_ONLY = 'clear_text_injected_only'
+ALWAYS_CHANGE = 'always'
+NEVER_CHANGE = 'no'
+LOGON_PASSWORD_CHANGE_OPTIONS = [
+    CLEAR_TEXT_INJECTED_ONLY,
+    NEVER_CHANGE,
+    ALWAYS_CHANGE,
+]
 opts = [
     cfg.BoolOpt('inject_user_password', default=True, help='Set the password '
                 'provided in the configuration. If False or no password is '
                 'provided, a random one will be set'),
+    cfg.StrOpt('first_logon_behaviour',
+               default=CLEAR_TEXT_INJECTED_ONLY,
+               choices=LOGON_PASSWORD_CHANGE_OPTIONS,
+               help='Control the behaviour of what happens at '
+                    'next logon. If this option is set to `always`, '
+                    'then the user will be forced to change the password '
+                    'at next logon. If it is set to '
+                    '`clear_text_injected_only`, '
+                    'then the user will have to change the password only if '
+                    'the password is a clear text password, coming from the '
+                    'metadata. The last option is `no`, when the user is '
+                    'never forced to change the password.'),
 ]
-
 CONF = cfg.CONF
 CONF.register_opts(opts)
 CONF.import_opt('username', 'cloudbaseinit.plugins.common.createuser')
@@ -103,15 +122,23 @@ class SetUserPasswordPlugin(base.BasePlugin):
                 maximum_length)
 
         osutils.set_user_password(user_name, password)
-        self.post_set_password(user_name, password,
-                               password_injected=injected)
+        self._change_logon_behaviour(user_name, password_injected=injected)
         return password
 
-    def post_set_password(self, username, password, password_injected=False):
-        """Executes post set password logic.
+    def _change_logon_behaviour(self, username, password_injected=False):
+        """Post set password logic
 
-        This is called by :meth:`execute` after the password was set.
+        If the option is activated, force the user to change the
+        password at next logon.
         """
+        if CONF.first_logon_behaviour == NEVER_CHANGE:
+            return
+
+        clear_text = CONF.first_logon_behaviour == CLEAR_TEXT_INJECTED_ONLY
+        always = CONF.first_logon_behaviour == ALWAYS_CHANGE
+        if always or (clear_text and password_injected):
+            osutils = osutils_factory.get_os_utils()
+            osutils.change_password_next_logon(username)
 
     def execute(self, service, shared_data):
         # TODO(alexpilotti): The username selection logic must be set in the

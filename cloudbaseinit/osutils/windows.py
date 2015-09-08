@@ -1080,7 +1080,7 @@ class WindowsUtils(base.BaseOSUtils):
         timezone.Timezone(windows_name).set(self)
 
     def change_password_next_logon(self, username):
-        """Force the given user to change the password at next logon."""
+        """Force the given user to change the password at next login."""
         user = self._get_adsi_object(object_name=username,
                                      object_type='user')
         user.Put('PasswordExpired', self.PASSWORD_CHANGED_FLAG)
