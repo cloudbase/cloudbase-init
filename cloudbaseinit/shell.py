@@ -14,6 +14,10 @@
 
 import sys
 
+import pythoncom
+sys.coinit_flags = pythoncom.COINIT_MULTITHREADED
+pythoncom.CoInitializeEx(pythoncom.COINIT_MULTITHREADED)
+
 from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
