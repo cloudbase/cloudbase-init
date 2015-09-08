@@ -51,6 +51,7 @@ iphlpapi = ctypes.windll.iphlpapi
 Ws2_32 = ctypes.windll.Ws2_32
 setupapi = ctypes.windll.setupapi
 msvcrt = ctypes.cdll.msvcrt
+ntdll = ctypes.windll.ntdll
 
 
 class Win32_PROFILEINFO(ctypes.Structure):
@@ -165,10 +166,10 @@ msvcrt.malloc.restype = ctypes.c_void_p
 msvcrt.free.argtypes = [ctypes.c_void_p]
 msvcrt.free.restype = None
 
-kernel32.VerifyVersionInfoW.argtypes = [
+ntdll.RtlVerifyVersionInfo.argtypes = [
     ctypes.POINTER(Win32_OSVERSIONINFOEX_W),
     wintypes.DWORD, wintypes.ULARGE_INTEGER]
-kernel32.VerifyVersionInfoW.restype = wintypes.BOOL
+ntdll.RtlVerifyVersionInfo.restype = wintypes.DWORD
 
 kernel32.VerSetConditionMask.argtypes = [wintypes.ULARGE_INTEGER,
                                          wintypes.DWORD,
@@ -260,8 +261,9 @@ class WindowsUtils(base.BaseOSUtils):
     ERROR_NO_SUCH_MEMBER = 1387
     ERROR_MEMBER_IN_ALIAS = 1378
     ERROR_INVALID_MEMBER = 1388
-    ERROR_OLD_WIN_VERSION = 1150
     ERROR_NO_MORE_FILES = 18
+
+    STATUS_REVISION_MISMATCH = 0xC0000059
 
     ADS_UF_PASSWORD_EXPIRED = 0x800000
     PASSWORD_CHANGED_FLAG = 1
@@ -834,17 +836,14 @@ class WindowsUtils(base.BaseOSUtils):
                                                 VER_GREATER_EQUAL)
 
         type_mask = VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER
-        ret_val = kernel32.VerifyVersionInfoW(ctypes.byref(vi), type_mask,
-                                              mask)
-        if ret_val:
+        ret_val = ntdll.RtlVerifyVersionInfo(ctypes.byref(vi), type_mask, mask)
+        if not ret_val:
             return True
+        elif ret_val == self.STATUS_REVISION_MISMATCH:
+            return False
         else:
-            err = kernel32.GetLastError()
-            if err == self.ERROR_OLD_WIN_VERSION:
-                return False
-            else:
-                raise exception.CloudbaseInitException(
-                    "VerifyVersionInfo failed with error: %s" % err)
+            raise exception.CloudbaseInitException(
+                "RtlVerifyVersionInfo failed with error: %s" % ret_val)
 
     def get_volume_label(self, drive):
         max_label_size = 261

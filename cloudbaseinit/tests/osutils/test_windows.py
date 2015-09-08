@@ -85,6 +85,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._winutils = self.windows_utils.WindowsUtils()
         self._kernel32 = self._windll_mock.kernel32
         self._iphlpapi = self._windll_mock.iphlpapi
+        self._ntdll = self._windll_mock.ntdll
 
     def tearDown(self):
         self._module_patcher.stop()
@@ -589,9 +590,12 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             adapter_config.SetDNSServerSearchOrder.assert_called_with(
                 dns_list)
 
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_os_version')
     @mock.patch("cloudbaseinit.utils.windows.network"
                 ".get_adapter_addresses")
     def _test_set_static_network_config_v6(self, mock_get_adapter_addresses,
+                                           mock_check_os_version,
                                            v6adapters=True, v6error=False):
         friendly_name = "Ethernet0"
         interface_index = "4"
@@ -614,6 +618,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 }
             ]
         mock_get_adapter_addresses.return_value = adapter_addresses
+        mock_check_os_version.return_value = True
 
         set_static_call = functools.partial(
             self._winutils.set_static_network_config_v6,
@@ -983,45 +988,59 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_add_static_route_fail(self):
         self._test_add_static_route(err=None)
 
-    def _test_check_os_version(self, ret_value, error_value=None):
-        self._windll_mock.kernel32.VerSetConditionMask.return_value = 2
-        self._windll_mock.kernel32.VerifyVersionInfoW.return_value = ret_value
-        self._windll_mock.kernel32.GetLastError.return_value = error_value
+    def _test_check_os_version(self, ret_val=None, fail=False):
+        params = (3, 1, 2)
+        mock_version_info = self._ntdll.RtlVerifyVersionInfo
+        mock_version_info.return_value = ret_val
+        mask = mock.Mock()
+        mock_condition_mask = self._kernel32.VerSetConditionMask
+        mock_condition_mask.return_value = mask
+        ver_constants = [
+            self.windows_utils.VER_MAJORVERSION,
+            self.windows_utils.VER_MINORVERSION,
+            self.windows_utils.VER_BUILDNUMBER]
 
-        old_version = self._winutils.ERROR_OLD_WIN_VERSION
+        if fail:
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.check_os_version(*params)
+            return
 
-        if error_value and error_value is not old_version:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.check_os_version, 3, 1, 2)
-            self._windll_mock.kernel32.GetLastError.assert_called_once_with()
+        osversion_struct = self.windows_utils.Win32_OSVERSIONINFOEX_W
+        osversion_struct.return_value = osversion_struct()
+        osversion_struct.side_effect = None
+        vi = osversion_struct()
+        mask_calls = [
+            mock.call(0, ver_constants[0],
+                      self.windows_utils.VER_GREATER_EQUAL),
+            mock.call(mask, ver_constants[1],
+                      self.windows_utils.VER_GREATER_EQUAL),
+            mock.call(mask, ver_constants[2],
+                      self.windows_utils.VER_GREATER_EQUAL)]
 
-        else:
-            response = self._winutils.check_os_version(3, 1, 2)
+        response = self._winutils.check_os_version(*params)
+        self._ctypes_mock.sizeof.assert_called_once_with(osversion_struct)
+        mock_condition_mask.assert_has_calls(mask_calls)
+        type_mask = ver_constants[0] | ver_constants[1] | ver_constants[2]
+        self._ctypes_mock.byref.assert_called_once_with(vi)
+        mock_version_info.assert_called_once_with(
+            self._ctypes_mock.byref.return_value, type_mask, mask)
 
-            self._ctypes_mock.sizeof.assert_called_once_with(
-                self.windows_utils.Win32_OSVERSIONINFOEX_W)
-            self.assertEqual(
-                3, self._windll_mock.kernel32.VerSetConditionMask.call_count)
+        expect = None
+        if not ret_val:
+            expect = True
+        elif ret_val == self._winutils.STATUS_REVISION_MISMATCH:
+            expect = False
+        self.assertEqual(expect, response)
 
-            self._windll_mock.kernel32.VerifyVersionInfoW.assert_called_with(
-                self._ctypes_mock.byref.return_value, 1 | 2 | 3 | 7, 2)
+    def test_check_os_version_pass(self):
+        self._test_check_os_version(ret_val=0)
 
-            if error_value is old_version:
-                self._windll_mock.kernel32.GetLastError.assert_called_with()
-                self.assertFalse(response)
-            else:
-                self.assertTrue(response)
-
-    def test_check_os_version(self):
-        m = mock.MagicMock()
-        self._test_check_os_version(ret_value=m)
-
-    def test_check_os_version_expect_False(self):
+    def test_check_os_version_no_pass(self):
         self._test_check_os_version(
-            ret_value=None, error_value=self._winutils.ERROR_OLD_WIN_VERSION)
+            ret_val=self._winutils.STATUS_REVISION_MISMATCH)
 
-    def test_check_os_version_exception(self):
-        self._test_check_os_version(ret_value=None, error_value=9999)
+    def test_check_os_version_fail(self):
+        self._test_check_os_version(ret_val=mock.Mock(), fail=True)
 
     def _test_get_volume_label(self, ret_val):
         label = mock.MagicMock()
