@@ -28,9 +28,11 @@ class PartHandlerPluginTests(unittest.TestCase):
     def setUp(self):
         self._parthandler = parthandler.PartHandlerPlugin()
 
+    @mock.patch('cloudbaseinit.utils.encoding.write_file')
     @mock.patch('tempfile.gettempdir')
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_module')
-    def test_process(self, mock_load_module, mock_gettempdir):
+    def test_process(self, mock_load_module, mock_gettempdir,
+                     mock_write_file):
         mock_part = mock.MagicMock()
         mock_part_handler = mock.MagicMock()
         mock_part.get_filename.return_value = 'fake_name'
@@ -38,12 +40,14 @@ class PartHandlerPluginTests(unittest.TestCase):
         mock_load_module.return_value = mock_part_handler
         mock_part_handler.list_types.return_value = ['fake part']
 
-        with mock.patch('cloudbaseinit.plugins.common.userdataplugins.'
-                        'parthandler.open',
-                        mock.mock_open(read_data='fake data'), create=True):
-            response = self._parthandler.process(mock_part)
+        response = self._parthandler.process(mock_part)
 
         mock_part.get_filename.assert_called_once_with()
+        part_handler_path = os.path.join(mock_gettempdir.return_value,
+                                         mock_part.get_filename.return_value)
+        mock_write_file.assert_called_once_with(
+            part_handler_path, mock_part.get_payload.return_value)
+
         mock_load_module.assert_called_once_with(os.path.join(
             'fake_directory', 'fake_name'))
         mock_part_handler.list_types.assert_called_once_with()

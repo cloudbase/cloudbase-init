@@ -16,6 +16,7 @@
 import os
 
 from oslo_config import cfg
+import six
 
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common import userdatautils
@@ -49,4 +50,10 @@ class HeatPlugin(base.BaseUserDataPlugin):
         encoding.write_file(file_name, part.get_payload())
 
         if part.get_filename() == self._heat_user_data_filename:
-            return userdatautils.execute_user_data_script(part.get_payload())
+            payload = part.get_payload()
+            # Normalize the payload to bytes, since `execute_user_data_script`
+            # operates on bytes and `get_payload` returns a string on
+            # Python 3.
+            if isinstance(payload, six.text_type):
+                payload = payload.encode()
+            return userdatautils.execute_user_data_script(payload)

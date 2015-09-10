@@ -18,6 +18,7 @@ import tempfile
 
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.utils import classloader
+from cloudbaseinit.utils import encoding
 
 
 class PartHandlerPlugin(base.BaseUserDataPlugin):
@@ -28,9 +29,7 @@ class PartHandlerPlugin(base.BaseUserDataPlugin):
     def process(self, part):
         temp_dir = tempfile.gettempdir()
         part_handler_path = os.path.join(temp_dir, part.get_filename())
-
-        with open(part_handler_path, "wb") as f:
-            f.write(part.get_payload())
+        encoding.write_file(part_handler_path, part.get_payload())
 
         part_handler = classloader.ClassLoader().load_module(part_handler_path)
 
