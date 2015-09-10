@@ -63,7 +63,6 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
 
     def _get_iso_disk_size(self, phys_disk):
         geom = phys_disk.get_geometry()
-
         if geom.MediaType != physical_disk.Win32_DiskGeometry.FixedMedia:
             return None
 
@@ -74,9 +73,9 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         id_off = 1
         volume_size_off = 80
         block_size_off = 128
-        iso_id = 'CD001'
+        iso_id = b'CD001'
 
-        offset = boot_record_off / geom.BytesPerSector * geom.BytesPerSector
+        offset = boot_record_off // geom.BytesPerSector * geom.BytesPerSector
         bytes_to_read = geom.BytesPerSector
 
         if disk_size <= offset + bytes_to_read:
@@ -102,7 +101,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
             geom = phys_disk.get_geometry()
             offset = 0
             # Get a multiple of the sector byte size
-            bytes_to_read = 4096 / geom.BytesPerSector * geom.BytesPerSector
+            bytes_to_read = 4096 // geom.BytesPerSector * geom.BytesPerSector
 
             while offset < iso_file_size:
                 phys_disk.seek(offset)

@@ -237,7 +237,10 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         sanitised = ' \\" '
         self.assertEqual(sanitised, response)
 
-    def _test_get_user_sid_and_domain(self, ret_val, last_error=None):
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                '_get_cch_referenced_domain_name')
+    def _test_get_user_sid_and_domain(self, mock_cch_referenced,
+                                      ret_val, last_error=None):
         cbSid = mock.Mock()
         sid = mock.Mock()
         size = 1024
@@ -245,13 +248,14 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         domainName = mock.Mock()
         sidNameUse = mock.Mock()
         advapi32 = self._windll_mock.advapi32
+        mock_cch_referenced.return_value = cchReferencedDomainName
 
         self._ctypes_mock.create_string_buffer.return_value = sid
         self._ctypes_mock.sizeof.return_value = size
-        self._wintypes_mock.DWORD.return_value = cchReferencedDomainName
         self._ctypes_mock.create_unicode_buffer.return_value = domainName
 
         advapi32.LookupAccountNameW.return_value = ret_val
+
         if ret_val is None:
             with self.assert_raises_windows_message(
                     "Cannot get user SID: %r",
@@ -267,6 +271,17 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 self._ctypes_mock.byref(cchReferencedDomainName),
                 self._ctypes_mock.byref(sidNameUse))
             self.assertEqual((sid, domainName.value), response)
+        mock_cch_referenced.assert_called_once_with(
+            self._ctypes_mock.create_unicode_buffer.return_value)
+
+    def test_get_cch_referenced_domain_name(self):
+        self._ctypes_mock.sizeof.side_effect = [42, 24]
+
+        result = self._winutils._get_cch_referenced_domain_name(
+            mock.sentinel.domain_name)
+
+        self._wintypes_mock.DWORD.assert_called_once_with(42 // 24)
+        self.assertEqual(result, self._wintypes_mock.DWORD.return_value)
 
     def test_get_user_sid_and_domain(self):
         fake_obj = mock.Mock()

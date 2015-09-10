@@ -381,12 +381,17 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "Setting password expiration failed: %s" % ex.args[2])
 
+    @staticmethod
+    def _get_cch_referenced_domain_name(domain_name):
+        return wintypes.DWORD(
+            ctypes.sizeof(domain_name) // ctypes.sizeof(wintypes.WCHAR))
+
     def _get_user_sid_and_domain(self, username):
         sid = ctypes.create_string_buffer(1024)
         cbSid = wintypes.DWORD(ctypes.sizeof(sid))
         domainName = ctypes.create_unicode_buffer(1024)
-        cchReferencedDomainName = wintypes.DWORD(
-            ctypes.sizeof(domainName) / ctypes.sizeof(wintypes.WCHAR))
+        cchReferencedDomainName = self._get_cch_referenced_domain_name(
+            domainName)
         sidNameUse = wintypes.DWORD()
 
         ret_val = advapi32.LookupAccountNameW(

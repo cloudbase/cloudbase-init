@@ -96,8 +96,8 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._c_char_array_to_c_ushort')
     def _test_get_iso_disk_size(self, mock_c_char_array_to_c_ushort,
-                                media_type, value, iso_id):
-
+                                media_type, value, iso_id,
+                                bytes_per_sector=2):
         if media_type == "fixed":
             media_type = self.physical_disk.Win32_DiskGeometry.FixedMedia
 
@@ -115,7 +115,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         mock_geom.Cylinders = value
         mock_geom.TracksPerCylinder = 2
         mock_geom.SectorsPerTrack = 2
-        mock_geom.BytesPerSector = 2
+        mock_geom.BytesPerSector = bytes_per_sector
 
         mock_phys_disk.read.return_value = (mock_buff, 'fake value')
 
@@ -125,7 +125,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         disk_size = mock_geom.Cylinders * mock_geom.TracksPerCylinder * \
             mock_geom.SectorsPerTrack * mock_geom.BytesPerSector
 
-        offset = boot_record_off / mock_geom.BytesPerSector * \
+        offset = boot_record_off // mock_geom.BytesPerSector * \
             mock_geom.BytesPerSector
 
         buf_off_volume = boot_record_off - offset + volume_size_off
@@ -134,7 +134,6 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         response = self._config_manager._get_iso_disk_size(mock_phys_disk)
 
         mock_phys_disk.get_geometry.assert_called_once_with()
-
         if media_type != self.physical_disk.Win32_DiskGeometry.FixedMedia:
             self.assertIsNone(response)
 
@@ -173,7 +172,12 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
             media_type="fixed",
             value=100, iso_id='other id')
 
-    def test_write_iso_file(self):
+    def test_test_get_iso_disk_size_bigger_offset(self):
+        self._test_get_iso_disk_size(
+            media_type="other media", value=100, iso_id='other id',
+            bytes_per_sector=2000)
+
+    def test_write_iso_file(self, bytes_per_sector=40):
         mock_buff = mock.MagicMock()
         mock_geom = mock.MagicMock()
         mock_geom.BytesPerSector = 2
@@ -187,10 +191,16 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         with mock.patch('six.moves.builtins.open', mock.mock_open(),
                         create=True) as f:
             self._config_manager._write_iso_file(mock_phys_disk, fake_path,
-                                                 10)
-            f().write.assert_called_once_with(mock_buff)
-        mock_phys_disk.seek.assert_called_once_with(0)
-        mock_phys_disk.read.assert_called_once_with(10)
+                                                 4098)
+            f().write.assert_called_with(mock_buff)
+
+        seek_calls = [mock.call(value) for value in range(0, 4098, 10)]
+        read_calls = (
+            [mock.call(4096)] +
+            [mock.call(value) for value in range(4088, 0, -10)]
+        )
+        self.assertEqual(seek_calls, mock_phys_disk.seek.mock_calls)
+        self.assertEqual(read_calls, mock_phys_disk.read.mock_calls)
 
     @mock.patch('os.makedirs')
     def _test_extract_iso_files(self, mock_makedirs, exit_code):
