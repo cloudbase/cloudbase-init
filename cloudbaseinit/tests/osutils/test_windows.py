@@ -53,6 +53,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._win32com_mock = mock.MagicMock()
         self._win32process_mock = mock.MagicMock()
         self._win32security_mock = mock.MagicMock()
+        self._win32net_mock = mock.MagicMock()
+        self._win32netcon_mock = mock.MagicMock()
         self._wmi_mock = mock.MagicMock()
         self._wmi_mock.x_wmi = WMIError
         self._moves_mock = mock.MagicMock()
@@ -60,11 +62,15 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._ctypes_mock = mock.MagicMock()
         self._tzlocal_mock = mock.Mock()
 
+        self._win32net_mock.error = Exception
+
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'win32com': self._win32com_mock,
              'win32process': self._win32process_mock,
              'win32security': self._win32security_mock,
+             'win32net': self._win32net_mock,
+             'win32netcon': self._win32netcon_mock,
              'wmi': self._wmi_mock,
              'six.moves': self._moves_mock,
              'six.moves.xmlrpc_client': self._xmlrpc_client_mock,
@@ -117,138 +123,118 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_reboot_failed(self):
         self._test_reboot(ret_value=None, expected_ret_value=100)
 
+    def _test_get_user_info(self, exc=None):
+        userget_mock = self._win32net_mock.NetUserGetInfo
+        level = mock.Mock()
+        ret = mock.Mock()
+        if exc:
+            userget_mock.side_effect = [exc]
+            error_class = (
+                exception.ItemNotFoundException if
+                exc.args[0] == self._winutils.NERR_UserNotFound else
+                exception.CloudbaseInitException)
+            with self.assertRaises(error_class):
+                self._winutils._get_user_info(self._USERNAME, level)
+            return
+        userget_mock.return_value = ret
+        response = self._winutils._get_user_info(self._USERNAME, level)
+        userget_mock.assert_called_once_with(None, self._USERNAME, level)
+        self.assertEqual(ret, response)
+
+    def test_get_user_info(self):
+        self._test_get_user_info()
+
+    def test_get_user_info_not_found(self):
+        exc = self._win32net_mock.error(self._winutils.NERR_UserNotFound,
+                                        *([mock.Mock()] * 2))
+        self._test_get_user_info(exc=exc)
+
+    def test_get_user_info_failed(self):
+        exc = self._win32net_mock.error(*([mock.Mock()] * 3))
+        self._test_get_user_info(exc=exc)
+
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._sanitize_wmi_input')
-    def _test_get_user_wmi_object(self, mock_sanitize_wmi_input, return_value):
-        conn = self._wmi_mock.WMI
-        mock_sanitize_wmi_input.return_value = self._USERNAME
-        conn.return_value.query.return_value = return_value
-
-        response = self._winutils._get_user_wmi_object(self._USERNAME)
-
-        conn.return_value.query.assert_called_with(
-            "SELECT * FROM Win32_Account where name = \'%s\'" % self._USERNAME)
-        mock_sanitize_wmi_input.assert_called_with(self._USERNAME)
-        conn.assert_called_with(moniker='//./root/cimv2')
-        if return_value:
-            self.assertTrue(response is not None)
+                '._get_user_info')
+    def _test_set_user_password(self, mock_get_user_info,
+                                expire=False, fail=False):
+        user_info = mock.MagicMock()
+        mock_get_user_info.return_value = user_info
+        user_info["password"] = self._PASSWORD
+        if expire:
+            user_info["flags"] &= \
+                ~self._win32netcon_mock.UF_DONT_EXPIRE_PASSWD
         else:
-            self.assertTrue(response is None)
+            user_info["flags"] |= \
+                self._win32netcon_mock.UF_DONT_EXPIRE_PASSWD
+        if fail:
+            self._win32net_mock.NetUserSetInfo.side_effect = [
+                self._win32net_mock.error(*([mock.Mock()] * 3))]
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.set_user_password(self._USERNAME,
+                                                 self._PASSWORD)
+            return
+        self._winutils.set_user_password(self._USERNAME, self._PASSWORD,
+                                         password_expires=expire)
+        mock_get_user_info.assert_called_once_with(self._USERNAME, 1)
+        self._win32net_mock.NetUserSetInfo.assert_called_once_with(
+            None, self._USERNAME, 1, user_info)
 
-    def test_get_user_wmi_object(self):
-        caption = 'fake'
-        self._test_get_user_wmi_object(return_value=caption)
+    def test_set_user_password(self):
+        self._test_set_user_password()
 
-    def test_no_user_wmi_object(self):
-        empty_caption = ''
-        self._test_get_user_wmi_object(return_value=empty_caption)
+    def test_set_user_password_expire(self):
+        self._test_set_user_password(expire=True)
+
+    def test_set_user_password_fail(self):
+        self._test_set_user_password(fail=True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_user_wmi_object')
-    def _test_user_exists(self, mock_get_user_wmi_object, return_value):
-        mock_get_user_wmi_object.return_value = return_value
-        response = self._winutils.user_exists(return_value)
-        mock_get_user_wmi_object.assert_called_with(return_value)
-        if return_value:
-            self.assertTrue(response)
-        else:
-            self.assertFalse(response)
+                '._get_user_info')
+    def _test_change_password_next_logon(self, mock_get_user_info,
+                                         fail=False):
+        user_info = mock.MagicMock()
+        mock_get_user_info.return_value = user_info
+        user_info["flags"] &= ~self._win32netcon_mock.UF_DONT_EXPIRE_PASSWD
+        user_info["password_expired"] = 1
+        if fail:
+            self._win32net_mock.NetUserSetInfo.side_effect = [
+                self._win32net_mock.error(*([mock.Mock()] * 3))]
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.change_password_next_logon(self._USERNAME)
+            return
+        self._winutils.change_password_next_logon(self._USERNAME)
+        self._win32net_mock.NetUserSetInfo.assert_called_once_with(
+            None, self._USERNAME, 4, user_info)
+
+    def test_change_password_next_logon(self):
+        self._test_change_password_next_logon()
+
+    def test_change_password_next_logon_fail(self):
+        self._test_change_password_next_logon(fail=True)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_user_info')
+    def _test_user_exists(self, mock_get_user_info, exists):
+        if not exists:
+            mock_get_user_info.side_effect = [exception.ItemNotFoundException]
+            response = self._winutils.user_exists(self._USERNAME)
+            self.assertEqual(False, response)
+            return
+        response = self._winutils.user_exists(self._USERNAME)
+        mock_get_user_info.assert_called_once_with(self._USERNAME, 1)
+        self.assertEqual(True, response)
 
     def test_user_exists(self):
-        self._test_user_exists(return_value=self._USERNAME)
+        self._test_user_exists(exists=True)
 
-    def test_username_does_not_exist(self):
-        self._test_user_exists(return_value=None)
-
-    def test_sanitize_wmi_input(self):
-        unsanitised = ' \' '
-        response = self._winutils._sanitize_wmi_input(unsanitised)
-        sanitised = ' \'\' '
-        self.assertEqual(sanitised, response)
+    def test_user_does_not_exist(self):
+        self._test_user_exists(exists=False)
 
     def test_sanitize_shell_input(self):
         unsanitised = ' " '
         response = self._winutils.sanitize_shell_input(unsanitised)
         sanitised = ' \\" '
         self.assertEqual(sanitised, response)
-
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._set_user_password_expiration')
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_adsi_object')
-    def _test_create_or_change_user(self, mock_get_adsi_object,
-                                    mock_set_user_password_expiration,
-                                    create, password_expires, ret_value=0):
-
-        if not ret_value:
-            self._winutils._create_or_change_user(self._USERNAME,
-                                                  self._PASSWORD, create,
-                                                  password_expires)
-            mock_set_user_password_expiration.assert_called_with(
-                self._USERNAME, password_expires)
-        else:
-            mock_get_adsi_object.side_effect = [
-                self._pywintypes_mock.com_error]
-            self.assertRaises(
-                exception.CloudbaseInitException,
-                self._winutils._create_or_change_user,
-                self._USERNAME, self._PASSWORD, create, password_expires)
-
-        if create:
-            mock_get_adsi_object.assert_called_with()
-        else:
-            mock_get_adsi_object.assert_called_with(
-                object_name=self._USERNAME, object_type='user')
-
-    def test_create_user_and_add_password_expire_true(self):
-        self._test_create_or_change_user(create=True, password_expires=True)
-
-    def test_create_user_and_add_password_expire_false(self):
-        self._test_create_or_change_user(create=True, password_expires=False)
-
-    def test_add_password_expire_true(self):
-        self._test_create_or_change_user(create=False, password_expires=True)
-
-    def test_add_password_expire_false(self):
-        self._test_create_or_change_user(create=False, password_expires=False)
-
-    def test_create_user_and_add_password_expire_true_with_ret_value(self):
-        self._test_create_or_change_user(create=True, password_expires=True,
-                                         ret_value=1)
-
-    def test_create_user_and_add_password_expire_false_with_ret_value(self):
-        self._test_create_or_change_user(create=True,
-                                         password_expires=False, ret_value=1)
-
-    def test_add_password_expire_true_with_ret_value(self):
-        self._test_create_or_change_user(create=False,
-                                         password_expires=True, ret_value=1)
-
-    def test_add_password_expire_false_with_ret_value(self):
-        self._test_create_or_change_user(create=False,
-                                         password_expires=False, ret_value=1)
-
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_user_wmi_object')
-    def _test_set_user_password_expiration(self, mock_get_user_wmi_object,
-                                           fake_obj):
-        mock_get_user_wmi_object.return_value = fake_obj
-
-        response = self._winutils._set_user_password_expiration(
-            self._USERNAME, True)
-
-        if fake_obj:
-            self.assertTrue(fake_obj.PasswordExpires)
-            self.assertTrue(response)
-        else:
-            self.assertFalse(response)
-
-    def test_set_password_expiration(self):
-        fake = mock.Mock()
-        self._test_set_user_password_expiration(fake_obj=fake)
-
-    def test_set_password_expiration_no_object(self):
-        self._test_set_user_password_expiration(fake_obj=None)
 
     def _test_get_user_sid_and_domain(self, ret_val, last_error=None):
         cbSid = mock.Mock()
@@ -342,28 +328,56 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             ret_value=self._winutils.ERROR_INVALID_MEMBER)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_user_wmi_object')
-    def _test_get_user_sid(self, mock_get_user_wmi_object, fail):
-        r = mock.Mock()
-        if not fail:
-            mock_get_user_wmi_object.return_value = None
-
+                '._get_user_info')
+    def _test_get_user_sid(self, mock_get_user_info, fail):
+        if fail:
+            mock_get_user_info.side_effect = [exception.ItemNotFoundException]
             response = self._winutils.get_user_sid(self._USERNAME)
-
-            self.assertTrue(response is None)
-        else:
-            mock_get_user_wmi_object.return_value = r
-
-            response = self._winutils.get_user_sid(self._USERNAME)
-
-            self.assertTrue(response is not None)
-        mock_get_user_wmi_object.assert_called_with(self._USERNAME)
+            self.assertEqual(None, response)
+            return
+        user_info = mock.MagicMock()
+        mock_get_user_info.return_value = user_info
+        response = self._winutils.get_user_sid(self._USERNAME)
+        mock_get_user_info.assert_called_once_with(self._USERNAME, 4)
+        self.assertEqual(response, str(user_info["user_sid"])[6:])
 
     def test_get_user_sid(self):
         self._test_get_user_sid(fail=False)
 
     def test_get_user_sid_fail(self):
         self._test_get_user_sid(fail=True)
+
+    def _test_create_user(self, expire=False, fail=False):
+        user_info = {
+            "name": self._USERNAME,
+            "password": self._PASSWORD,
+            "priv": self._win32netcon_mock.USER_PRIV_USER,
+            "flags": (self._win32netcon_mock.UF_NORMAL_ACCOUNT |
+                      self._win32netcon_mock.UF_SCRIPT)
+        }
+        if not expire:
+            user_info["flags"] |= self._win32netcon_mock.UF_DONT_EXPIRE_PASSWD
+
+        if fail:
+            self._win32net_mock.NetUserAdd.side_effect = [
+                self._win32net_mock.error(*([mock.Mock()] * 3))]
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.create_user(self._USERNAME,
+                                           self._PASSWORD)
+            return
+        self._winutils.create_user(self._USERNAME, self._PASSWORD,
+                                   password_expires=expire)
+        self._win32net_mock.NetUserAdd.assert_called_once_with(
+            None, 1, user_info)
+
+    def test_create_user(self):
+        self._test_create_user()
+
+    def test_create_user_expire(self):
+        self._test_create_user(expire=True)
+
+    def test_create_user_fail(self):
+        self._test_create_user(fail=True)
 
     @mock.patch('cloudbaseinit.osutils.windows.Win32_PROFILEINFO')
     def _test_create_user_logon_session(self, mock_Win32_PROFILEINFO, logon,
@@ -1689,18 +1703,3 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self.assertEqual('dwForwardNextHop', given_route[2])
         self.assertEqual('dwForwardIfIndex', given_route[3])
         self.assertEqual('dwForwardMetric1', given_route[4])
-
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
-                '_get_adsi_object')
-    def test_change_password_next_logon(self, mock_get_adsi_object):
-        self._winutils.change_password_next_logon(mock.sentinel.username)
-
-        mock_get_adsi_object.called_once_with(mock.sentinel.username)
-        user = mock_get_adsi_object.return_value
-        expected_put_call = [
-            mock.call('PasswordExpired',
-                      self._winutils.PASSWORD_CHANGED_FLAG),
-            mock.call('UserFlags', self._winutils.ADS_UF_PASSWORD_EXPIRED)
-        ]
-        self.assertEqual(expected_put_call, user.Put.mock_calls)
-        user.SetInfo.assert_called_once_with()

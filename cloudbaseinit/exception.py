@@ -19,6 +19,10 @@ class CloudbaseInitException(Exception):
     pass
 
 
+class ItemNotFoundException(CloudbaseInitException):
+    pass
+
+
 class WindowsCloudbaseInitException(CloudbaseInitException):
 
     def __init__(self, msg="%r", error_code=None):
