@@ -108,9 +108,9 @@ class Win32_OSVERSIONINFOEX_W(ctypes.Structure):
         ('dwBuildNumber', wintypes.DWORD),
         ('dwPlatformId', wintypes.DWORD),
         ('szCSDVersion', wintypes.WCHAR * 128),
-        ('wServicePackMajor', wintypes.DWORD),
-        ('wServicePackMinor', wintypes.DWORD),
-        ('wSuiteMask', wintypes.DWORD),
+        ('wServicePackMajor', wintypes.WORD),
+        ('wServicePackMinor', wintypes.WORD),
+        ('wSuiteMask', wintypes.WORD),
         ('wProductType', wintypes.BYTE),
         ('wReserved', wintypes.BYTE)
     ]
