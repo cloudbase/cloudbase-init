@@ -101,7 +101,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                      expected_ret_value=None):
         mock_privilege_module.acquire_privilege = mock.MagicMock()
         advapi32 = self._windll_mock.advapi32
-        advapi32.InitiateSystemShutdownW = mock.MagicMock(
+        advapi32.InitiateSystemShutdownExW = mock.MagicMock(
             return_value=ret_value)
 
         if not ret_value:
@@ -111,10 +111,10 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         else:
             self._winutils.reboot()
 
-            advapi32.InitiateSystemShutdownW.assert_called_with(
+            advapi32.InitiateSystemShutdownExW.assert_called_with(
                 0,
                 "Cloudbase-Init reboot",
-                0, True, True)
+                0, True, True, 0)
         mock_privilege_module.acquire_privilege.assert_called_once_with(
             self._win32security_mock.SE_SHUTDOWN_NAME)
 

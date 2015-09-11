@@ -311,9 +311,9 @@ class WindowsUtils(base.BaseOSUtils):
 
     def reboot(self):
         with privilege.acquire_privilege(win32security.SE_SHUTDOWN_NAME):
-            ret_val = advapi32.InitiateSystemShutdownW(
+            ret_val = advapi32.InitiateSystemShutdownExW(
                 0, "Cloudbase-Init reboot",
-                0, True, True)
+                0, True, True, 0)
             if not ret_val:
                 raise exception.WindowsCloudbaseInitException(
                     "Reboot failed: %r")
