@@ -24,6 +24,7 @@ except ImportError:
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import opennebulaservice
+from cloudbaseinit.tests import testutils
 
 
 MAC = "54:EE:75:19:F4:61"    # output must be upper
@@ -215,7 +216,9 @@ class TestOpenNebulaService(_TestOpenNebulaService):
             if level > 2:
                 mock_os_path.isfile.return_value = True
         # run the method being tested
-        ret = self._service.load()
+        with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
+                                   'opennebulaservice'):
+            ret = self._service.load()
         # check calls
         if level > 0:
             mock_osutils_factory.get_os_utils.assert_called_once_with()

@@ -21,6 +21,7 @@ except ImportError:
 
 from cloudbaseinit import exception
 from cloudbaseinit.metadata import factory
+from cloudbaseinit.tests import testutils
 
 
 class MetadataServiceFactoryTests(unittest.TestCase):
@@ -50,4 +51,6 @@ class MetadataServiceFactoryTests(unittest.TestCase):
             ret_value=exception.CloudbaseInitException)
 
     def test_get_metadata_service_load_exception(self):
-        self._test_get_metadata_service(load_exception=True)
+        with testutils.LogSnatcher('cloudbaseinit.metadata.'
+                                   'factory'):
+            self._test_get_metadata_service(load_exception=True)

@@ -276,10 +276,26 @@ class CloudStackTest(unittest.TestCase):
         mock_response.read.side_effect = [cloudstack.BAD_REQUEST,
                                           cloudstack.SAVED_PASSWORD]
         mock_response.status = 400
-        self.assertIsNone(self._service._delete_password())
-        mock_response.status = 200
-        self.assertIsNone(self._service._delete_password())
-        self.assertEqual(2, mock_request.call_count)
+        expected_output = [
+            'Remove the password for this instance from the '
+            'Password Server.',
+            'Removing password failed',
+            'Fail to remove the password from the Password Server.',
+
+            'Remove the password for this instance from the '
+            'Password Server.',
+            'The password was removed from the Password Server',
+
+        ]
+
+        with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
+                                   'cloudstack') as snatcher:
+            self.assertIsNone(self._service._delete_password())
+            mock_response.status = 200
+            self.assertIsNone(self._service._delete_password())
+            self.assertEqual(2, mock_request.call_count)
+        for expected, output in zip(expected_output, snatcher.output):
+            self.assertTrue(output.startswith(expected))
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack.'
                 '_delete_password')

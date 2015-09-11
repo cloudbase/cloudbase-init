@@ -21,14 +21,20 @@ except ImportError:
 
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common import fileexecutils
+from cloudbaseinit.tests import testutils
 
 
 @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
 class TestFileExecutilsPlugin(unittest.TestCase):
 
     def test_exec_file_no_executor(self, _):
-        retval = fileexecutils.exec_file("fake.fake")
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'fileexecutils') as snatcher:
+            retval = fileexecutils.exec_file("fake.fake")
+
+        expected_logging = ['Unsupported script file type: fake']
         self.assertEqual(0, retval)
+        self.assertEqual(expected_logging, snatcher.output)
 
     def test_executors_mapping(self, _):
         self.assertEqual(fileexecutils.FORMATS["cmd"],
@@ -46,9 +52,17 @@ class TestFileExecutilsPlugin(unittest.TestCase):
                 'BaseCommand.execute')
     def test_exec_file_fails(self, mock_execute, _):
         mock_execute.side_effect = ValueError
-        retval = fileexecutils.exec_file("fake.py")
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'fileexecutils') as snatcher:
+            retval = fileexecutils.exec_file("fake.py")
+
+        expected_logging = [
+            "An error occurred during file execution: ''",
+            'Script "fake.py" ended with exit code: 0'
+        ]
         mock_execute.assert_called_once_with()
         self.assertEqual(0, retval)
+        self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.execcmd.'
                 'BaseCommand.execute')
@@ -58,6 +72,7 @@ class TestFileExecutilsPlugin(unittest.TestCase):
             mock.sentinel.error,
             0,
         )
+
         retval = fileexecutils.exec_file("fake.py")
         mock_execute.assert_called_once_with()
         self.assertEqual(0, retval)

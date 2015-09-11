@@ -22,6 +22,7 @@ except ImportError:
 
 
 from cloudbaseinit.plugins.common.userdataplugins import shellscript
+from cloudbaseinit.tests import testutils
 
 
 class ShellScriptPluginTests(unittest.TestCase):
@@ -53,7 +54,10 @@ class ShellScriptPluginTests(unittest.TestCase):
             mock_exec_file.side_effect = [Exception]
         with mock.patch("cloudbaseinit.plugins.common.userdataplugins."
                         "shellscript.open", mock.mock_open(), create=True):
-            response = self._shellscript.process(mock_part)
+            with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                       'userdataplugins.'
+                                       'shellscript') as snatcher:
+                response = self._shellscript.process(mock_part)
 
         mock_part.get_filename.assert_called_once_with()
         mock_write_file.assert_called_once_with(
@@ -63,6 +67,10 @@ class ShellScriptPluginTests(unittest.TestCase):
         mock_gettempdir.assert_called_once_with()
         if not exception:
             self.assertEqual('fake response', response)
+        else:
+            expected_logging = 'An error occurred during user_data execution'
+            self.assertTrue(snatcher.output[0].startswith(expected_logging))
+
         mock_os_remove.assert_called_once_with(fake_target)
         mock_path_exists.assert_called_once_with(fake_target)
 

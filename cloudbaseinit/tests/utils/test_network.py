@@ -20,7 +20,9 @@ except ImportError:
     import mock
 from oslo_config import cfg
 
+from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import network
+
 
 CONF = cfg.CONF
 
@@ -55,7 +57,10 @@ class NetworkUtilsTest(unittest.TestCase):
         self._test_check_metadata_ip_route(side_effect=None)
 
     def test_test_check_metadata_ip_route_fail(self):
-        self._test_check_metadata_ip_route(side_effect=Exception)
+        with testutils.LogSnatcher('cloudbaseinit.utils.network') as snatcher:
+            self._test_check_metadata_ip_route(side_effect=ValueError)
+
+        self.assertIn('ValueError', snatcher.output[-1])
 
     def test_address6_to_4_truncate(self):
         address_map = {

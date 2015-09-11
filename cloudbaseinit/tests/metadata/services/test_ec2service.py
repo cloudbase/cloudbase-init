@@ -24,6 +24,7 @@ from six.moves.urllib import error
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import ec2service
+from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
@@ -39,7 +40,10 @@ class EC2ServiceTest(unittest.TestCase):
     def _test_load(self, mock_get_host_name, mock_check_metadata_ip_route,
                    side_effect):
         mock_get_host_name.side_effect = [side_effect]
-        response = self._service.load()
+        with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
+                                   'ec2service'):
+            response = self._service.load()
+
         mock_check_metadata_ip_route.assert_called_once_with(
             CONF.ec2_metadata_base_url)
         mock_get_host_name.assert_called_once_with()

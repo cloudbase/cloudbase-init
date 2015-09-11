@@ -348,7 +348,10 @@ class TestCloudConfig(unittest.TestCase):
                                                    b64_binary=b64_binary,
                                                    gzip=gz,
                                                    gzip_binary=gz_binary))
-        status, reboot = self.plugin.execute(service, {})
+        with testutils.LogSnatcher('cloudbaseinit.plugins.'
+                                   'common.userdataplugins.'
+                                   'cloudconfigplugins') as snatcher:
+            status, reboot = self.plugin.execute(service, {})
 
         for path in (b64, b64_binary, gz, gz_binary):
             self.assertTrue(os.path.exists(path),
@@ -358,3 +361,10 @@ class TestCloudConfig(unittest.TestCase):
 
         self.assertEqual(status, 1)
         self.assertFalse(reboot)
+        expected_logging = [
+            'Unknown encoding, doing nothing.',
+            'Fail to process permissions None, assuming 420',
+            'Fail to process permissions None, assuming 420',
+            'Fail to process permissions None, assuming 420'
+        ]
+        self.assertEqual(expected_logging, snatcher.output)
