@@ -60,12 +60,16 @@ class WindowsLicensingPlugin(base.BasePlugin):
     def execute(self, service, shared_data):
         osutils = osutils_factory.get_os_utils()
 
-        license_info = self._run_slmgr(osutils, ['/dlv'])
-        LOG.info('Microsoft Windows license info:\n%s' % license_info)
+        if osutils.is_nano_server():
+            LOG.info("Licensing info and activation are not available on "
+                     "Nano Server")
+        else:
+            license_info = self._run_slmgr(osutils, ['/dlv'])
+            LOG.info('Microsoft Windows license info:\n%s' % license_info)
 
-        if CONF.activate_windows:
-            LOG.info("Activating Windows")
-            activation_result = self._run_slmgr(osutils, ['/ato'])
-            LOG.debug("Activation result:\n%s" % activation_result)
+            if CONF.activate_windows:
+                LOG.info("Activating Windows")
+                activation_result = self._run_slmgr(osutils, ['/ato'])
+                LOG.debug("Activation result:\n%s" % activation_result)
 
         return base.PLUGIN_EXECUTION_DONE, False

@@ -81,8 +81,9 @@ class WindowsLicensingPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.plugins.windows.licensing'
                 '.WindowsLicensingPlugin._run_slmgr')
     def _test_execute(self, mock_run_slmgr, mock_get_os_utils,
-                      activate_windows):
+                      activate_windows=None, nano=False):
         mock_osutils = mock.MagicMock()
+        mock_osutils.is_nano_server.return_value = nano
         run_slmgr_calls = [mock.call(mock_osutils, ['/dlv'])]
         mock_get_os_utils.return_value = mock_osutils
 
@@ -90,6 +91,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
             response = self._licensing.execute(service=None, shared_data=None)
 
         mock_get_os_utils.assert_called_once_with()
+        if nano:
+            return    # no activation available
         if activate_windows:
             run_slmgr_calls.append(mock.call(mock_osutils, ['/ato']))
 
@@ -101,3 +104,6 @@ class WindowsLicensingPluginTests(unittest.TestCase):
 
     def test_execute_activate_windows_false(self):
         self._test_execute(activate_windows=False)
+
+    def test_execute_activate_windows_nano(self):
+        self._test_execute(nano=True)
