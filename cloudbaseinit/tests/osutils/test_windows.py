@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import contextlib
 import functools
 import importlib
 import os
@@ -1439,6 +1440,64 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_get_system_dir(sysnative=True, arches=arches)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._check_server_level')
+    def test_is_nano_server(self, mock_check_server_level):
+        expect = mock.Mock()
+        mock_check_server_level.return_value = expect
+        response = self._winutils.is_nano_server()
+        mock_check_server_level.assert_called_once_with("NanoServer")
+        self.assertEqual(expect, response)
+
+    def _test_check_server_level(self, fail=False, success=True):
+        server_level = mock.Mock()
+        open_key = self._winreg_mock.OpenKey
+
+        if not success:
+            eclass = Exception
+            error = eclass()
+            self.windows_utils.WindowsError = eclass
+            open_key.side_effect = [error]
+            if fail:
+                with self.assertRaises(eclass):
+                    self._winutils._check_server_level(server_level)
+                return
+            error.winerror = 2
+            response = self._winutils._check_server_level(server_level)
+            self.assertEqual(False, response)
+            return
+
+        self.used_hive, self.used_path = None, None
+        mock_key = mock.Mock()
+
+        @contextlib.contextmanager
+        def open_key_context(hive, path):
+            self.used_hive, self.used_path = hive, path
+            yield mock_key
+
+        self._winreg_mock.OpenKey = open_key_context
+        self._winreg_mock.QueryValueEx.return_value = [1]
+        response = self._winutils._check_server_level(server_level)
+        self.assertEqual(self._winreg_mock.HKEY_LOCAL_MACHINE,
+                         self.used_hive)
+        self.assertEqual("Software\\Microsoft\\Windows NT\\"
+                         "CurrentVersion\\Server\\ServerLevels",
+                         self.used_path)
+        self._winreg_mock.QueryValueEx.assert_called_once_with(
+            mock_key, server_level)
+        self.assertEqual(True, response)
+
+    def test_check_server_level_fail(self):
+        self._test_check_server_level(fail=True, success=False)
+
+    def test_check_server_level_no_success(self):
+        self._test_check_server_level(fail=False, success=False)
+
+    def test_check_server_level_success(self):
+        self._test_check_server_level()
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.is_nano_server')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.get_sysnative_dir')
@@ -1450,19 +1509,24 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                         mock_get_system32_dir,
                                         mock_get_sysnative_dir,
                                         mock_check_sysnative_dir_exists,
-                                        ret_val):
+                                        mock_is_nano_server,
+                                        ret_val=None, nano=False):
         mock_check_sysnative_dir_exists.return_value = ret_val
+        mock_is_nano_server.return_value = nano
         mock_get_sysnative_dir.return_value = 'fake'
         mock_get_system32_dir.return_value = 'fake'
         fake_path = os.path.join('fake', 'WindowsPowerShell\\v1.0\\'
                                          'powershell.exe')
-        args = [fake_path, '-ExecutionPolicy', 'RemoteSigned',
-                '-NonInteractive', '-File', 'fake_script_path']
+        args = [fake_path]
+        if not nano:
+            args.extend(['-ExecutionPolicy', 'RemoteSigned',
+                         '-NonInteractive', '-File'])
+        args.append('fake_script_path')
 
         response = self._winutils.execute_powershell_script(
             script_path='fake_script_path')
 
-        if ret_val is True:
+        if ret_val:
             mock_get_sysnative_dir.assert_called_once_with()
         else:
             mock_get_system32_dir.assert_called_once_with()
@@ -1475,6 +1539,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_execute_powershell_script_system32(self):
         self._test_execute_powershell_script(ret_val=False)
+
+    def test_execute_powershell_script_sysnative_nano(self):
+        self._test_execute_powershell_script(ret_val=True, nano=True)
 
     @mock.patch('cloudbaseinit.utils.windows.network.get_adapter_addresses')
     def test_get_dhcp_hosts_in_use(self, mock_get_adapter_addresses):

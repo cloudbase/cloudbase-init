@@ -1059,14 +1059,33 @@ class WindowsUtils(base.BaseOSUtils):
             return self.get_syswow64_dir()
         return self.get_system32_dir()
 
+    def is_nano_server(self):
+        return self._check_server_level("NanoServer")
+
+    def _check_server_level(self, server_level):
+        try:
+            with winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    "Software\\Microsoft\\Windows NT\\CurrentVersion\\Server\\"
+                    "ServerLevels") as key:
+                return winreg.QueryValueEx(key, server_level)[0] == 1
+        except WindowsError as ex:
+            if ex.winerror == 2:
+                return False
+            else:
+                raise
+
     def execute_powershell_script(self, script_path, sysnative=True):
         base_dir = self._get_system_dir(sysnative)
         powershell_path = os.path.join(base_dir,
                                        'WindowsPowerShell\\v1.0\\'
                                        'powershell.exe')
 
-        args = [powershell_path, '-ExecutionPolicy', 'RemoteSigned',
-                '-NonInteractive', '-File', script_path]
+        args = [powershell_path]
+        if not self.is_nano_server():
+            args += ['-ExecutionPolicy', 'RemoteSigned', '-NonInteractive',
+                     '-File']
+        args.append(script_path)
 
         return self.execute_process(args, shell=False)
 
