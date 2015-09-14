@@ -27,13 +27,18 @@ ole32.CoTaskMemFree.restype = None
 ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
 
 
+def _enumerate(query):
+    """Enumerate VDS service queries."""
+    while True:
+        unk, avail = query.Next(1)
+        if not avail:
+            return
+        yield unk
+
+
 class VDSStorageManager(base.BaseStorageManager):
     def _extend_volumes(self, pack, volume_indexes):
-        enum = pack.QueryVolumes()
-        while True:
-            (unk, c) = enum.Next(1)
-            if not c:
-                break
+        for unk in _enumerate(pack.QueryVolumes()):
             volume = unk.QueryInterface(vds.IVdsVolume)
             volume_prop = volume.GetProperties()
             try:
@@ -82,11 +87,7 @@ class VDSStorageManager(base.BaseStorageManager):
     def _get_volume_extents_to_resize(self, pack, volume_id):
         volume_extents = []
 
-        enum = pack.QueryDisks()
-        while True:
-            (unk, c) = enum.Next(1)
-            if not c:
-                break
+        for unk in _enumerate(pack.QueryDisks()):
             disk = unk.QueryInterface(vds.IVdsDisk)
 
             (extents_p, num_extents) = disk.QueryExtents()
@@ -118,24 +119,13 @@ class VDSStorageManager(base.BaseStorageManager):
         return [ve for ve in volume_extents if ve[1] > 0]
 
     def _query_providers(self, svc):
-        providers = []
-        enum = svc.QueryProviders(vds.VDS_QUERY_SOFTWARE_PROVIDERS)
-        while True:
-            (unk, c) = enum.Next(1)
-            if not c:
-                break
-            providers.append(unk.QueryInterface(vds.IVdsSwProvider))
-        return providers
+        return [unk.QueryInterface(vds.IVdsSwProvider)
+                for unk in _enumerate(
+                    svc.QueryProviders(vds.VDS_QUERY_SOFTWARE_PROVIDERS))]
 
     def _query_packs(self, provider):
-        packs = []
-        enum = provider.QueryPacks()
-        while True:
-            (unk, c) = enum.Next(1)
-            if not c:
-                break
-            packs.append(unk.QueryInterface(vds.IVdsPack))
-        return packs
+        return [unk.QueryInterface(vds.IVdsPack)
+                for unk in _enumerate(provider.QueryPacks())]
 
     def extend_volumes(self, volume_indexes=None):
         svc = vds.load_vds_service()

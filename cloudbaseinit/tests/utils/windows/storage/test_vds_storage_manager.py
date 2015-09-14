@@ -38,11 +38,19 @@ class TestVDSStorageManager(unittest.TestCase):
 
         self._module_patcher.start()
 
-        vds_store = importlib.import_module(
+        self.vds_store = importlib.import_module(
             "cloudbaseinit.utils.windows.storage.vds_storage_manager")
-        self._vds_storage_manager = vds_store.VDSStorageManager()
+        self._vds_storage_manager = self.vds_store.VDSStorageManager()
 
         self.addCleanup(self._module_patcher.stop)
+
+    def test_enumerate(self):
+        query = mock.Mock()
+        items = [1, 2, 3]
+        query.Next.side_effect = [(item, True) for item in items] + \
+                                 [(None, None)]
+        response = list(self.vds_store._enumerate(query))
+        self.assertEqual(items, response)
 
     @mock.patch("cloudbaseinit.utils.windows.storage.vds_storage_manager"
                 ".VDSStorageManager._get_volume_index")
