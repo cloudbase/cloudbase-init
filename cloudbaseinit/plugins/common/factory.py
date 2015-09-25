@@ -80,7 +80,7 @@ OLD_PLUGINS = {
 }
 
 
-def load_plugins():
+def load_plugins(stage):
     plugins = []
     cl = classloader.ClassLoader()
     for class_path in CONF.plugins:
@@ -93,10 +93,10 @@ def load_plugins():
 
         try:
             plugin_cls = cl.load_class(class_path)
+            if not stage or plugin_cls.execution_stage == stage:
+                plugin = plugin_cls()
+                plugins.append(plugin)
         except ImportError:
             LOG.error("Could not import plugin module %r", class_path)
             continue
-
-        plugin = plugin_cls()
-        plugins.append(plugin)
     return plugins

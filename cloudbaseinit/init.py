@@ -62,7 +62,9 @@ class InitManager(object):
     def _exec_plugin(self, osutils, service, plugin, instance_id, shared_data):
         plugin_name = plugin.get_name()
 
-        status = self._get_plugin_status(osutils, instance_id, plugin_name)
+        status = None
+        if instance_id is not None:
+            status = self._get_plugin_status(osutils, instance_id, plugin_name)
         if status == plugins_base.PLUGIN_EXECUTION_DONE:
             LOG.debug('Plugin \'%s\' execution already done, skipping',
                       plugin_name)
@@ -71,8 +73,9 @@ class InitManager(object):
             try:
                 (status, reboot_required) = plugin.execute(service,
                                                            shared_data)
-                self._set_plugin_status(osutils, instance_id, plugin_name,
-                                        status)
+                if instance_id is not None:
+                    self._set_plugin_status(osutils, instance_id, plugin_name,
+                                            status)
                 return reboot_required
             except Exception as ex:
                 LOG.error('plugin \'%(plugin_name)s\' failed with error '
@@ -106,35 +109,54 @@ class InitManager(object):
                 LOG.info, 'Found new version of cloudbase-init %s')
             version.check_latest_version(log_version)
 
+    def _handle_plugins_stage(self, osutils, service, instance_id, stage):
+        plugins_shared_data = {}
+        reboot_required = False
+        plugins = plugins_factory.load_plugins(stage)
+
+        LOG.info('Executing plugins for stage %r:', stage)
+
+        for plugin in plugins:
+            if self._check_plugin_os_requirements(osutils, plugin):
+                if self._exec_plugin(osutils, service, plugin,
+                                     instance_id, plugins_shared_data):
+                    reboot_required = True
+                    if CONF.allow_reboot:
+                        break
+
+        return reboot_required
+
     def configure_host(self):
         LOG.info('Cloudbase-Init version: %s', version.get_version())
 
         osutils = osutils_factory.get_os_utils()
         osutils.wait_for_boot_completion()
 
-        service = metadata_factory.get_metadata_service()
-        LOG.info('Metadata service loaded: \'%s\'' %
-                 service.get_name())
+        reboot_required = self._handle_plugins_stage(
+            osutils, None, None,
+            plugins_base.PLUGIN_STAGE_PRE_NETWORKING)
 
         self._check_latest_version()
 
-        instance_id = service.get_instance_id()
-        LOG.debug('Instance id: %s', instance_id)
+        if not (reboot_required and CONF.allow_reboot):
+            reboot_required = self._handle_plugins_stage(
+                osutils, None, None,
+                plugins_base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY)
 
-        plugins = plugins_factory.load_plugins()
-        plugins_shared_data = {}
+        if not (reboot_required and CONF.allow_reboot):
+            service = metadata_factory.get_metadata_service()
+            LOG.info('Metadata service loaded: \'%s\'' %
+                     service.get_name())
 
-        reboot_required = False
-        try:
-            for plugin in plugins:
-                if self._check_plugin_os_requirements(osutils, plugin):
-                    if self._exec_plugin(osutils, service, plugin,
-                                         instance_id, plugins_shared_data):
-                        reboot_required = True
-                        if CONF.allow_reboot:
-                            break
-        finally:
-            service.cleanup()
+            instance_id = service.get_instance_id()
+            LOG.debug('Instance id: %s', instance_id)
+
+            try:
+                reboot_required = self._handle_plugins_stage(
+                    osutils, service, instance_id,
+                    plugins_base.PLUGIN_STAGE_MAIN)
+            finally:
+                service.cleanup()
 
         if reboot_required and CONF.allow_reboot:
             try:

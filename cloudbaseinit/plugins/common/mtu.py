@@ -35,6 +35,7 @@ LOG = oslo_logging.getLogger(__name__)
 
 
 class MTUPlugin(base.BasePlugin):
+    execution_stage = base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY
 
     def execute(self, service, shared_data):
         if CONF.mtu_use_dhcp_config:

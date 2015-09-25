@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 import unittest
 
 try:
@@ -20,28 +21,83 @@ except ImportError:
     import mock
 from oslo_config import cfg
 
+from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import factory
 from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
 
+STAGE = {
+    base.PLUGIN_STAGE_PRE_NETWORKING: [
+        'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin'
+    ],
+    base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY: [
+        'cloudbaseinit.plugins.common.mtu.MTUPlugin'
+    ],
+    base.PLUGIN_STAGE_MAIN: [
+        'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin',
+        'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
+        'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin',
+        'cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin',
+        'cloudbaseinit.plugins.common.sshpublickeys.'
+        'SetUserSSHPublicKeysPlugin',
+        'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
+        'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
+        'cloudbaseinit.plugins.common.setuserpassword.'
+        'SetUserPasswordPlugin',
+        'cloudbaseinit.plugins.windows.winrmlistener.'
+        'ConfigWinRMListenerPlugin',
+        'cloudbaseinit.plugins.windows.winrmcertificateauth.'
+        'ConfigWinRMCertificateAuthPlugin',
+        'cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin',
+    ]
+}
 
-class PluginFactoryTests(unittest.TestCase):
+
+class TestPluginFactory(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
-    def test_load_plugins(self, mock_load_class):
-        expected = []
-        for path in CONF.plugins:
-            expected.append(mock.call(path))
-        response = factory.load_plugins()
-        self.assertEqual(expected, mock_load_class.call_args_list)
-        self.assertTrue(response is not None)
+    def _test_load_plugins(self, mock_load_class, stage=None):
+        if stage:
+            expected_plugins = STAGE.get(stage, [])
+        else:
+            expected_plugins = list(itertools.chain(*STAGE.values()))
+        expected_load = [mock.call(path) for path in CONF.plugins]
+        side_effect = []
+        for path in expected_plugins:
+            plugin = mock.Mock()
+            plugin.execution_stage = (stage if stage in STAGE.keys() else
+                                      None)
+            plugin.return_value = path
+            side_effect.append(plugin)
+        mock_load_class.side_effect = (
+            side_effect + [mock.Mock() for _ in range(len(expected_load) -
+                                                      len(side_effect))])
+
+        response = factory.load_plugins(stage)
+        self.assertEqual(expected_load, mock_load_class.call_args_list)
+        self.assertEqual(sorted(expected_plugins), sorted(response))
+
+    def test_load_plugins(self):
+        self._test_load_plugins()
+
+    def test_load_plugins_main(self):
+        self._test_load_plugins(stage=base.PLUGIN_STAGE_MAIN)
+
+    def test_load_plugins_networking(self):
+        self._test_load_plugins(stage=base.PLUGIN_STAGE_PRE_NETWORKING)
+
+    def test_load_plugins_metadata(self):
+        self._test_load_plugins(stage=base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY)
+
+    def test_load_plugins_empty(self):
+        self._test_load_plugins(stage=mock.Mock())
 
     @testutils.ConfPatcher('plugins', ['missing.plugin'])
     def test_load_plugins_plugin_failed(self):
         with testutils.LogSnatcher('cloudbaseinit.plugins.'
                                    'common.factory') as snatcher:
-            plugins = factory.load_plugins()
+            plugins = factory.load_plugins(None)
 
         self.assertEqual([], plugins)
         self.assertEqual(["Could not import plugin module 'missing.plugin'"],
@@ -53,7 +109,7 @@ class PluginFactoryTests(unittest.TestCase):
     def test_old_plugin_mapping(self, mock_load_class):
         with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'factory') as snatcher:
-            factory.load_plugins()
+            factory.load_plugins(None)
 
         expected = [
             "Old plugin module 'cloudbaseinit.plugins.windows."

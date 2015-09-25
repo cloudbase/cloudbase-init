@@ -15,8 +15,13 @@
 PLUGIN_EXECUTION_DONE = 1
 PLUGIN_EXECUTE_ON_NEXT_BOOT = 2
 
+PLUGIN_STAGE_PRE_NETWORKING = "PRE_NETWORKING"
+PLUGIN_STAGE_PRE_METADATA_DISCOVERY = "PRE_METADATA_DISCOVERY"
+PLUGIN_STAGE_MAIN = "MAIN"
+
 
 class BasePlugin(object):
+    execution_stage = PLUGIN_STAGE_MAIN
 
     def get_name(self):
         return self.__class__.__name__

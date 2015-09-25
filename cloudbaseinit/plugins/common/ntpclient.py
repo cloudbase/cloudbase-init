@@ -34,6 +34,7 @@ LOG = oslo_logging.getLogger(__name__)
 
 
 class NTPClientPlugin(base.BasePlugin):
+    execution_stage = base.PLUGIN_STAGE_PRE_NETWORKING
 
     def verify_time_service(self, osutils):
         """Verify that the time service is up.
