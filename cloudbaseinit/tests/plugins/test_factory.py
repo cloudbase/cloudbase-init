@@ -22,7 +22,7 @@ except ImportError:
 from oslo_config import cfg
 
 from cloudbaseinit.plugins.common import base
-from cloudbaseinit.plugins.common import factory
+from cloudbaseinit.plugins import factory
 from cloudbaseinit.tests import testutils
 
 CONF = cfg.CONF
@@ -96,7 +96,7 @@ class TestPluginFactory(unittest.TestCase):
     @testutils.ConfPatcher('plugins', ['missing.plugin'])
     def test_load_plugins_plugin_failed(self):
         with testutils.LogSnatcher('cloudbaseinit.plugins.'
-                                   'common.factory') as snatcher:
+                                   'factory') as snatcher:
             plugins = factory.load_plugins(None)
 
         self.assertEqual([], plugins)
@@ -107,7 +107,7 @@ class TestPluginFactory(unittest.TestCase):
                                        "localscripts.LocalScriptsPlugin"])
     @mock.patch('cloudbaseinit.utils.classloader.ClassLoader.load_class')
     def test_old_plugin_mapping(self, mock_load_class):
-        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+        with testutils.LogSnatcher('cloudbaseinit.plugins.'
                                    'factory') as snatcher:
             factory.load_plugins(None)
 

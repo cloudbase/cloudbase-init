@@ -140,7 +140,7 @@ class TestInitManager(unittest.TestCase):
                 '_exec_plugin')
     @mock.patch('cloudbaseinit.init.InitManager.'
                 '_check_plugin_os_requirements')
-    @mock.patch('cloudbaseinit.plugins.common.factory.load_plugins')
+    @mock.patch('cloudbaseinit.plugins.factory.load_plugins')
     def _test_handle_plugins_stage(self, mock_load_plugins,
                                    mock_check_plugin_os_requirements,
                                    mock_exec_plugin,
@@ -184,7 +184,7 @@ class TestInitManager(unittest.TestCase):
                 '._handle_plugins_stage')
     @mock.patch('cloudbaseinit.init.InitManager._check_latest_version')
     @mock.patch('cloudbaseinit.version.get_version')
-    @mock.patch('cloudbaseinit.plugins.common.factory.load_plugins')
+    @mock.patch('cloudbaseinit.plugins.factory.load_plugins')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.metadata.factory.get_metadata_service')
     def _test_configure_host(self, mock_get_metadata_service,

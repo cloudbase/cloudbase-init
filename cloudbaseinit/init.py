@@ -21,7 +21,7 @@ from oslo_log import log as oslo_logging
 from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugins_base
-from cloudbaseinit.plugins.common import factory as plugins_factory
+from cloudbaseinit.plugins import factory as plugins_factory
 from cloudbaseinit import version
 
 opts = [
