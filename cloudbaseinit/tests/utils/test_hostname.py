@@ -60,8 +60,19 @@ class HostnameUtilsTest(unittest.TestCase):
     def test_execute_hostname_to_be_truncated(self):
         new_hostname = 'x' * (hostname.NETBIOS_HOST_NAME_MAX_LEN + 1)
         expected_new_hostname = new_hostname[:-1]
-        self._test_set_hostname(new_hostname=new_hostname,
-                                expected_new_hostname=expected_new_hostname)
+        with testutils.LogSnatcher('cloudbaseinit.utils.'
+                                   'hostname') as snatcher:
+            self._test_set_hostname(
+                new_hostname=new_hostname,
+                expected_new_hostname=expected_new_hostname)
+
+        expected = [
+            'Truncating host name for Netbios compatibility. '
+            'Old name: {0}, new name: {1}'.format(
+                new_hostname, expected_new_hostname),
+            'Setting hostname: xxxxxxxxxxxxxxx'
+        ]
+        self.assertEqual(expected, snatcher.output)
 
     def test_execute_no_truncate_needed(self):
         new_hostname = 'x' * hostname.NETBIOS_HOST_NAME_MAX_LEN

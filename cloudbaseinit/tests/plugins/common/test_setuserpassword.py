@@ -83,10 +83,19 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_service.get_admin_password.return_value = expected_password
 
-        with testutils.ConfPatcher('inject_user_password', inject_password):
-            response = self._setpassword_plugin._get_password(mock_service,
-                                                              shared_data)
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'setuserpassword') as snatcher:
+            with testutils.ConfPatcher('inject_user_password',
+                                       inject_password):
+                response = self._setpassword_plugin._get_password(
+                    mock_service, shared_data)
+
+        expected_logging = [
+            'Using admin_pass metadata user password. '
+            'Consider changing it as soon as possible'
+        ]
         if inject_password:
+            self.assertEqual(expected_logging, snatcher.output)
             mock_service.get_admin_password.assert_called_with()
             expected_password = (expected_password, True)
         else:

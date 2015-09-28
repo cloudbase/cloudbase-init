@@ -17,6 +17,7 @@ import unittest
 
 from cloudbaseinit.metadata.services import base as service_base
 from cloudbaseinit.tests.metadata import fake_json_response
+from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import debiface
 
 
@@ -28,8 +29,13 @@ class TestInterfacesParser(unittest.TestCase):
         self.data = content["network_config"]["debian_config"]
 
     def _test_parse_nics(self, no_nics=False):
-        nics = debiface.parse(self.data)
+        with testutils.LogSnatcher('cloudbaseinit.utils.'
+                                   'debiface') as snatcher:
+            nics = debiface.parse(self.data)
+
         if no_nics:
+            expected_logging = 'Invalid Debian config to parse:'
+            self.assertTrue(snatcher.output[0].startswith(expected_logging))
             self.assertFalse(nics)
             return
         # check what we've got

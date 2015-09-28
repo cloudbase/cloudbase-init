@@ -25,6 +25,7 @@ from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base as service_base
 from cloudbaseinit.plugins.common import base as plugin_base
 from cloudbaseinit.plugins.common import networkconfig
+from cloudbaseinit.tests import testutils
 
 
 class TestNetworkConfigPlugin(unittest.TestCase):
@@ -61,7 +62,10 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                 network_execute()
             return
         # Good to go for the configuration process.
-        ret = network_execute()
+        with testutils.LogSnatcher('cloudbaseinit.plugins.'
+                                   'common.networkconfig'):
+            ret = network_execute()
+
         calls, calls6 = [], []
         for adapter in set(network_adapters) - set(missed_adapters):
             nics = [nic for nic in (network_details +

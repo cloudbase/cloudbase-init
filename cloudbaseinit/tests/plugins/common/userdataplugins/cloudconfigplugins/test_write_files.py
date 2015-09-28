@@ -75,7 +75,16 @@ class WriteFilesPluginTests(unittest.TestCase):
             self.assertEqual(
                 420, write_files._convert_permissions(permissions))
 
-        response = write_files._convert_permissions(mock.sentinel.invalid)
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            response = write_files._convert_permissions(mock.sentinel.invalid)
+
+        expected_logging = [
+            'Fail to process permissions %s, assuming 420'
+            % mock.sentinel.invalid
+        ]
+        self.assertEqual(expected_logging, snatcher.output)
         self.assertEqual(write_files.DEFAULT_PERMISSIONS, response)
 
     def test_write_file_list(self):

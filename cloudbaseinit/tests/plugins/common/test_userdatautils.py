@@ -23,6 +23,7 @@ except ImportError:
 
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common import userdatautils
+from cloudbaseinit.tests import testutils
 
 
 def _safe_remove(filepath):
@@ -71,18 +72,32 @@ class UserDataUtilsTest(unittest.TestCase):
         self.assertIsNone(command)
 
     def test_execute_user_data_script_no_commands(self, _):
-        retval = userdatautils.execute_user_data_script(b"unknown")
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdatautils') as snatcher:
+            retval = userdatautils.execute_user_data_script(b"unknown")
+
+        expected_logging = [
+            'Unsupported user_data format'
+        ]
         self.assertEqual(0, retval)
+        self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.userdatautils.'
                 '_get_command')
     def test_execute_user_data_script_fails(self, mock_get_command, _):
         mock_get_command.return_value.side_effect = ValueError
 
-        retval = userdatautils.execute_user_data_script(
-            mock.sentinel.user_data)
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdatautils') as snatcher:
+            retval = userdatautils.execute_user_data_script(
+                mock.sentinel.user_data)
 
+        expected_logging = [
+            "An error occurred during user_data execution: ''",
+            'User_data script ended with return code: 0'
+        ]
         self.assertEqual(0, retval)
+        self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.userdatautils.'
                 '_get_command')
