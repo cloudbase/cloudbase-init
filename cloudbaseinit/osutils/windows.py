@@ -538,7 +538,7 @@ class WindowsUtils(base.BaseOSUtils):
             iface_index = iface_index_list[0]
 
             LOG.debug('Setting MTU for interface "%(mac_address)s" with '
-                      'value "%(mtu)s"' %
+                      'value "%(mtu)s"',
                       {'mac_address': mac_address, 'mtu': mtu})
 
             base_dir = self._get_system_dir()

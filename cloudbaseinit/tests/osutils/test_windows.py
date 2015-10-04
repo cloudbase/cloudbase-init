@@ -64,6 +64,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._tzlocal_mock = mock.Mock()
 
         self._win32net_mock.error = Exception
+        module_path = "cloudbaseinit.osutils.windows"
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
@@ -80,8 +81,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
              'tzlocal': self._tzlocal_mock})
 
         self._module_patcher.start()
-        self.windows_utils = importlib.import_module(
-            "cloudbaseinit.osutils.windows")
+        self.windows_utils = importlib.import_module(module_path)
 
         self._winreg_mock = self._moves_mock.winreg
         self._windll_mock = self._ctypes_mock.windll
@@ -93,6 +93,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._kernel32 = self._windll_mock.kernel32
         self._iphlpapi = self._windll_mock.iphlpapi
         self._ntdll = self._windll_mock.ntdll
+
+        self.snatcher = testutils.LogSnatcher(module_path)
 
     def tearDown(self):
         self._module_patcher.stop()
@@ -1349,16 +1351,34 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self.assertEqual(path, response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.is_wow64')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.get_sysnative_dir')
     @mock.patch('os.path.isdir')
-    def test_check_sysnative_dir_exists(self, mock_isdir,
-                                        mock_get_sysnative_dir):
+    def _test_check_sysnative_dir_exists(self, mock_isdir,
+                                         mock_get_sysnative_dir,
+                                         mock_is_wow64,
+                                         exists=True, wow64=False):
         mock_get_sysnative_dir.return_value = 'fake_sysnative'
-        mock_isdir.return_value = True
+        mock_isdir.return_value = exists
+        mock_is_wow64.return_value = wow64
 
-        response = self._winutils.check_sysnative_dir_exists()
+        with self.snatcher:
+            response = self._winutils.check_sysnative_dir_exists()
 
-        self.assertTrue(response)
+        expected_log = []
+        if not exists and wow64:
+            expected_log = ['Unable to validate sysnative folder presence. '
+                            'If Target OS is Server 2003 x64, please ensure '
+                            'you have KB942589 installed']
+        self.assertEqual(expected_log, self.snatcher.output)
+        self.assertEqual(exists, response)
+
+    def test_check_sysnative_dir_exists(self):
+        self._test_check_sysnative_dir_exists()
+
+    def test_check_sysnative_dir_does_not_exist(self):
+        self._test_check_sysnative_dir_exists(exists=False, wow64=True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')
@@ -1606,6 +1626,68 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_set_ntp_client_config_sysnative_exception(self):
         self._test_set_ntp_client_config(sysnative=False,
                                          ret_val='fake return value')
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.execute_process')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_system_dir')
+    @mock.patch("cloudbaseinit.utils.windows.network."
+                "get_adapter_addresses")
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_os_version')
+    def _test_set_network_adapter_mtu(self,
+                                      mock_check_os_version,
+                                      mock_get_adapter_addresses,
+                                      mock_get_system_dir,
+                                      mock_execute_process,
+                                      fail=False, os_version_ret=True,
+                                      mac_address_match=True,
+                                      execute_process_val=0):
+        mac_address = "fake mac"
+        mtu = "fake mtu"
+        base_dir = "fake path"
+        mock_check_os_version.return_value = os_version_ret
+        mock_get_adapter_addresses.return_value = [mock.MagicMock()
+                                                   for _ in range(3)]
+        if mac_address_match:
+            # Same as `iface_index` under the "interface_index" key.
+            mock_get_adapter_addresses.return_value[1].\
+                __getitem__.return_value = mac_address
+        mock_get_system_dir.return_value = base_dir
+        mock_execute_process.return_value = [None, None, execute_process_val]
+
+        if fail:
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.set_network_adapter_mtu(mac_address, mtu)
+            return
+
+        with self.snatcher:
+            self._winutils.set_network_adapter_mtu(mac_address, mtu)
+        expected_log = ['Setting MTU for interface "%(mac_address)s" with '
+                        'value "%(mtu)s"' %
+                        {'mac_address': mac_address, 'mtu': mtu}]
+        args = [os.path.join(base_dir, "netsh.exe"),
+                "interface", "ipv4", "set", "subinterface",
+                mac_address, "mtu=%s" % mtu, "store=persistent"]
+        self.assertEqual(expected_log, self.snatcher.output)
+        mock_check_os_version.assert_called_once_with(6, 0)
+        mock_get_adapter_addresses.assert_called_once_with()
+        mock_get_system_dir.assert_called_once_with()
+        mock_execute_process.assert_called_once_with(args, shell=False)
+
+    def test_set_network_adapter_mtu_not_supported(self):
+        self._test_set_network_adapter_mtu(fail=True, os_version_ret=False)
+
+    def test_set_network_adapter_mtu_no_mac_match(self):
+        self._test_set_network_adapter_mtu(fail=True,
+                                           mac_address_match=False)
+
+    def test_set_network_adapter_mtu_execute_fail(self):
+        self._test_set_network_adapter_mtu(fail=True,
+                                           execute_process_val=1)
+
+    def test_set_network_adapter_mtu(self):
+        self._test_set_network_adapter_mtu()
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
                 '_get_system_dir')
