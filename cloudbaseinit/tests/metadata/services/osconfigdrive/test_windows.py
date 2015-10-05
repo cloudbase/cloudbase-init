@@ -42,10 +42,10 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         self.windows = importlib.import_module(
             "cloudbaseinit.metadata.services.osconfigdrive.windows")
         self.physical_disk = importlib.import_module(
-            "cloudbaseinit.utils.windows.physical_disk")
+            "cloudbaseinit.utils.windows.disk")
 
         self.physical_disk.Win32_DiskGeometry = mock.MagicMock()
-        self.windows.physical_disk.PhysicalDisk = mock.MagicMock()
+        self.windows.disk.PhysicalDisk = mock.MagicMock()
 
         self._config_manager = self.windows.WindowsConfigDriveManager()
 
@@ -242,7 +242,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         mock_osutils.get_physical_disks.return_value = [fake_path_physical]
         mock_get_iso_disk_size.return_value = 'fake iso size'
 
-        mock_PhysDisk = self.windows.physical_disk.PhysicalDisk.return_value
+        mock_PhysDisk = self.windows.disk.PhysicalDisk.return_value
 
         if exception:
             mock_PhysDisk.open.side_effect = [Exception]
@@ -256,7 +256,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
             mock_write_iso_file.assert_called_once_with(
                 mock_PhysDisk, fake_path, 'fake iso size')
 
-            self.windows.physical_disk.PhysicalDisk.assert_called_once_with(
+            self.windows.disk.PhysicalDisk.assert_called_once_with(
                 fake_path_physical)
             mock_osutils.get_physical_disks.assert_called_once_with()
 

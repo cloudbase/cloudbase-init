@@ -25,7 +25,7 @@ from oslo_log import log as oslo_logging
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.osutils import factory as osutils_factory
-from cloudbaseinit.utils.windows import physical_disk
+from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import vfat
 
 opts = [
@@ -63,7 +63,8 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
 
     def _get_iso_disk_size(self, phys_disk):
         geom = phys_disk.get_geometry()
-        if geom.MediaType != physical_disk.Win32_DiskGeometry.FixedMedia:
+
+        if geom.MediaType != disk.Win32_DiskGeometry.FixedMedia:
             return None
 
         disk_size = geom.Cylinders * geom.TracksPerCylinder * \
@@ -127,7 +128,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
     def _extract_iso_disk_file(self, osutils, iso_file_path):
         iso_disk_found = False
         for path in osutils.get_physical_disks():
-            phys_disk = physical_disk.PhysicalDisk(path)
+            phys_disk = disk.PhysicalDisk(path)
             try:
                 phys_disk.open()
                 iso_file_size = self._get_iso_disk_size(phys_disk)

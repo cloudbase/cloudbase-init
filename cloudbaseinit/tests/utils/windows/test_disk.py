@@ -35,7 +35,7 @@ class WindowsPhysicalDiskUtilsTests(testutils.CloudbaseInitTestBase):
         self._module_patcher.start()
 
         self.physical_disk = importlib.import_module(
-            "cloudbaseinit.utils.windows.physical_disk")
+            "cloudbaseinit.utils.windows.disk")
 
         self.fake_path = mock.sentinel.fake_path
         self._phys_disk_class = self.physical_disk.PhysicalDisk(
@@ -46,7 +46,7 @@ class WindowsPhysicalDiskUtilsTests(testutils.CloudbaseInitTestBase):
     def tearDown(self):
         self._module_patcher.stop()
 
-    @mock.patch('cloudbaseinit.utils.windows.physical_disk'
+    @mock.patch('cloudbaseinit.utils.windows.disk'
                 '.PhysicalDisk.close')
     def _test_open(self, mock_close, _handle, exception):
         self._phys_disk_class._handle = _handle
@@ -98,7 +98,7 @@ class WindowsPhysicalDiskUtilsTests(testutils.CloudbaseInitTestBase):
         self.assertEqual(0, self._phys_disk_class._handle)
         self.assertEqual(None, self._phys_disk_class._geom)
 
-    @mock.patch('cloudbaseinit.utils.windows.physical_disk'
+    @mock.patch('cloudbaseinit.utils.windows.disk'
                 '.Win32_DiskGeometry')
     def _test_get_geometry(self, mock_Win32_DiskGeometry, _geom, ret_val,
                            last_error=None):
