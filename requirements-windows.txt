@@ -1,4 +1,0 @@
-pywin32
-comtypes
-wmi
-tzlocal
