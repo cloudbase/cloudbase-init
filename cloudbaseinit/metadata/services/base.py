@@ -15,6 +15,8 @@
 
 import abc
 import collections
+import gzip
+import io
 import time
 
 from oslo_config import cfg
@@ -63,6 +65,8 @@ class NotExistingMetadataException(Exception):
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseMetadataService(object):
+    _GZIP_MAGIC_NUMBER = b'\x1f\x8b'
+
     def __init__(self):
         self._cache = {}
         self._enable_retry = False
@@ -112,6 +116,21 @@ class BaseMetadataService(object):
 
     def get_user_data(self):
         pass
+
+    def get_decoded_user_data(self):
+        """Get the decoded user data, if any
+
+        The user data can be gzip-encoded, which means
+        that every access to it should verify this fact,
+        leading to code duplication.
+        """
+        user_data = self.get_user_data()
+        if user_data and user_data[:2] == self._GZIP_MAGIC_NUMBER:
+            bio = io.BytesIO(user_data)
+            with gzip.GzipFile(fileobj=bio, mode='rb') as out:
+                user_data = out.read()
+
+        return user_data
 
     def get_host_name(self):
         pass
