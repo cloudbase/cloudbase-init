@@ -228,7 +228,7 @@ class CryptoAPICertManager(object):
         try:
             cert_encoded_len = wintypes.DWORD()
 
-            if not cryptoapi.CryptStringToBinaryA(
+            if not cryptoapi.CryptStringToBinaryW(
                     base64_cert_data, len(base64_cert_data),
                     cryptoapi.CRYPT_STRING_BASE64,
                     None, ctypes.byref(cert_encoded_len),
@@ -239,7 +239,7 @@ class CryptoAPICertManager(object):
             cert_encoded = ctypes.cast(malloc(size),
                                        ctypes.POINTER(wintypes.BYTE))
 
-            if not cryptoapi.CryptStringToBinaryA(
+            if not cryptoapi.CryptStringToBinaryW(
                     base64_cert_data, len(base64_cert_data),
                     cryptoapi.CRYPT_STRING_BASE64,
                     cert_encoded, ctypes.byref(cert_encoded_len),

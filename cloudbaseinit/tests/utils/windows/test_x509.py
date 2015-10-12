@@ -303,12 +303,12 @@ class CryptoAPICertManagerTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
                 'CertOpenStore')
     @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
-                'CryptStringToBinaryA')
+                'CryptStringToBinaryW')
     @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '._get_cert_base64')
     @mock.patch('cloudbaseinit.utils.windows.x509.malloc')
     def _test_import_cert(self, mock_malloc, mock_get_cert_base64,
-                          mock_CryptStringToBinaryA, mock_CertOpenStore,
+                          mock_CryptStringToBinaryW, mock_CertOpenStore,
                           mock_CertAddEncodedCertificateToStore,
                           mock_CertGetNameString,
                           mock_CertFreeCertificateContext,
@@ -327,7 +327,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         fake_cert_data += 'fake cert' + '\n'
         fake_cert_data += x509constants.PEM_FOOTER
         mock_get_cert_base64.return_value = 'fake cert'
-        mock_CryptStringToBinaryA.return_value = crypttstr
+        mock_CryptStringToBinaryW.return_value = crypttstr
         mock_CertOpenStore.return_value = store_handle
         mock_CertAddEncodedCertificateToStore.return_value = add_enc_cert
         mock_CertGetNameString.side_effect = [2, upn_len]
@@ -355,7 +355,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
 
             mock_cast.assert_called_with(mock_malloc(), mock_POINTER())
             self.assertEqual(expected,
-                             mock_CryptStringToBinaryA.call_args_list)
+                             mock_CryptStringToBinaryW.call_args_list)
             mock_CertOpenStore.assert_called_with(
                 self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
@@ -389,7 +389,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         self._test_import_cert(crypttstr=True, store_handle='fake handle',
                                add_enc_cert='fake encoded cert', upn_len=2)
 
-    def test_import_cert_CryptStringToBinaryA_fail(self):
+    def test_import_cert_CryptStringToBinaryW_fail(self):
         self._test_import_cert(crypttstr=False, store_handle='fake handle',
                                add_enc_cert='fake encoded cert', upn_len=2)
 

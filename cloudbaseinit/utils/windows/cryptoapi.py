@@ -182,15 +182,15 @@ crypt32.CertAddCertificateContextToStore.argtypes = [
     ctypes.POINTER(CERT_CONTEXT)]
 CertAddCertificateContextToStore = crypt32.CertAddCertificateContextToStore
 
-crypt32.CryptStringToBinaryA.restype = wintypes.BOOL
-crypt32.CryptStringToBinaryA.argtypes = [wintypes.LPCSTR,
+crypt32.CryptStringToBinaryW.restype = wintypes.BOOL
+crypt32.CryptStringToBinaryW.argtypes = [wintypes.LPCWSTR,
                                          wintypes.DWORD,
                                          wintypes.DWORD,
                                          ctypes.POINTER(wintypes.BYTE),
                                          ctypes.POINTER(wintypes.DWORD),
                                          ctypes.POINTER(wintypes.DWORD),
                                          ctypes.POINTER(wintypes.DWORD)]
-CryptStringToBinaryA = crypt32.CryptStringToBinaryA
+CryptStringToBinaryW = crypt32.CryptStringToBinaryW
 
 crypt32.CertAddEncodedCertificateToStore.restype = wintypes.BOOL
 crypt32.CertAddEncodedCertificateToStore.argtypes = [
