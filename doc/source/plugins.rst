@@ -5,13 +5,26 @@ Plugins
 
 Plugins execute actions based on the metadata obtained by the loaded service.
 They are intended to actually configure your instance using data provided by
-the cloud and even by the user.
+the cloud and even by the user. There are three stages for the plugins
+execution:
+
+1. The `pre-networking` stage (for setting up the network, before doing any
+valid web request).
+
+2. The `pre-metadata-discovery` one (additional configuration before the
+metadata service discovery).
+
+3. The `main` set of plugins, which holds the rest of the plugins which are
+(re)executed according to their saved status.
+
+Note that the first two stages (1,2) are executed each time the service
+starts.
 
 Current list of supported plugins:
 
 
-Setting host name
------------------
+Setting host name *(main)*
+--------------------------
 
 .. class:: cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin
 
@@ -25,8 +38,8 @@ Config options:
 .. warning:: This may require a system restart.
 
 
-Creating user
--------------
+Creating user *(main)*
+----------------------
 
 .. class:: cloudbaseinit.plugins.windows.createuser.CreateUserPlugin
 
@@ -40,8 +53,8 @@ Config options:
     * groups (list of strings: ["Administrators"])
 
 
-Setting password
-----------------
+Setting password *(main)*
+-------------------------
 
 .. class:: cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin
 
@@ -70,8 +83,8 @@ Config options:
           metadata service supports this).
 
 
-Static networking
------------------
+Static networking *(main)*
+--------------------------
 
 .. class:: cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin
 
@@ -86,8 +99,8 @@ DHCP server is disabled, to have internet access and static IPs.
 .. warning:: This may require a system restart.
 
 
-Saving public keys
-------------------
+Saving public keys *(main)*
+---------------------------
 
 .. class:: cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin
 
@@ -100,8 +113,8 @@ Config options:
     * username (string: "Admin")
 
 
-Volume expanding
-----------------
+Volume expanding *(main)*
+-------------------------
 
 .. class:: cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin
 
@@ -117,8 +130,8 @@ Config options:
 .. note:: This plugin will run at every boot.
 
 
-WinRM listener
---------------
+WinRM listener *(main)*
+-----------------------
 
 .. class:: cloudbaseinit.plugins.windows.winrmlistener.ConfigWinRMListenerPlugin
 
@@ -136,8 +149,8 @@ Config options:
 
 .. _certificate:
 
-WinRM certificate
------------------
+WinRM certificate *(main)*
+--------------------------
 
 .. class:: cloudbaseinit.plugins.windows.winrmcertificateauth.ConfigWinRMCertificateAuthPlugin
 
@@ -153,8 +166,8 @@ Config options:
 
 .. _scripts:
 
-Scripts execution
------------------
+Scripts execution *(main)*
+--------------------------
 
 .. class:: cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin
 
@@ -173,8 +186,8 @@ Config options:
           return code).
 
 
-Licensing
----------
+Licensing *(main)*
+------------------
 
 .. class:: cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin
 
@@ -185,8 +198,8 @@ Config options:
     * activate_windows (bool: False)
 
 
-Clock synchronization
----------------------
+Clock synchronization *(pre-networking)*
+----------------------------------------
 
 .. class:: cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin
 
@@ -201,8 +214,8 @@ Config options:
 .. note:: This plugin will run until the NTP client is configured.
 
 
-MTU customization
------------------
+MTU customization *(pre-metadata-discovery)*
+--------------------------------------------
 
 .. class:: cloudbaseinit.plugins.common.mtu.MTUPlugin
 
@@ -218,8 +231,8 @@ Config options:
 .. note:: This plugin will run at every boot.
 
 
-User data
----------
+User data *(main)*
+------------------
 
 .. class:: cloudbaseinit.plugins.common.userdata.UserDataPlugin
 
@@ -229,8 +242,8 @@ More details, examples and possible formats here: :ref:`userdata`.
 
 ----
 
-Configuring selected plugins
-----------------------------
+Configuring selected plugins *(main)*
+-------------------------------------
 
 By default, all plugins are executed, but a custom list of them can be
 specified through the `plugins` option in the configuration file.
