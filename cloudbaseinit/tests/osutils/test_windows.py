@@ -66,7 +66,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._win32net_mock.error = Exception
         module_path = "cloudbaseinit.osutils.windows"
 
-        self._module_patcher = mock.patch.dict(
+        _module_patcher = mock.patch.dict(
             'sys.modules',
             {'win32com': self._win32com_mock,
              'win32process': self._win32process_mock,
@@ -78,10 +78,15 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
              'six.moves.xmlrpc_client': self._xmlrpc_client_mock,
              'ctypes': self._ctypes_mock,
              'pywintypes': self._pywintypes_mock,
-             'tzlocal': self._tzlocal_mock})
+             'tzlocal': self._tzlocal_mock,
+             'winioctlcon': mock.MagicMock()})
+        _module_patcher.start()
+        self.addCleanup(_module_patcher.stop)
 
-        self._module_patcher.start()
-        self.windows_utils = importlib.import_module(module_path)
+        exception.ctypes.GetLastError = mock.MagicMock()
+        exception.ctypes.FormatError = mock.MagicMock()
+        with mock.patch("cloudbaseinit.utils.windows.disk.GUID"):
+            self.windows_utils = importlib.import_module(module_path)
 
         self._winreg_mock = self._moves_mock.winreg
         self._windll_mock = self._ctypes_mock.windll
@@ -95,9 +100,6 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._ntdll = self._windll_mock.ntdll
 
         self.snatcher = testutils.LogSnatcher(module_path)
-
-    def tearDown(self):
-        self._module_patcher.stop()
 
     @mock.patch('cloudbaseinit.osutils.windows.privilege')
     def _test_reboot(self, mock_privilege_module, ret_value,
@@ -523,7 +525,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def _test_get_user_home(self, user_sid, mock_get_user_sid):
         mock_get_user_sid.return_value = user_sid
 
-        response = self._winutils.get_user_home(self._USERNAME)
+        with self.snatcher:
+            response = self._winutils.get_user_home(self._USERNAME)
 
         if user_sid:
             mock_get_user_sid.assert_called_with(self._USERNAME)
@@ -536,6 +539,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 self._winreg_mock.OpenKey.return_value.__enter__.return_value,
                 'ProfileImagePath')
         else:
+            self.assertEqual(
+                ["Home directory not found for user %r" % self._USERNAME],
+                self.snatcher.output)
             self.assertTrue(response is None)
 
     def test_get_user_home(self):
@@ -593,6 +599,13 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             )
             return
 
+        expected_log = []
+        for (ret_val,), msg in ((static_val, "Setting static IP address"),
+                                (gateway_val, "Setting static gateways"),
+                                (dns_val, "Setting static DNS servers")):
+            if ret_val in (0, 1):
+                expected_log.append(msg)
+
         conn.return_value.query.return_value = adapter
         adapter_config = adapter[0].associators.return_value[0]
         adapter_config.EnableStatic.return_value = static_val
@@ -604,11 +617,13 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 exception.CloudbaseInitException,
                 set_static_call)
         else:
-            response = set_static_call()
+            with self.snatcher:
+                response = set_static_call()
             if static_val[0] or gateway_val[0] or dns_val[0]:
                 self.assertTrue(response)
             else:
                 self.assertFalse(response)
+            self.assertEqual(expected_log, self.snatcher.output)
 
             select = ("SELECT * FROM Win32_NetworkAdapter WHERE "
                       "MACAddress = '{}'".format(mac_address))
@@ -655,13 +670,19 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         set_static_call = functools.partial(
             self._winutils.set_static_network_config_v6,
             mac_address, address6, netmask6, gateway6)
+        expected_log = []
+        if not mock_check_os_version.return_value:
+            expected_log.append("Setting IPv6 info not available "
+                                "on this system")
 
         if not v6adapters or v6error:
             self.assertRaises(
                 exception.CloudbaseInitException,
                 set_static_call)
         else:
-            set_static_call()
+            expected_log.append("Setting IPv6 info for %s" % friendly_name)
+            with self.snatcher:
+                set_static_call()
             mock_get_adapter_addresses.assert_called_once_with()
             select = ("SELECT * FROM MSFT_NetIPAddress "
                       "WHERE InterfaceAlias = '{}'".format(friendly_name))
@@ -686,6 +707,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 "PassThru": False,
             }
             netip.Create.assert_called_once_with(**params)
+            self.assertEqual(expected_log, self.snatcher.output)
 
     def test_set_static_network_config(self):
         ret_val1 = (1,)
@@ -820,10 +842,11 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_get_config_value(None)
 
     @mock.patch('time.sleep')
-    def _test_wait_for_boot_completion(self, ret_val, mock_sleep):
-        self._winreg_mock.QueryValueEx.side_effect = [ret_val]
+    def _test_wait_for_boot_completion(self, _, ret_vals=None):
+        self._winreg_mock.QueryValueEx.side_effect = ret_vals
 
-        self._winutils.wait_for_boot_completion()
+        with self.snatcher:
+            self._winutils.wait_for_boot_completion()
 
         key = self._winreg_mock.OpenKey.return_value.__enter__.return_value
         self._winreg_mock.OpenKey.assert_called_with(
@@ -831,12 +854,24 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
             self._winreg_mock.KEY_READ)
 
+        expected_log = []
+        for gen_states in ret_vals:
+            gen_state = gen_states[0]
+            if gen_state == 7:
+                break
+            expected_log.append('Waiting for sysprep completion. '
+                                'GeneralizationState: %d' % gen_state)
         self._winreg_mock.QueryValueEx.assert_called_with(
             key, "GeneralizationState")
+        self.assertEqual(expected_log, self.snatcher.output)
 
     def test_wait_for_boot_completion(self):
-        ret_val = [7]
-        self._test_wait_for_boot_completion(ret_val)
+        ret_vals = [[7]]
+        self._test_wait_for_boot_completion(ret_vals=ret_vals)
+
+    def test_wait_for_boot_completion_wait(self):
+        ret_vals = [[1], [7]]
+        self._test_wait_for_boot_completion(ret_vals=ret_vals)
 
     def test_get_service(self):
         conn = self._wmi_mock.WMI
@@ -911,7 +946,10 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                               self._winutils.start_service,
                               'fake name')
         else:
-            self._winutils.start_service('fake name')
+            with self.snatcher:
+                self._winutils.start_service('fake name')
+            self.assertEqual(["Starting service fake name"],
+                             self.snatcher.output)
 
         mock_service.StartService.assert_called_once_with()
 
@@ -933,7 +971,10 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                               self._winutils.stop_service,
                               'fake name')
         else:
-            self._winutils.stop_service('fake name')
+            with self.snatcher:
+                self._winutils.stop_service('fake name')
+            self.assertEqual(["Stopping service fake name"],
+                             self.snatcher.output)
 
         mock_service.StopService.assert_called_once_with()
 
@@ -1301,6 +1342,49 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             last_error=self._winutils.ERROR_INSUFFICIENT_BUFFER,
             interface_detail='fake interface detail',
             disk_handle=mock_disk_handle, io_control=True)
+
+    def _test_get_volumes(self, find_first=True, find_next=True):
+        count = 3
+        expected_volumes = ["ID_{}".format(idx) for idx in range(count)]
+
+        volume_values = mock.PropertyMock(side_effect=expected_volumes)
+        mock_volume = mock.Mock()
+        type(mock_volume).value = volume_values
+        self._ctypes_mock.create_unicode_buffer.return_value = mock_volume
+
+        if not find_first:
+            self._kernel32.FindFirstVolumeW.return_value = self._winutils\
+                .INVALID_HANDLE_VALUE
+        side_effects = [1] * (count - 1)
+        side_effects.append(0)
+        self._kernel32.FindNextVolumeW.side_effect = side_effects
+        if find_next:
+            self._ctypes_mock.GetLastError.return_value = self._winutils\
+                .ERROR_NO_MORE_FILES
+        if not (find_first and find_next):
+            with self.assertRaises(exception.WindowsCloudbaseInitException):
+                self._winutils.get_volumes()
+            return
+
+        volumes = self._winutils.get_volumes()
+        self._kernel32.FindFirstVolumeW.assert_called_once_with(
+            mock_volume, self._winutils.MAX_PATH)
+        find_next_calls = [
+            mock.call(self._kernel32.FindFirstVolumeW.return_value,
+                      mock_volume, self._winutils.MAX_PATH)] * count
+        self._kernel32.FindNextVolumeW.assert_has_calls(find_next_calls)
+        self._kernel32.FindVolumeClose.assert_called_once_with(
+            self._kernel32.FindFirstVolumeW.return_value)
+        self.assertEqual(expected_volumes, volumes)
+
+    def test_get_volumes(self):
+        self._test_get_volumes()
+
+    def test_get_volumes_first_fail(self):
+        self._test_get_volumes(find_first=False)
+
+    def test_get_volumes_next_fail(self):
+        self._test_get_volumes(find_next=False)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils._get_fw_protocol')
     def test_firewall_create_rule(self, mock_get_fw_protocol):
