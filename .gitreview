@@ -1,4 +1,4 @@
 [gerrit]
 host=review.openstack.org
 port=29418
-project=stackforge/cloudbase-init.git
+project=openstack/cloudbase-init.git
