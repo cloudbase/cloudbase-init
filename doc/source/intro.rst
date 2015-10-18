@@ -3,7 +3,7 @@
 Intro
 =====
 
-The open source `project <https://github.com/stackforge/cloudbase-init>`_
+The open source `project <https://github.com/openstack/cloudbase-init>`_
 **cloudbase-init** is a service conceived and
 maintained by Cloudbase Solutions Srl, currently working on NT systems.
 It was designed to initialize and configure guest operating systems under

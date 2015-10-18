@@ -6,7 +6,7 @@ Portable Multi-Cloud Initialization Service
 * Home page:      http://www.cloudbase.it/cloud-init-windows/
 
 * Documentation:  http://cloudbase-init.readthedocs.org/en/latest/
-* Source:         https://github.com/stackforge/cloudbase-init
+* Source:         https://github.com/openstack/cloudbase-init
 * License:        Apache 2.0
 
 
