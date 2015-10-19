@@ -242,8 +242,8 @@ More details, examples and possible formats here: :ref:`userdata`.
 
 ----
 
-Configuring selected plugins *(main)*
--------------------------------------
+Configuring selected plugins
+----------------------------
 
 By default, all plugins are executed, but a custom list of them can be
 specified through the `plugins` option in the configuration file.
