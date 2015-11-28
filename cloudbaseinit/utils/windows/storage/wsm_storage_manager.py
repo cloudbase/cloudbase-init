@@ -41,7 +41,7 @@ class WSMStorageManager(base.BaseStorageManager):
                     raise exception.CloudbaseInitException(
                         "GetSupportedSize failed with error: %s" % ret_val)
 
-                if size_max > partition.Size:
+                if int(size_max) > int(partition.Size):
                     LOG.info('Extending partition "%(partition_number)s" '
                              'to %(size)s bytes' %
                              {'partition_number': partition.PartitionNumber,
