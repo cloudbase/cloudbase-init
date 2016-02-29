@@ -229,9 +229,11 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 six.text_type(self.x509.STORE_NAME_MY))
             mock_get_cert_thumprint.assert_called_once_with(
                 mock_CertCreateSelfSignCertificate())
-            mock_add_system_time_interval.assert_called_once_with(
-                mock_SYSTEMTIME.return_value, self.x509.X509_END_DATE_INTERVAL)
-
+            mock_add_system_time_interval.assert_has_calls(
+                [mock.call(mock_SYSTEMTIME.return_value,
+                           self.x509.X509_END_DATE_INTERVAL),
+                 mock.call(mock_SYSTEMTIME.return_value,
+                           self.x509.X509_START_DATE_INTERVAL)])
             mock_CertCloseStore.assert_called_once_with(store_handle, 0)
             mock_CertFreeCertificateContext.assert_called_once_with(
                 mock_CertCreateSelfSignCertificate())

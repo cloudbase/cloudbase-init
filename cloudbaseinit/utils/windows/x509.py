@@ -35,6 +35,7 @@ STORE_NAME_MY = "My"
 STORE_NAME_ROOT = "Root"
 STORE_NAME_TRUSTED_PEOPLE = "TrustedPeople"
 
+X509_START_DATE_INTERVAL = -24 * 60 * 60 * 10000000
 X509_END_DATE_INTERVAL = 10 * 365 * 24 * 60 * 60 * 10000000
 
 
@@ -185,6 +186,11 @@ class CryptoAPICertManager(object):
 
             end_time = self._add_system_time_interval(
                 start_time, X509_END_DATE_INTERVAL)
+
+            # Needed in case of time sync issues as PowerShell remoting
+            # enforces a valid time interval even for self signed certificates
+            start_time = self._add_system_time_interval(
+                start_time, X509_START_DATE_INTERVAL)
 
             cert_context_p = cryptoapi.CertCreateSelfSignCertificate(
                 None, ctypes.byref(subject_blob), 0,
