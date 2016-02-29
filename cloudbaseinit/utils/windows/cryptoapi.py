@@ -42,6 +42,13 @@ class SYSTEMTIME(ctypes.Structure):
     ]
 
 
+class FILETIME(ctypes.Structure):
+    _fields_ = [
+        ('dwLowDateTime', wintypes.DWORD),
+        ('dwHighDateTime', wintypes.DWORD),
+    ]
+
+
 class CERT_CONTEXT(ctypes.Structure):
     _fields_ = [
         ('dwCertEncodingType', wintypes.DWORD),
@@ -137,11 +144,21 @@ crypt32.CertStrToNameW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR,
                                    ctypes.POINTER(wintypes.LPCWSTR)]
 CertStrToName = crypt32.CertStrToNameW
 
-# TODO(alexpilotti): this is not a CryptoAPI funtion, putting it in a separate
-# module would be more correct
+# TODO(alexpilotti): the following time related functions are not CryptoAPI
+# specific, putting them in a separate module would be more correct
 kernel32.GetSystemTime.restype = None
 kernel32.GetSystemTime.argtypes = [ctypes.POINTER(SYSTEMTIME)]
 GetSystemTime = kernel32.GetSystemTime
+
+kernel32.SystemTimeToFileTime.restype = wintypes.BOOL
+kernel32.SystemTimeToFileTime.argtypes = [ctypes.POINTER(SYSTEMTIME),
+                                          ctypes.POINTER(FILETIME)]
+SystemTimeToFileTime = kernel32.SystemTimeToFileTime
+
+kernel32.FileTimeToSystemTime.restype = wintypes.BOOL
+kernel32.FileTimeToSystemTime.argtypes = [ctypes.POINTER(FILETIME),
+                                          ctypes.POINTER(SYSTEMTIME)]
+FileTimeToSystemTime = kernel32.FileTimeToSystemTime
 
 # TODO(alexpilotti): this is not a CryptoAPI funtion, putting it in a separate
 # module would be more correct

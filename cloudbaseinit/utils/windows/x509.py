@@ -13,7 +13,6 @@
 #    under the License.
 
 
-import copy
 import ctypes
 from ctypes import wintypes
 import uuid
@@ -35,6 +34,8 @@ free.argtypes = [ctypes.c_void_p]
 STORE_NAME_MY = "My"
 STORE_NAME_ROOT = "Root"
 STORE_NAME_TRUSTED_PEOPLE = "TrustedPeople"
+
+X509_END_DATE_INTERVAL = 10 * 365 * 24 * 60 * 60 * 10000000
 
 
 class CryptoAPICertManager(object):
@@ -107,6 +108,26 @@ class CryptoAPICertManager(object):
             if crypt_prov_handle:
                 cryptoapi.CryptReleaseContext(crypt_prov_handle, 0)
 
+    @staticmethod
+    def _add_system_time_interval(system_time, increment):
+        '''increment's unit: 10ns'''
+        file_time = cryptoapi.FILETIME()
+        if not cryptoapi.SystemTimeToFileTime(ctypes.byref(system_time),
+                                              ctypes.byref(file_time)):
+            raise cryptoapi.CryptoAPIException()
+
+        t = file_time.dwLowDateTime + (file_time.dwHighDateTime << 32)
+        t += increment
+
+        file_time.dwLowDateTime = t & 0xFFFFFFFF
+        file_time.dwHighDateTime = t >> 32 & 0xFFFFFFFF
+
+        new_system_time = cryptoapi.SYSTEMTIME()
+        if not cryptoapi.FileTimeToSystemTime(ctypes.byref(file_time),
+                                              ctypes.byref(new_system_time)):
+            raise cryptoapi.CryptoAPIException()
+        return new_system_time
+
     def create_self_signed_cert(self, subject, validity_years=10,
                                 machine_keyset=True, store_name=STORE_NAME_MY):
         subject_encoded = None
@@ -162,8 +183,8 @@ class CryptoAPICertManager(object):
             start_time = cryptoapi.SYSTEMTIME()
             cryptoapi.GetSystemTime(ctypes.byref(start_time))
 
-            end_time = copy.copy(start_time)
-            end_time.wYear += validity_years
+            end_time = self._add_system_time_interval(
+                start_time, X509_END_DATE_INTERVAL)
 
             cert_context_p = cryptoapi.CertCreateSelfSignCertificate(
                 None, ctypes.byref(subject_blob), 0,
