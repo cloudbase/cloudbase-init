@@ -210,6 +210,7 @@ class WriteFilesPluginTests(unittest.TestCase):
         write_files:
         -   content: NDI=
             path: {}
+            encoding: unknown_encoding
             permissions: '0o466'
         """.format(tmp))
         with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
@@ -222,8 +223,28 @@ class WriteFilesPluginTests(unittest.TestCase):
         with open(tmp) as stream:
             self.assertEqual('NDI=', stream.read())
 
-        self.assertEqual(["Unknown encoding, doing nothing."],
+        self.assertEqual(["Unknown encoding, assuming plain text."],
                          snatcher.output)
+
+    def test_missing_encoding(self):
+        tmp = self._get_tempfile()
+        code = textwrap.dedent("""
+        write_files:
+        -   content: NDI=
+            path: {}
+            permissions: '0o466'
+        """.format(tmp))
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            self.plugin.process_non_multipart(code)
+
+        self.assertTrue(os.path.exists(tmp),
+                        "Expected path does not exist.")
+        with open(tmp) as stream:
+            self.assertEqual('NDI=', stream.read())
+
+        self.assertEqual([], snatcher.output)
 
     def test_invalid_object_passed(self):
         with self.assertRaises(exception.CloudbaseInitException) as cm:
