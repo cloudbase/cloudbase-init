@@ -39,6 +39,21 @@ class TestBase(unittest.TestCase):
         userdata = self._service.get_decoded_user_data()
         self.assertEqual(b"of course it works", userdata)
 
+    def test_get_name(self):
+        self.assertEqual(self._service.get_name(), 'FakeService')
+
+    def test_can_post_password(self):
+        self.assertFalse(self._service.can_post_password)
+
+    def test_is_password_set(self):
+        self.assertFalse(self._service.is_password_set)
+
+    def test_can_update_password(self):
+        self.assertFalse(self._service.can_update_password)
+
+    def test_is_password_changed(self):
+        self.assertFalse(self._service.is_password_changed())
+
 
 class TestBaseHTTPMetadataService(unittest.TestCase):
 

@@ -169,10 +169,7 @@ class UserDataPluginTest(unittest.TestCase):
         mock_part.get_content_type.assert_called_once_with()
         mock_user_handlers.get.assert_called_once_with(
             _content_type)
-        if handler_func and handler_func is Exception:
-            self.assertEqual(2, mock_part.get_content_type.call_count)
-            self.assertEqual(2, mock_part.get_filename.call_count)
-        elif handler_func:
+        if handler_func:
             handler_func.assert_called_once_with(None, _content_type,
                                                  mock_part.get_filename(),
                                                  mock_part.get_payload())
@@ -208,6 +205,19 @@ class UserDataPluginTest(unittest.TestCase):
         self._test_process_part(handler_func=None,
                                 user_data_plugin=user_data_plugin,
                                 content_type=False)
+        self._test_process_part(handler_func=None,
+                                user_data_plugin=None,
+                                content_type=False)
+
+    def test_process_part_exception_occurs(self):
+        mock_part = mock_handlers = mock.MagicMock()
+        mock_handlers.get.side_effect = Exception
+        mock_part.get_content_type().side_effect = Exception
+        self.assertEqual((1, False),
+                         self._userdata._process_part(
+                         part=mock_part,
+                         user_data_plugins=None,
+                         user_handlers=mock_handlers))
 
     @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
                 '._begin_part_process_event')

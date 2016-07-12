@@ -22,6 +22,7 @@ except ImportError:
 from six.moves.urllib import error
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import httpservice
 
 CONF = cloudbaseinit_conf.CONF
@@ -71,6 +72,13 @@ class HttpServiceTest(unittest.TestCase):
                          self._httpservice._POST_PASSWORD_MD_VER, response)
 
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
+                '._get_meta_data')
+    def test_can_post_password(self, mock_get_meta_data):
+        self.assertTrue(self._httpservice.can_post_password)
+        mock_get_meta_data.side_effect = base.NotExistingMetadataException
+        self.assertFalse(self._httpservice.can_post_password)
+
+    @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._get_password_path')
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
                 '._post_data')
@@ -91,6 +99,13 @@ class HttpServiceTest(unittest.TestCase):
                 enc_password_b64='fake')
             mock_get_password_path.assert_called_once_with()
             self.assertEqual(ret_val, response)
+
+    @mock.patch('cloudbaseinit.metadata.services.base.BaseHTTPMetadataService'
+                '._get_data')
+    def test_is_password_set(self, mock_get_data):
+        mock_get_data.return_value = "fake-data"
+        res = self._httpservice.is_password_set
+        self.assertTrue(res)
 
     def test_post_password(self):
         self._test_post_password(ret_val='fake return')

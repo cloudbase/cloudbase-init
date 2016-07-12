@@ -87,6 +87,20 @@ class WriteFilesPluginTests(unittest.TestCase):
         self.assertEqual(expected_logging, snatcher.output)
         self.assertEqual(write_files.DEFAULT_PERMISSIONS, response)
 
+    @mock.patch('os.makedirs')
+    def test_write_file(self, mk):
+        path = u'fake_path'
+        content = u'fake_content'
+        result = write_files._write_file(path, content, open_mode="w")
+        os.remove(path)
+        self.assertTrue(result)
+
+    @mock.patch('os.makedirs')
+    def test_write_file_excp(self, mock_makedirs):
+        mock_makedirs.side_effect = OSError
+        result = write_files._write_file(u'fake_path', u'fake_content')
+        self.assertFalse(result)
+
     def test_write_file_list(self):
         expected_logging = [
             "Plugin 'invalid' is currently not supported",

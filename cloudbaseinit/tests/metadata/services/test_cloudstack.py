@@ -57,7 +57,7 @@ class CloudStackTest(unittest.TestCase):
         ]
 
         self.assertTrue(self._service._test_api(url))
-        for _ in range(3):
+        for _ in range(4):
             self.assertFalse(self._service._test_api(url))
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
@@ -280,3 +280,12 @@ class CloudStackTest(unittest.TestCase):
         self.assertIsNone(self._service.get_admin_password())
         self.assertEqual(1, mock_get_password.call_count)
         self.assertEqual(0, mock_delete_password.call_count)
+
+    def test_can_update_password(self):
+        self.assertTrue(self._service.can_update_password)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack.'
+                '_get_password')
+    def test_is_password_changed(self, mock_get_password):
+        mock_get_password.return_value = True
+        self.assertTrue(self._service.is_password_changed())
