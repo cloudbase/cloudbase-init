@@ -22,7 +22,6 @@ except ImportError:
 from six.moves.urllib import error
 
 from cloudbaseinit import conf as cloudbaseinit_conf
-from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import httpservice
 
 CONF = cloudbaseinit_conf.CONF
@@ -54,83 +53,16 @@ class HttpServiceTest(unittest.TestCase):
     def test_load_exception(self):
         self._test_load(side_effect=Exception)
 
-    @mock.patch('six.moves.urllib.request.urlopen')
-    def _test_get_response(self, mock_urlopen, side_effect):
-        mock_req = mock.MagicMock
-        if side_effect and side_effect.code is 404:
-            mock_urlopen.side_effect = [side_effect]
-            self.assertRaises(base.NotExistingMetadataException,
-                              self._httpservice._get_response,
-                              mock_req)
-        elif side_effect and side_effect.code:
-            mock_urlopen.side_effect = [side_effect]
-            if side_effect.code == 404:
-                self.assertRaises(base.NotExistingMetadataException,
-                                  self._httpservice._get_response,
-                                  mock_req)
-            else:
-                self.assertRaises(error.HTTPError)
-        else:
-            mock_urlopen.return_value = 'fake url'
-            response = self._httpservice._get_response(mock_req)
-            self.assertEqual('fake url', response)
-
-    def test_get_response_fail_HTTPError(self):
-        err = error.HTTPError("http://169.254.169.254/", 404,
-                              'test error 404', {}, None)
-        self._test_get_response(side_effect=err)
-
-    def test_get_response_fail_other_exception(self):
-        err = error.HTTPError("http://169.254.169.254/", 409,
-                              'test error 409', {}, None)
-        self._test_get_response(side_effect=err)
-
-    def test_get_response(self):
-        self._test_get_response(side_effect=None)
-
     @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
-                '._get_response')
-    @mock.patch('posixpath.join')
-    @mock.patch('six.moves.urllib.request.Request')
-    def test_get_data(self, mock_Request, mock_posix_join,
-                      mock_get_response):
-        fake_path = os.path.join('fake', 'path')
-        mock_data = mock.MagicMock()
-        mock_norm_path = mock.MagicMock()
-        mock_req = mock.MagicMock()
-        mock_get_response.return_value = mock_data
-        mock_posix_join.return_value = mock_norm_path
-        mock_Request.return_value = mock_req
-
-        response = self._httpservice._get_data(fake_path)
-
-        mock_posix_join.assert_called_with(CONF.openstack.metadata_base_url,
-                                           fake_path)
-        mock_Request.assert_called_once_with(mock_norm_path)
-        mock_get_response.assert_called_once_with(mock_req)
-        self.assertEqual(mock_data.read.return_value, response)
-
-    @mock.patch('cloudbaseinit.metadata.services.httpservice.HttpService'
-                '._get_response')
-    @mock.patch('posixpath.join')
-    @mock.patch('six.moves.urllib.request.Request')
-    def test_post_data(self, mock_Request, mock_posix_join,
-                       mock_get_response):
+                '._http_request')
+    def test_post_data(self, mock_http_request):
         fake_path = os.path.join('fake', 'path')
         fake_data = 'fake data'
         mock_data = mock.MagicMock()
-        mock_norm_path = mock.MagicMock()
-        mock_req = mock.MagicMock()
-        mock_get_response.return_value = mock_data
-        mock_posix_join.return_value = mock_norm_path
-        mock_Request.return_value = mock_req
+        mock_http_request.return_value = mock_data
 
         response = self._httpservice._post_data(fake_path, fake_data)
-
-        mock_posix_join.assert_called_with(CONF.openstack.metadata_base_url,
-                                           fake_path)
-        mock_Request.assert_called_once_with(mock_norm_path, data=fake_data)
-        mock_get_response.assert_called_once_with(mock_req)
+        mock_http_request.assert_called_once_with(fake_path, data=fake_data)
         self.assertTrue(response)
 
     def test_get_password_path(self):

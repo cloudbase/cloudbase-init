@@ -31,6 +31,14 @@ class CloudStackOptions(conf_base.Options):
                 help="The base URL where the service looks for metadata",
                 deprecated_name="cloudstack_metadata_ip",
                 deprecated_group="DEFAULT"),
+            cfg.BoolOpt(
+                "https_allow_insecure", default=False,
+                help="Whether to disable the validation of HTTPS "
+                     "certificates."),
+            cfg.StrOpt(
+                "https_ca_bundle", default=None,
+                help="The path to a CA_BUNDLE file or directory with "
+                     "certificates of trusted CAs."),
         ]
 
     def register(self):

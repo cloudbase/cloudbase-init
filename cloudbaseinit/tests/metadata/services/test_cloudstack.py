@@ -64,8 +64,8 @@ class CloudStackTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._test_api')
     def test_load(self, mock_test_api, mock_os_util):
-        self._service.osutils.get_dhcp_hosts_in_use = mock.Mock()
-        self._service.osutils.get_dhcp_hosts_in_use.side_effect = [
+        self._service._osutils.get_dhcp_hosts_in_use = mock.Mock()
+        self._service._osutils.get_dhcp_hosts_in_use.side_effect = [
             [(mock.sentinel.mac_address, '10.10.0.1'),
              (mock.sentinel.mac_address, '10.10.0.2'),
              (mock.sentinel.mac_address, '10.10.0.3')]
@@ -89,7 +89,7 @@ class CloudStackTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._test_api')
     def test_load_fail(self, mock_test_api, mock_os_util):
-        self._service.osutils.get_dhcp_hosts_in_use.side_effect = [None]
+        self._service._osutils.get_dhcp_hosts_in_use.side_effect = [None]
         mock_test_api.side_effect = [False]
 
         self.assertFalse(self._service.load())  # No DHCP server was found.
@@ -100,8 +100,8 @@ class CloudStackTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._test_api')
     def test_load_no_service(self, mock_test_api, mock_os_util):
-        self._service.osutils.get_dhcp_hosts_in_use = mock.Mock()
-        self._service.osutils.get_dhcp_hosts_in_use.side_effect = [
+        self._service._osutils.get_dhcp_hosts_in_use = mock.Mock()
+        self._service._osutils.get_dhcp_hosts_in_use.side_effect = [
             [(mock.sentinel.mac_address, CONF.cloudstack.metadata_base_url)]
         ]
         mock_test_api.side_effect = [False, False]
@@ -109,29 +109,6 @@ class CloudStackTest(unittest.TestCase):
         # No service
         self.assertFalse(self._service.load())
         self.assertEqual(2, mock_test_api.call_count)
-
-    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
-                '._http_request')
-    def test_get_data(self, mock_http_request):
-        metadata = '/latest/meta-data/service-offering'
-        mock_http_request.side_effect = [
-            mock.sentinel.ok,
-            urllib.error.HTTPError(url=metadata, code=404, hdrs={}, fp=None,
-                                   msg='Testing 404 Not Found.'),
-            urllib.error.HTTPError(url=metadata, code=427, hdrs={}, fp=None,
-                                   msg='Testing 429 Too Many Requests.')
-        ]
-
-        for status in (200, 404, 427):
-            if status == 200:
-                response = self._service._get_data(metadata)
-                self.assertEqual(mock.sentinel.ok, response)
-            elif status == 404:
-                self.assertRaises(base.NotExistingMetadataException,
-                                  self._service._get_data, metadata)
-            else:
-                self.assertRaises(urllib.error.HTTPError,
-                                  self._service._get_data, metadata)
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._get_data')
@@ -192,24 +169,6 @@ class CloudStackTest(unittest.TestCase):
         for _ in range(3):
             response = self._service.get_public_keys()
             self.assertEqual([], response)
-
-    @mock.patch('six.moves.urllib.request')
-    def test__http_request(self, mock_urllib_request):
-        mock_urllib_request.Request.return_value = mock.sentinel.request
-        with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
-                                   'cloudstack') as snatcher:
-            self._service._http_request(mock.sentinel.url)
-
-        expected_logging = [
-            'Getting metadata from:  %s' % mock.sentinel.url,
-        ]
-        mock_urllib_request.Request.assert_called_once_with(
-            mock.sentinel.url)
-        mock_urllib_request.urlopen.assert_called_once_with(
-            mock.sentinel.request)
-        mock_urlopen = mock_urllib_request.urlopen.return_value
-        mock_urlopen.read.assert_called_once_with()
-        self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('six.moves.http_client.HTTPConnection')
     def test_get_password(self, mock_http_connection):

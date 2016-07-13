@@ -20,9 +20,11 @@ import io
 import time
 
 from oslo_log import log as oslo_logging
+import requests
 import six
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.utils import encoding
 
 CONF = cloudbaseinit_conf.CONF
@@ -180,3 +182,74 @@ class BaseMetadataService(object):
             is True.
         """
         return False
+
+
+class BaseHTTPMetadataService(BaseMetadataService):
+
+    """Contract class for metadata services that are ussing HTTP(S)."""
+
+    def __init__(self, base_url, https_allow_insecure=False,
+                 https_ca_bundle=None):
+        """Setup a new metadata service.
+
+        :param https_allow_insecure:
+            Whether to disable the validation of HTTPS certificates
+            (default False).
+        :param base_url:
+            The base URL where the service looks for metadata.
+        :param https_ca_bundle:
+            The path to a CA_BUNDLE file or directory with certificates
+            of trusted CAs.
+
+        .. note ::
+            If `https_ca_bundle` is set to a path to a directory, the
+            directory must have been processed using the c_rehash utility
+            supplied with OpenSSL.
+        """
+        super(BaseHTTPMetadataService, self).__init__()
+        self._https_allow_insecure = https_allow_insecure
+        self._https_ca_bundle = https_ca_bundle
+        self._base_url = base_url
+
+    def _verify_https_request(self):
+        """Whether to disable the validation of HTTPS certificates.
+
+        When this option is `True` the SSL certificate validation for the
+        current metadata provider will be disabled (please don't use it if
+        you don't know the implications of this behaviour).
+        """
+        if self._https_ca_bundle:
+            return self._https_ca_bundle
+        else:
+            return self._https_allow_insecure
+
+    def _http_request(self, url, data=None, headers=None):
+        """Get content for received url."""
+        if not url.startswith("http"):
+            url = requests.compat.urljoin(self._base_url, url)
+        request_action = requests.get if not data else requests.post
+        if not data:
+            LOG.debug('Getting metadata from: %s', url)
+        else:
+            LOG.debug('Posting data to %s', url)
+
+        response = request_action(url=url, data=data, headers=headers,
+                                  verify=self._verify_https_request())
+        response.raise_for_status()
+        return response.content
+
+    def _get_data(self, path):
+        """Getting the required information ussing metadata service."""
+        try:
+            response = self._http_request(path)
+        except requests.HTTPError as exc:
+            if exc.response.status_code == 404:
+                raise NotExistingMetadataException(
+                    getattr(exc, "message", str(exc)))
+            raise
+        except requests.exceptions.SSLError as exc:
+            LOG.exception(exc)
+            raise exception.CertificateVerifyFailed(
+                "HTTPS certificate validation failed.")
+
+        return response

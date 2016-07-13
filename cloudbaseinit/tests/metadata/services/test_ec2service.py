@@ -12,17 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import posixpath
 import unittest
 
 try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from six.moves.urllib import error
 
 from cloudbaseinit import conf as cloudbaseinit_conf
-from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import ec2service
 from cloudbaseinit.tests import testutils
 
@@ -57,46 +54,6 @@ class EC2ServiceTest(unittest.TestCase):
 
     def test_load_exception(self):
         self._test_load(side_effect=Exception)
-
-    @mock.patch('six.moves.urllib.request.urlopen')
-    def _test_get_response(self, mock_urlopen, ret_value):
-        req = mock.MagicMock()
-        mock_urlopen.side_effect = [ret_value]
-        is_instance = isinstance(ret_value, error.HTTPError)
-        if is_instance and ret_value.code == 404:
-            self.assertRaises(base.NotExistingMetadataException,
-                              self._service._get_response, req)
-        elif is_instance and ret_value.code != 404:
-            self.assertRaises(error.HTTPError,
-                              self._service._get_response, req)
-        else:
-            response = self._service._get_response(req)
-            self.assertEqual(ret_value, response)
-        mock_urlopen.assert_called_once_with(req)
-
-    def test_get_response(self):
-        self._test_get_response(ret_value=None)
-
-    def test_get_response_error_404(self):
-        err = error.HTTPError("http://169.254.169.254/", 404,
-                              'test error 404', {}, None)
-        self._test_get_response(ret_value=err)
-
-    def test_get_response_error_other(self):
-        err = error.HTTPError("http://169.254.169.254/", 409,
-                              'test error 409', {}, None)
-        self._test_get_response(ret_value=err)
-
-    @mock.patch('six.moves.urllib.request.Request')
-    @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
-                '._get_response')
-    def test_get_data(self, mock_get_response, mock_Request):
-        response = self._service._get_data('fake')
-        fake_path = posixpath.join(CONF.ec2.metadata_base_url, 'fake')
-        mock_Request.assert_called_once_with(fake_path)
-        mock_get_response.assert_called_once_with(mock_Request())
-        self.assertEqual(mock_get_response.return_value.read.return_value,
-                         response)
 
     @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
                 '._get_cache_data')

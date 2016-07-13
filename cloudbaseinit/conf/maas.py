@@ -46,6 +46,14 @@ class MAASOptions(conf_base.Options):
                        help="The MaaS OAuth token secret",
                        deprecated_name="maas_oauth_token_secret",
                        deprecated_group="DEFAULT"),
+            cfg.BoolOpt(
+                "https_allow_insecure", default=False,
+                help="Whether to disable the validation of HTTPS "
+                     "certificates."),
+            cfg.StrOpt(
+                "https_ca_bundle", default=None,
+                help="The path to a CA_BUNDLE file or directory with "
+                     "certificates of trusted CAs."),
         ]
 
     def register(self):

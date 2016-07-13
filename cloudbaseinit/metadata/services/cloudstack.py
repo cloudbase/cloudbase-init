@@ -24,7 +24,6 @@ from cloudbaseinit.metadata.services import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 
-
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
@@ -33,12 +32,17 @@ SAVED_PASSWORD = b"saved_password"
 TIMEOUT = 10
 
 
-class CloudStack(base.BaseMetadataService):
+class CloudStack(base.BaseHTTPMetadataService):
 
     def __init__(self):
-        super(CloudStack, self).__init__()
-        self.osutils = osutils_factory.get_os_utils()
-        self._metadata_url = None
+        # Note: The base url used by the current metadata service will be
+        #       updated later by the `_test_api` method.
+        super(CloudStack, self).__init__(
+            base_url=None,
+            https_allow_insecure=CONF.cloudstack.https_allow_insecure,
+            https_ca_bundle=CONF.cloudstack.https_ca_bundle)
+
+        self._osutils = osutils_factory.get_os_utils()
         self._router_ip = None
 
     def _get_path(self, resource, version="latest"):
@@ -48,7 +52,7 @@ class CloudStack(base.BaseMetadataService):
 
     def _test_api(self, metadata_url):
         """Test if the CloudStack API is responding properly."""
-        self._metadata_url = metadata_url
+        self._base_url = metadata_url
         try:
             response = self._get_data(self._get_path("service-offering"))
         except urllib.error.HTTPError as exc:
@@ -63,7 +67,8 @@ class CloudStack(base.BaseMetadataService):
             return False
 
         LOG.debug('Available services: %s', response)
-        self._router_ip = urllib.parse.urlparse(metadata_url).netloc
+        netloc = urllib.parse.urlparse(metadata_url).netloc
+        self._router_ip = netloc.split(":")[0]
         return True
 
     def load(self):
@@ -72,7 +77,7 @@ class CloudStack(base.BaseMetadataService):
         if self._test_api(CONF.cloudstack.metadata_base_url):
             return True
 
-        dhcp_servers = self.osutils.get_dhcp_hosts_in_use()
+        dhcp_servers = self._osutils.get_dhcp_hosts_in_use()
         if not dhcp_servers:
             LOG.debug('No DHCP server was found.')
             return False
@@ -82,24 +87,6 @@ class CloudStack(base.BaseMetadataService):
                 return True
 
         return False
-
-    def _http_request(self, url, **kwargs):
-        """Get content for received url."""
-        LOG.debug('Getting metadata from:  %s', url)
-        request = urllib.request.Request(url, **kwargs)
-        response = urllib.request.urlopen(request)
-        return response.read()
-
-    def _get_data(self, path):
-        """Getting required metadata using CloudStack metadata API."""
-        metadata_url = urllib.parse.urljoin(self._metadata_url, path)
-        try:
-            content = self._http_request(metadata_url)
-        except urllib.error.HTTPError as exc:
-            if exc.code == 404:
-                raise base.NotExistingMetadataException()
-            raise
-        return content
 
     def get_instance_id(self):
         """Instance name of the virtual machine."""
@@ -147,7 +134,6 @@ class CloudStack(base.BaseMetadataService):
 
         with contextlib.closing(http_client.HTTPConnection(
                 self._router_ip, 8080, timeout=TIMEOUT)) as connection:
-
             for _ in range(CONF.retry_count):
                 try:
                     connection.request("GET", "/", headers=headers)

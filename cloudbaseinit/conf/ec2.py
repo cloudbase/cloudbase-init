@@ -36,6 +36,14 @@ class EC2Options(conf_base.Options):
                 help="Add a route for the metadata ip address to the gateway",
                 deprecated_name="ec2_add_metadata_private_ip_route",
                 deprecated_group="DEFAULT"),
+            cfg.BoolOpt(
+                "https_allow_insecure", default=False,
+                help="Whether to disable the validation of HTTPS "
+                     "certificates."),
+            cfg.StrOpt(
+                "https_ca_bundle", default=None,
+                help="The path to a CA_BUNDLE file or directory with "
+                     "certificates of trusted CAs."),
         ]
 
     def register(self):

@@ -34,6 +34,14 @@ class OpenStackOptions(conf_base.Options):
                 "add_metadata_private_ip_route", default=True,
                 help="Add a route for the metadata ip address to the gateway",
                 deprecated_group="DEFAULT"),
+            cfg.BoolOpt(
+                "https_allow_insecure", default=False,
+                help="Whether to disable the validation of HTTPS "
+                     "certificates."),
+            cfg.StrOpt(
+                "https_ca_bundle", default=None,
+                help="The path to a CA_BUNDLE file or directory with "
+                     "certificates of trusted CAs."),
         ]
 
     def register(self):

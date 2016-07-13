@@ -12,18 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-import posixpath
 import unittest
 
 try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from six.moves.urllib import error
 
 from cloudbaseinit import conf as cloudbaseinit_conf
-from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import maasservice
 from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import x509constants
@@ -68,34 +64,6 @@ class MaaSHttpServiceTest(unittest.TestCase):
     def test_load_get_cache_data_fails(self):
         self._test_load(ip='196.254.196.254', cache_data_fails=True)
 
-    @mock.patch('six.moves.urllib.request.urlopen')
-    def _test_get_response(self, mock_urlopen, ret_val):
-        mock_request = mock.MagicMock()
-        mock_urlopen.side_effect = [ret_val]
-        if isinstance(ret_val, error.HTTPError) and ret_val.code == 404:
-            self.assertRaises(base.NotExistingMetadataException,
-                              self._maasservice._get_response, mock_request)
-        elif isinstance(ret_val, error.HTTPError) and ret_val.code != 404:
-            self.assertRaises(error.HTTPError,
-                              self._maasservice._get_response, mock_request)
-        else:
-            response = self._maasservice._get_response(req=mock_request)
-            mock_urlopen.assert_called_once_with(mock_request)
-            self.assertEqual(ret_val, response)
-
-    def test_get_response(self):
-        self._test_get_response(ret_val='fake response')
-
-    def test_get_response_error_404(self):
-        err = error.HTTPError("http://169.254.169.254/", 404,
-                              'test error 404', {}, None)
-        self._test_get_response(ret_val=err)
-
-    def test_get_response_error_not_404(self):
-        err = error.HTTPError("http://169.254.169.254/", 409,
-                              'test other error', {}, None)
-        self._test_get_response(ret_val=err)
-
     @testutils.ConfPatcher('oauth_consumer_key', 'consumer_key', "maas")
     @testutils.ConfPatcher('oauth_consumer_secret', 'consumer_secret', "maas")
     @testutils.ConfPatcher('oauth_token_key', 'token_key', "maas")
@@ -122,26 +90,6 @@ class MaaSHttpServiceTest(unittest.TestCase):
         self.assertEqual('"consumer_key"', auth_parts['oauth_consumer_key'])
         self.assertEqual('"consumer_secret%26token_secret"',
                          auth_parts['oauth_signature'])
-
-    @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
-                "._get_oauth_headers")
-    @mock.patch("six.moves.urllib.request.Request")
-    @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
-                "._get_response")
-    def test_get_data(self, mock_get_response, mock_Request,
-                      mock_get_oauth_headers):
-        with testutils.ConfPatcher('metadata_base_url', '196.254.196.254',
-                                   'maas'):
-            fake_path = os.path.join('fake', 'path')
-            mock_get_oauth_headers.return_value = 'fake headers'
-            response = self._maasservice._get_data(path=fake_path)
-            norm_path = posixpath.join(CONF.maas.metadata_base_url, fake_path)
-            mock_get_oauth_headers.assert_called_once_with(norm_path)
-            mock_Request.assert_called_once_with(norm_path,
-                                                 headers='fake headers')
-            mock_get_response.assert_called_once_with(mock_Request())
-            self.assertEqual(mock_get_response.return_value.read.return_value,
-                             response)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
