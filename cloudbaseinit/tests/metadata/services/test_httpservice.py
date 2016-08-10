@@ -41,7 +41,7 @@ class HttpServiceTest(unittest.TestCase):
         mock_get_meta_data.side_effect = [side_effect]
         response = self._httpservice.load()
         mock_check_metadata_ip_route.assert_called_once_with(
-            CONF.metadata_base_url)
+            CONF.openstack.metadata_base_url)
         mock_get_meta_data.assert_called_once_with()
         if side_effect:
             self.assertFalse(response)
@@ -104,7 +104,8 @@ class HttpServiceTest(unittest.TestCase):
 
         response = self._httpservice._get_data(fake_path)
 
-        mock_posix_join.assert_called_with(CONF.metadata_base_url, fake_path)
+        mock_posix_join.assert_called_with(CONF.openstack.metadata_base_url,
+                                           fake_path)
         mock_Request.assert_called_once_with(mock_norm_path)
         mock_get_response.assert_called_once_with(mock_req)
         self.assertEqual(mock_data.read.return_value, response)
@@ -126,7 +127,7 @@ class HttpServiceTest(unittest.TestCase):
 
         response = self._httpservice._post_data(fake_path, fake_data)
 
-        mock_posix_join.assert_called_with(CONF.metadata_base_url,
+        mock_posix_join.assert_called_with(CONF.openstack.metadata_base_url,
                                            fake_path)
         mock_Request.assert_called_once_with(mock_norm_path, data=fake_data)
         mock_get_response.assert_called_once_with(mock_req)

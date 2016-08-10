@@ -24,21 +24,32 @@ from six.moves.urllib import request
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.utils import x509constants
 
-opts = [
-    cfg.StrOpt('maas_metadata_url', default=None,
-               help='The base URL for MaaS metadata'),
-    cfg.StrOpt('maas_oauth_consumer_key', default="",
-               help='The MaaS OAuth consumer key'),
-    cfg.StrOpt('maas_oauth_consumer_secret', default="",
-               help='The MaaS OAuth consumer secret'),
-    cfg.StrOpt('maas_oauth_token_key', default="",
-               help='The MaaS OAuth token key'),
-    cfg.StrOpt('maas_oauth_token_secret', default="",
-               help='The MaaS OAuth token secret'),
+MAAS_OPTS = [
+    cfg.StrOpt("metadata_base_url", default=None,
+               help="The base URL for MaaS metadata",
+               deprecated_name="maas_metadata_url",
+               deprecated_group="DEFAULT"),
+    cfg.StrOpt("oauth_consumer_key", default="",
+               help="The MaaS OAuth consumer key",
+               deprecated_name="maas_oauth_consumer_key",
+               deprecated_group="DEFAULT"),
+    cfg.StrOpt("oauth_consumer_secret", default="",
+               help="The MaaS OAuth consumer secret",
+               deprecated_name="maas_oauth_consumer_secret",
+               deprecated_group="DEFAULT"),
+    cfg.StrOpt("oauth_token_key", default="",
+               help="The MaaS OAuth token key",
+               deprecated_name="maas_oauth_token_key",
+               deprecated_group="DEFAULT"),
+    cfg.StrOpt("oauth_token_secret", default="",
+               help="The MaaS OAuth token secret",
+               deprecated_name="maas_oauth_token_secret",
+               deprecated_group="DEFAULT"),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_group(cfg.OptGroup("maas"))
+CONF.register_opts(MAAS_OPTS, "maas")
 
 LOG = oslo_logging.getLogger(__name__)
 
@@ -65,7 +76,7 @@ class MaaSHttpService(base.BaseMetadataService):
     def load(self):
         super(MaaSHttpService, self).load()
 
-        if not CONF.maas_metadata_url:
+        if not CONF.maas.metadata_base_url:
             LOG.debug('MaaS metadata url not set')
         else:
             try:
@@ -74,7 +85,7 @@ class MaaSHttpService(base.BaseMetadataService):
             except Exception as ex:
                 LOG.exception(ex)
                 LOG.debug('Metadata not found at URL \'%s\'' %
-                          CONF.maas_metadata_url)
+                          CONF.maas.metadata_base_url)
         return False
 
     def _get_response(self, req):
@@ -88,17 +99,17 @@ class MaaSHttpService(base.BaseMetadataService):
 
     def _get_oauth_headers(self, url):
         client = oauth1.Client(
-            CONF.maas_oauth_consumer_key,
-            client_secret=CONF.maas_oauth_consumer_secret,
-            resource_owner_key=CONF.maas_oauth_token_key,
-            resource_owner_secret=CONF.maas_oauth_token_secret,
+            CONF.maas.oauth_consumer_key,
+            client_secret=CONF.maas.oauth_consumer_secret,
+            resource_owner_key=CONF.maas.oauth_token_key,
+            resource_owner_secret=CONF.maas.oauth_token_secret,
             signature_method=oauth1.SIGNATURE_PLAINTEXT)
         realm = _Realm("")
         headers = client.sign(url, realm=realm)[1]
         return headers
 
     def _get_data(self, path):
-        norm_path = posixpath.join(CONF.maas_metadata_url, path)
+        norm_path = posixpath.join(CONF.maas.metadata_base_url, path)
         oauth_headers = self._get_oauth_headers(norm_path)
 
         LOG.debug('Getting metadata from: %(norm_path)s',

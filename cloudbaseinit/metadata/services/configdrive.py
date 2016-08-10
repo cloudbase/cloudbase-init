@@ -41,24 +41,35 @@ CD_LOCATIONS = {
     "partition",
 }
 
-opts = [
-    cfg.BoolOpt('config_drive_raw_hhd', default=True,
-                help='Look for an ISO config drive in raw HDDs',
+CONFIG_DRIVE_OPTS = [
+    cfg.BoolOpt("raw_hdd", default=True,
+                help="Look for an ISO config drive in raw HDDs",
+                deprecated_name="config_drive_raw_hhd",
+                deprecated_group="DEFAULT",
                 deprecated_for_removal=True),
-    cfg.BoolOpt('config_drive_cdrom', default=True,
-                help='Look for a config drive in the attached cdrom drives',
+    cfg.BoolOpt("cdrom", default=True,
+                help="Look for a config drive in the attached cdrom drives",
+                deprecated_name="config_drive_cdrom",
+                deprecated_group="DEFAULT",
                 deprecated_for_removal=True),
-    cfg.BoolOpt('config_drive_vfat', default=True,
-                help='Look for a config drive in VFAT filesystems',
+    cfg.BoolOpt("vfat", default=True,
+                help="Look for a config drive in VFAT filesystems",
+                deprecated_name="config_drive_vfat",
+                deprecated_group="DEFAULT",
                 deprecated_for_removal=True),
-    cfg.ListOpt('config_drive_types', default=list(CD_TYPES),
-                help='Supported formats of a configuration drive'),
-    cfg.ListOpt('config_drive_locations', default=list(CD_LOCATIONS),
-                help='Supported configuration drive locations'),
+    cfg.ListOpt("types", default=list(CD_TYPES),
+                help="Supported formats of a configuration drive",
+                deprecated_name="config_drive_types",
+                deprecated_group="DEFAULT",),
+    cfg.ListOpt("locations", default=list(CD_LOCATIONS),
+                deprecated_name="config_drive_locations",
+                deprecated_group="DEFAULT",
+                help="Supported configuration drive locations"),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_group(cfg.OptGroup("config_drive"))
+CONF.register_opts(CONFIG_DRIVE_OPTS, "config_drive")
 
 LOG = oslo_logging.getLogger(__name__)
 
@@ -70,17 +81,17 @@ class ConfigDriveService(baseopenstackservice.BaseOpenStackService):
         self._metadata_path = None
 
     def _preprocess_options(self):
-        self._searched_types = set(CONF.config_drive_types)
-        self._searched_locations = set(CONF.config_drive_locations)
+        self._searched_types = set(CONF.config_drive.types)
+        self._searched_locations = set(CONF.config_drive.locations)
 
         # Deprecation backward compatibility.
-        if CONF.config_drive_raw_hhd:
+        if CONF.config_drive.raw_hdd:
             self._searched_types.add("iso")
             self._searched_locations.add("hdd")
-        if CONF.config_drive_cdrom:
+        if CONF.config_drive.cdrom:
             self._searched_types.add("iso")
             self._searched_locations.add("cdrom")
-        if CONF.config_drive_vfat:
+        if CONF.config_drive.vfat:
             self._searched_types.add("vfat")
             self._searched_locations.add("hdd")
 

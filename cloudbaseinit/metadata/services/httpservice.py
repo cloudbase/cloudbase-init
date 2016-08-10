@@ -23,15 +23,17 @@ from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.utils import network
 
-opts = [
-    cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
-               help='The base URL where the service looks for metadata'),
-    cfg.BoolOpt('add_metadata_private_ip_route', default=True,
-                help='Add a route for the metadata ip address to the gateway'),
+OPENSTACK_OPTS = [
+    cfg.StrOpt("metadata_base_url", default="http://169.254.169.254/",
+               help="The base URL where the service looks for metadata",
+               deprecated_group="DEFAULT"),
+    cfg.BoolOpt("add_metadata_private_ip_route", default=True,
+                help="Add a route for the metadata ip address to the gateway",
+                deprecated_group="DEFAULT"),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_opts(OPENSTACK_OPTS, "openstack")
 
 LOG = oslo_logging.getLogger(__name__)
 
@@ -45,15 +47,15 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
 
     def load(self):
         super(HttpService, self).load()
-        if CONF.add_metadata_private_ip_route:
-            network.check_metadata_ip_route(CONF.metadata_base_url)
+        if CONF.openstack.add_metadata_private_ip_route:
+            network.check_metadata_ip_route(CONF.openstack.metadata_base_url)
 
         try:
             self._get_meta_data()
             return True
         except Exception:
             LOG.debug('Metadata not found at URL \'%s\'' %
-                      CONF.metadata_base_url)
+                      CONF.openstack.metadata_base_url)
             return False
 
     def _get_response(self, req):
@@ -66,14 +68,14 @@ class HttpService(baseopenstackservice.BaseOpenStackService):
                 raise
 
     def _get_data(self, path):
-        norm_path = posixpath.join(CONF.metadata_base_url, path)
+        norm_path = posixpath.join(CONF.openstack.metadata_base_url, path)
         LOG.debug('Getting metadata from: %s', norm_path)
         req = request.Request(norm_path)
         response = self._get_response(req)
         return response.read()
 
     def _post_data(self, path, data):
-        norm_path = posixpath.join(CONF.metadata_base_url, path)
+        norm_path = posixpath.join(CONF.openstack.metadata_base_url, path)
         LOG.debug('Posting metadata to: %s', norm_path)
         req = request.Request(norm_path, data=data)
         self._get_response(req)

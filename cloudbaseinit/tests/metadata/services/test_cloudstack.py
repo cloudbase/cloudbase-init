@@ -48,7 +48,6 @@ class CloudStackTest(unittest.TestCase):
         url = '127.0.0.1'
         mock_http_request.side_effect = [
             '200 OK. Successfully!',    # Request to Web Service
-            'service-offering',         # Response for get_data
             urllib.error.HTTPError(url=url, code=404, hdrs={}, fp=None,
                                    msg='Testing 404 Not Found.'),
             urllib.error.HTTPError(url=url, code=427, hdrs={}, fp=None,
@@ -83,7 +82,8 @@ class CloudStackTest(unittest.TestCase):
         self._service._test_api = mock_test_api
 
         self.assertTrue(self._service.load())
-        mock_test_api.assert_called_once_with(CONF.cloudstack_metadata_ip)
+        mock_test_api.assert_called_once_with(
+            CONF.cloudstack.metadata_base_url)
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
@@ -93,7 +93,8 @@ class CloudStackTest(unittest.TestCase):
         mock_test_api.side_effect = [False]
 
         self.assertFalse(self._service.load())  # No DHCP server was found.
-        mock_test_api.assert_called_once_with(CONF.cloudstack_metadata_ip)
+        mock_test_api.assert_called_once_with(
+            CONF.cloudstack.metadata_base_url)
 
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
@@ -101,7 +102,7 @@ class CloudStackTest(unittest.TestCase):
     def test_load_no_service(self, mock_test_api, mock_os_util):
         self._service.osutils.get_dhcp_hosts_in_use = mock.Mock()
         self._service.osutils.get_dhcp_hosts_in_use.side_effect = [
-            [(mock.sentinel.mac_address, CONF.cloudstack_metadata_ip)]
+            [(mock.sentinel.mac_address, CONF.cloudstack.metadata_base_url)]
         ]
         mock_test_api.side_effect = [False, False]
 
@@ -112,7 +113,7 @@ class CloudStackTest(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._http_request')
     def test_get_data(self, mock_http_request):
-        metadata = 'service-offering'
+        metadata = '/latest/meta-data/service-offering'
         mock_http_request.side_effect = [
             mock.sentinel.ok,
             urllib.error.HTTPError(url=metadata, code=404, hdrs={}, fp=None,
@@ -164,15 +165,15 @@ class CloudStackTest(unittest.TestCase):
 
     def test_get_instance_id(self):
         self._test_cache_response(method=self._service.get_instance_id,
-                                  metadata='instance-id')
+                                  metadata='latest/meta-data/instance-id')
 
     def test_get_host_name(self):
         self._test_cache_response(method=self._service.get_host_name,
-                                  metadata='local-hostname')
+                                  metadata='latest/meta-data/local-hostname')
 
     def test_get_user_data(self):
         self._test_cache_response(method=self._service.get_user_data,
-                                  metadata='../user-data', decode=False)
+                                  metadata='latest/user-data', decode=False)
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
                 '._get_cache_data')

@@ -43,7 +43,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
         if cache_data_fails:
             mock_get_cache_data.side_effect = Exception
 
-        with testutils.ConfPatcher('maas_metadata_url', ip):
+        with testutils.ConfPatcher('metadata_base_url', ip, "maas"):
             with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
                                        'maasservice') as snatcher:
                 response = self._maasservice.load()
@@ -96,10 +96,10 @@ class MaaSHttpServiceTest(unittest.TestCase):
                               'test other error', {}, None)
         self._test_get_response(ret_val=err)
 
-    @testutils.ConfPatcher('maas_oauth_consumer_key', 'consumer_key')
-    @testutils.ConfPatcher('maas_oauth_consumer_secret', 'consumer_secret')
-    @testutils.ConfPatcher('maas_oauth_token_key', 'token_key')
-    @testutils.ConfPatcher('maas_oauth_token_secret', 'token_secret')
+    @testutils.ConfPatcher('oauth_consumer_key', 'consumer_key', "maas")
+    @testutils.ConfPatcher('oauth_consumer_secret', 'consumer_secret', "maas")
+    @testutils.ConfPatcher('oauth_token_key', 'token_key', "maas")
+    @testutils.ConfPatcher('oauth_token_secret', 'token_secret', "maas")
     def test_get_oauth_headers(self):
         response = self._maasservice._get_oauth_headers(url='196.254.196.254')
         self.assertIsInstance(response, dict)
@@ -130,11 +130,12 @@ class MaaSHttpServiceTest(unittest.TestCase):
                 "._get_response")
     def test_get_data(self, mock_get_response, mock_Request,
                       mock_get_oauth_headers):
-        with testutils.ConfPatcher('maas_metadata_url', '196.254.196.254'):
+        with testutils.ConfPatcher('metadata_base_url', '196.254.196.254',
+                                   'maas'):
             fake_path = os.path.join('fake', 'path')
             mock_get_oauth_headers.return_value = 'fake headers'
             response = self._maasservice._get_data(path=fake_path)
-            norm_path = posixpath.join(CONF.maas_metadata_url, fake_path)
+            norm_path = posixpath.join(CONF.maas.metadata_base_url, fake_path)
             mock_get_oauth_headers.assert_called_once_with(norm_path)
             mock_Request.assert_called_once_with(norm_path,
                                                  headers='fake headers')

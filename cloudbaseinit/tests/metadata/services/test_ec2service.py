@@ -45,7 +45,7 @@ class EC2ServiceTest(unittest.TestCase):
             response = self._service.load()
 
         mock_check_metadata_ip_route.assert_called_once_with(
-            CONF.ec2_metadata_base_url)
+            CONF.ec2.metadata_base_url)
         mock_get_host_name.assert_called_once_with()
         if side_effect is Exception:
             self.assertFalse(response)
@@ -92,7 +92,7 @@ class EC2ServiceTest(unittest.TestCase):
                 '._get_response')
     def test_get_data(self, mock_get_response, mock_Request):
         response = self._service._get_data('fake')
-        fake_path = posixpath.join(CONF.ec2_metadata_base_url, 'fake')
+        fake_path = posixpath.join(CONF.ec2.metadata_base_url, 'fake')
         mock_Request.assert_called_once_with(fake_path)
         mock_get_response.assert_called_once_with(mock_Request())
         self.assertEqual(mock_get_response.return_value.read.return_value,

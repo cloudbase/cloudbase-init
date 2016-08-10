@@ -25,13 +25,15 @@ from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import x509constants
 
 
-opts = [
-    cfg.StrOpt('metadata_base_url', default='http://169.254.169.254/',
-               help='The base URL where the service looks for metadata'),
+OPENSTACK_OPTS = [
+    cfg.StrOpt("metadata_base_url", default="http://169.254.169.254/",
+               help="The base URL where the service looks for metadata",
+               deprecated_group="DEFAULT")
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_group(cfg.OptGroup('openstack'))
+CONF.register_opts(OPENSTACK_OPTS, 'openstack')
 
 LOG = oslo_logging.getLogger(__name__)
 

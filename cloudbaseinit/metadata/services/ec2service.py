@@ -23,16 +23,20 @@ from six.moves.urllib import request
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.utils import network
 
-opts = [
-    cfg.StrOpt('ec2_metadata_base_url',
-               default='http://169.254.169.254/',
-               help='The base URL where the service looks for metadata'),
-    cfg.BoolOpt('ec2_add_metadata_private_ip_route', default=True,
-                help='Add a route for the metadata ip address to the gateway'),
+EC2_OPTS = [
+    cfg.StrOpt("metadata_base_url", default="http://169.254.169.254/",
+               help="The base URL where the service looks for metadata",
+               deprecated_name="ec2_metadata_base_url",
+               deprecated_group="DEFAULT"),
+    cfg.BoolOpt("add_metadata_private_ip_route", default=True,
+                help="Add a route for the metadata ip address to the gateway",
+                deprecated_name="ec2_add_metadata_private_ip_route",
+                deprecated_group="DEFAULT"),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF.register_group(cfg.OptGroup("ec2"))
+CONF.register_opts(EC2_OPTS, "ec2")
 
 LOG = oslo_logging.getLogger(__name__)
 
@@ -46,8 +50,8 @@ class EC2Service(base.BaseMetadataService):
 
     def load(self):
         super(EC2Service, self).load()
-        if CONF.ec2_add_metadata_private_ip_route:
-            network.check_metadata_ip_route(CONF.ec2_metadata_base_url)
+        if CONF.ec2.add_metadata_private_ip_route:
+            network.check_metadata_ip_route(CONF.ec2.metadata_base_url)
 
         try:
             self.get_host_name()
@@ -55,7 +59,7 @@ class EC2Service(base.BaseMetadataService):
         except Exception as ex:
             LOG.exception(ex)
             LOG.debug('Metadata not found at URL \'%s\'' %
-                      CONF.ec2_metadata_base_url)
+                      CONF.ec2.metadata_base_url)
             return False
 
     def _get_response(self, req):
@@ -68,7 +72,7 @@ class EC2Service(base.BaseMetadataService):
                 raise
 
     def _get_data(self, path):
-        norm_path = posixpath.join(CONF.ec2_metadata_base_url, path)
+        norm_path = posixpath.join(CONF.ec2.metadata_base_url, path)
 
         LOG.debug('Getting metadata from: %(norm_path)s',
                   {'norm_path': norm_path})

@@ -52,24 +52,25 @@ class TestConfigDriveService(unittest.TestCase):
 
     def _test_preprocess_options(self, fail=False):
         if fail:
-            with testutils.ConfPatcher("config_drive_types",
-                                       ["vfat", "ntfs"]):
+            with testutils.ConfPatcher("types", ["vfat", "ntfs"],
+                                       group="config_drive"):
                 with self.assertRaises(exception.CloudbaseInitException):
                     self._config_drive._preprocess_options()
-            with testutils.ConfPatcher("config_drive_locations",
-                                       ["device"]):
+            with testutils.ConfPatcher("locations", ["device"],
+                                       group="config_drive"):
                 with self.assertRaises(exception.CloudbaseInitException):
                     self._config_drive._preprocess_options()
             return
+
         options = {
-            "config_drive_raw_hhd": False,
-            "config_drive_cdrom": False,
-            "config_drive_vfat": True,
+            "raw_hdd": False,
+            "cdrom": False,
+            "vfat": True,
             # Deprecated options above.
-            "config_drive_types": ["vfat", "iso"],
-            "config_drive_locations": ["partition"]
+            "types": ["vfat", "iso"],
+            "locations": ["partition"]
         }
-        contexts = [testutils.ConfPatcher(key, value)
+        contexts = [testutils.ConfPatcher(key, value, group="config_drive")
                     for key, value in options.items()]
         with contexts[0], contexts[1], contexts[2], \
                 contexts[3], contexts[4]:

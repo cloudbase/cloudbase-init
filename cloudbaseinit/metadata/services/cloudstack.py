@@ -13,6 +13,7 @@
 #    under the License.
 
 import contextlib
+import posixpath
 
 from oslo_config import cfg
 from oslo_log import log as oslo_logging
@@ -23,15 +24,18 @@ from cloudbaseinit.metadata.services import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 
+CLOUDSTACK_OPTS = [
+    cfg.StrOpt("metadata_base_url", default="http://10.1.1.1/",
+               help="The base URL where the service looks for metadata",
+               deprecated_name="cloudstack_metadata_ip",
+               deprecated_group="DEFAULT"),
+]
+
+CONF = cfg.CONF
+CONF.register_group(cfg.OptGroup("cloudstack"))
+CONF.register_opts(CLOUDSTACK_OPTS, "cloudstack")
 
 LOG = oslo_logging.getLogger(__name__)
-
-OPTS = [
-    cfg.StrOpt('cloudstack_metadata_ip', default="10.1.1.1",
-               help='The IP adress where the service looks for metadata'),
-]
-CONF = cfg.CONF
-CONF.register_opts(OPTS)
 
 BAD_REQUEST = b"bad_request"
 SAVED_PASSWORD = b"saved_password"
@@ -40,20 +44,22 @@ TIMEOUT = 10
 
 class CloudStack(base.BaseMetadataService):
 
-    URI_TEMPLATE = 'http://%s/latest/meta-data/'
-
     def __init__(self):
         super(CloudStack, self).__init__()
         self.osutils = osutils_factory.get_os_utils()
-        self._metadata_uri = None
+        self._metadata_url = None
         self._router_ip = None
 
-    def _test_api(self, ip_address):
+    def _get_path(self, resource, version="latest"):
+        """Get the relative path for the received resource."""
+        return posixpath.normpath(
+            posixpath.join(version, "meta-data", resource))
+
+    def _test_api(self, metadata_url):
         """Test if the CloudStack API is responding properly."""
-        self._metadata_uri = self.URI_TEMPLATE % ip_address
+        self._metadata_url = metadata_url
         try:
-            response = self._http_request(self._metadata_uri)
-            self._get_data('service-offering')
+            response = self._get_data(self._get_path("service-offering"))
         except urllib.error.HTTPError as exc:
             LOG.debug('Error response code: %s', exc.code)
             return False
@@ -66,13 +72,13 @@ class CloudStack(base.BaseMetadataService):
             return False
 
         LOG.debug('Available services: %s', response)
-        self._router_ip = ip_address
+        self._router_ip = urllib.parse.urlparse(metadata_url).netloc
         return True
 
     def load(self):
         """Obtain all the required informations."""
         super(CloudStack, self).load()
-        if self._test_api(CONF.cloudstack_metadata_ip):
+        if self._test_api(CONF.cloudstack.metadata_base_url):
             return True
 
         dhcp_servers = self.osutils.get_dhcp_hosts_in_use()
@@ -81,7 +87,7 @@ class CloudStack(base.BaseMetadataService):
             return False
         for _, ip_address in dhcp_servers:
             LOG.debug('Testing: %s', ip_address)
-            if self._test_api(ip_address):
+            if self._test_api('http://%s/' % ip_address):
                 return True
 
         return False
@@ -95,9 +101,9 @@ class CloudStack(base.BaseMetadataService):
 
     def _get_data(self, path):
         """Getting required metadata using CloudStack metadata API."""
-        metadata_uri = urllib.parse.urljoin(self._metadata_uri, path)
+        metadata_url = urllib.parse.urljoin(self._metadata_url, path)
         try:
-            content = self._http_request(metadata_uri)
+            content = self._http_request(metadata_url)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
                 raise base.NotExistingMetadataException()
@@ -106,20 +112,22 @@ class CloudStack(base.BaseMetadataService):
 
     def get_instance_id(self):
         """Instance name of the virtual machine."""
-        return self._get_cache_data('instance-id', decode=True)
+        return self._get_cache_data(self._get_path("instance-id"),
+                                    decode=True)
 
     def get_host_name(self):
         """Hostname of the virtual machine."""
-        return self._get_cache_data('local-hostname', decode=True)
+        return self._get_cache_data(self._get_path("local-hostname"),
+                                    decode=True)
 
     def get_user_data(self):
         """User data for this virtual machine."""
-        return self._get_cache_data('../user-data')
+        return self._get_cache_data(self._get_path('../user-data'))
 
     def get_public_keys(self):
         """Available ssh public keys."""
         ssh_keys = []
-        ssh_chunks = self._get_cache_data('public-keys',
+        ssh_chunks = self._get_cache_data(self._get_path("public-keys"),
                                           decode=True).splitlines()
         for ssh_key in ssh_chunks:
             ssh_key = ssh_key.strip()
