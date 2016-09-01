@@ -14,22 +14,14 @@
 
 import socket
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.utils import dhcp
 
-opts = [
-    cfg.BoolOpt('ntp_use_dhcp_config', default=False,
-                help='Configures NTP client time synchronization using '
-                     'the NTP servers provided via DHCP'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

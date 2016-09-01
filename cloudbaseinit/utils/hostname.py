@@ -15,18 +15,11 @@
 import platform
 import re
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
-opts = [
-    cfg.BoolOpt('netbios_host_name_compatibility', default=True,
-                help='Truncates the hostname to 15 characters for Netbios '
-                     'compatibility'),
-]
+from cloudbaseinit import conf as cloudbaseinit_conf
 
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 NETBIOS_HOST_NAME_MAX_LEN = 15

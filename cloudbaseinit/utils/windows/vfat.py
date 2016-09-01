@@ -15,20 +15,13 @@
 import os
 import re
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 
 
-opts = [
-    cfg.StrOpt('mtools_path', default=None,
-               help='Path to "mtools" program suite, used for interacting '
-                    'with VFAT filesystems'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = cloudbaseinit_conf.CONF
 CONFIG_DRIVE_LABEL = 'config-2'
 LOG = oslo_logging.getLogger(__name__)
 VOLUME_LABEL_REGEX = re.compile("Volume label is (.*?)$")

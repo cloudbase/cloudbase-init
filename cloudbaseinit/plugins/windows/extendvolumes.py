@@ -12,23 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.utils.windows.storage import factory as storage_factory
 
-opts = [
-    cfg.ListOpt('volumes_to_extend',
-                default=None,
-                help='List of volumes that need to be extended '
-                'if contiguous space is available on the disk. By default '
-                'all the available volumes can be extended. Volumes must '
-                'be specified using a comma separated list of volume indexes, '
-                'e.g.: "1,2"'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = cloudbaseinit_conf.CONF
 
 
 class ExtendVolumesPlugin(base.BasePlugin):

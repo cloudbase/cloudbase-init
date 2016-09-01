@@ -19,12 +19,11 @@ try:
 except ImportError:
     import mock
 
-from oslo_config import cfg
-
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common.userdataplugins import cloudconfig
 from cloudbaseinit.tests import testutils
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 class CloudConfigPluginTests(unittest.TestCase):

@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 import yaml
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
@@ -24,19 +24,8 @@ from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
 )
 
 
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
-OPTS = [
-    cfg.ListOpt(
-        'cloud_config_plugins',
-        default=[],
-        help=(
-            'List which contains the name of the cloud config plugins '
-            'ordered by priority.'
-        ),
-    )
-]
-CONF = cfg.CONF
-CONF.register_opts(OPTS)
 DEFAULT_ORDER_VALUE = 999
 
 

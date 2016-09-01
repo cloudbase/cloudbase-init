@@ -14,22 +14,15 @@
 
 import os
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
 
 
-opts = [
-    cfg.BoolOpt('activate_windows', default=False,
-                help='Activates Windows automatically'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

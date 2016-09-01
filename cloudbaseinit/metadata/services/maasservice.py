@@ -16,41 +16,15 @@ import posixpath
 import re
 
 from oauthlib import oauth1
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 from six.moves.urllib import error
 from six.moves.urllib import request
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.utils import x509constants
 
-MAAS_OPTS = [
-    cfg.StrOpt("metadata_base_url", default=None,
-               help="The base URL for MaaS metadata",
-               deprecated_name="maas_metadata_url",
-               deprecated_group="DEFAULT"),
-    cfg.StrOpt("oauth_consumer_key", default="",
-               help="The MaaS OAuth consumer key",
-               deprecated_name="maas_oauth_consumer_key",
-               deprecated_group="DEFAULT"),
-    cfg.StrOpt("oauth_consumer_secret", default="",
-               help="The MaaS OAuth consumer secret",
-               deprecated_name="maas_oauth_consumer_secret",
-               deprecated_group="DEFAULT"),
-    cfg.StrOpt("oauth_token_key", default="",
-               help="The MaaS OAuth token key",
-               deprecated_name="maas_oauth_token_key",
-               deprecated_group="DEFAULT"),
-    cfg.StrOpt("oauth_token_secret", default="",
-               help="The MaaS OAuth token secret",
-               deprecated_name="maas_oauth_token_secret",
-               deprecated_group="DEFAULT"),
-]
-
-CONF = cfg.CONF
-CONF.register_group(cfg.OptGroup("maas"))
-CONF.register_opts(MAAS_OPTS, "maas")
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

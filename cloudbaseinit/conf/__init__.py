@@ -1,4 +1,4 @@
-# Copyright 2014 Cloudbase Solutions Srl
+# Copyright 2016 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -12,16 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from cloudbaseinit import conf as cloudbaseinit_conf
-from cloudbaseinit.utils import classloader
+from oslo_config import cfg
+from oslo_log import log
 
-CONF = cloudbaseinit_conf.CONF
+from cloudbaseinit.conf import factory
 
+CONF = cfg.CONF
 
-def load_plugins():
-    plugins = {}
-    cl = classloader.ClassLoader()
-    for class_path in CONF.user_data_plugins:
-        plugin = cl.load_class(class_path)()
-        plugins[plugin.get_mime_type()] = plugin
-    return plugins
+log.register_options(CONF)
+for _OPT_CLS in factory.get_options():
+    _OPT_CLS(CONF).register()

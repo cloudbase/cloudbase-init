@@ -19,13 +19,13 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 from six.moves.urllib import error
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import httpservice
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 class HttpServiceTest(unittest.TestCase):

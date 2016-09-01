@@ -20,25 +20,16 @@ import struct
 import tempfile
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services.osconfigdrive import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import vfat
 
-
-opts = [
-    cfg.StrOpt('bsdtar_path', default='bsdtar.exe',
-               help='Path to "bsdtar", used to extract ISO ConfigDrive '
-                    'files'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 CONFIG_DRIVE_LABEL = 'config-2'

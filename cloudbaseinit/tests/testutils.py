@@ -25,13 +25,13 @@ try:
 except ImportError:
     import mock
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 @contextlib.contextmanager

@@ -1,4 +1,4 @@
-# Copyright 2014 Cloudbase Solutions Srl
+# Copyright 2016 Cloudbase Solutions Srl
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -12,16 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.utils import classloader
 
-CONF = cloudbaseinit_conf.CONF
+_OPT_PATHS = (
+    'cloudbaseinit.conf.cloudconfig.CloudConfigOptions',
+    'cloudbaseinit.conf.cloudstack.CloudStackOptions',
+    'cloudbaseinit.conf.default.GlobalOptions',
+    'cloudbaseinit.conf.ec2.EC2Options',
+    'cloudbaseinit.conf.maas.MAASOptions',
+    'cloudbaseinit.conf.openstack.OpenStackOptions',
+)
 
 
-def load_plugins():
-    plugins = {}
-    cl = classloader.ClassLoader()
-    for class_path in CONF.user_data_plugins:
-        plugin = cl.load_class(class_path)()
-        plugins[plugin.get_mime_type()] = plugin
-    return plugins
+def get_options():
+    """Return a list of all the available `Options` subclasses."""
+    loader = classloader.ClassLoader()
+    return [loader.load_class(class_path) for class_path in _OPT_PATHS]

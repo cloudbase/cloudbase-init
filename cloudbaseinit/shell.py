@@ -22,13 +22,13 @@ if struct.calcsize("P") == 8 and sys.platform == 'win32':
     sys.coinit_flags = pythoncom.COINIT_MULTITHREADED
     pythoncom.CoInitializeEx(pythoncom.COINIT_MULTITHREADED)
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import init
 from cloudbaseinit.utils import log as logging
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 LOG = oslo_logging.getLogger(__name__)
 

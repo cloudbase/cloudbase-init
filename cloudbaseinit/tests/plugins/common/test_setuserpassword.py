@@ -18,14 +18,16 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 
+
+from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import constant
 from cloudbaseinit.plugins.common import constants
 from cloudbaseinit.plugins.common import setuserpassword
 from cloudbaseinit.tests.metadata import fake_json_response
 from cloudbaseinit.tests import testutils
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 class SetUserPasswordPluginTests(unittest.TestCase):
@@ -281,7 +283,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
     @mock.patch.object(setuserpassword.osutils_factory, 'get_os_utils')
     @testutils.ConfPatcher('first_logon_behaviour',
-                           setuserpassword.NEVER_CHANGE)
+                           constant.NEVER_CHANGE)
     def test_logon_behaviour_never_change(self, mock_get_os_utils):
         self._setpassword_plugin._change_logon_behaviour(
             mock.sentinel.username)
@@ -289,7 +291,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self.assertFalse(mock_get_os_utils.called)
 
     @testutils.ConfPatcher('first_logon_behaviour',
-                           setuserpassword.ALWAYS_CHANGE)
+                           constant.ALWAYS_CHANGE)
     @mock.patch.object(setuserpassword, 'osutils_factory')
     def test_logon_behaviour_always(self, mock_factory):
         self._setpassword_plugin._change_logon_behaviour(
@@ -302,7 +304,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             mock.sentinel.username)
 
     @testutils.ConfPatcher('first_logon_behaviour',
-                           setuserpassword.CLEAR_TEXT_INJECTED_ONLY)
+                           constant.CLEAR_TEXT_INJECTED_ONLY)
     @mock.patch.object(setuserpassword, 'osutils_factory')
     def test_change_logon_behaviour_clear_text_password_not_injected(
             self, mock_factory):
@@ -314,7 +316,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self.assertFalse(mock_get_os_utils.called)
 
     @testutils.ConfPatcher('first_logon_behaviour',
-                           setuserpassword.CLEAR_TEXT_INJECTED_ONLY)
+                           constant.CLEAR_TEXT_INJECTED_ONLY)
     @mock.patch.object(setuserpassword, 'osutils_factory')
     def test_logon_behaviour_clear_text_password_injected(
             self, mock_factory):

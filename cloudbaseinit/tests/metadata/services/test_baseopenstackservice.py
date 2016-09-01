@@ -21,15 +21,15 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.tests.metadata import fake_json_response
 from cloudbaseinit.utils import x509constants
 
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 MODPATH = "cloudbaseinit.metadata.services.baseopenstackservice"
 

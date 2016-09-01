@@ -15,30 +15,17 @@
 import functools
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugins_base
 from cloudbaseinit.plugins import factory as plugins_factory
 from cloudbaseinit import version
 
-opts = [
-    cfg.BoolOpt('allow_reboot', default=True, help='Allows OS reboots '
-                'requested by plugins'),
-    cfg.BoolOpt('stop_service_on_exit', default=True, help='In case of '
-                'execution as a service, specifies if the service '
-                'must be gracefully stopped before exiting'),
-    cfg.BoolOpt('check_latest_version', default=True, help='Check if '
-                'there is a newer version of cloudbase-init available. '
-                'If this option is activated, a log message will be '
-                'emitted if there is a newer version available.')
-]
 
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

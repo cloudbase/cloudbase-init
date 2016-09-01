@@ -22,14 +22,14 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 import six
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.tests import fake
 from cloudbaseinit.tests import testutils
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 class WMIError(Exception):

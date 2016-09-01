@@ -20,16 +20,16 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 from six.moves.urllib import error
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import maasservice
 from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import x509constants
 
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 class MaaSHttpServiceTest(unittest.TestCase):

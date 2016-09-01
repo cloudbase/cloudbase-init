@@ -12,9 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
@@ -24,8 +24,7 @@ from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
 
-CONF = cfg.CONF
-CONF.import_opt('username', 'cloudbaseinit.plugins.common.createuser')
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

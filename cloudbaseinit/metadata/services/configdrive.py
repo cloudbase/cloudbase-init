@@ -15,63 +15,20 @@
 import os
 import shutil
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import constant
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.metadata.services.osconfigdrive import factory
 
-
-# Config Drive types and possible locations.
-CD_TYPES = {
-    "vfat",    # Visible device (with partition table).
-    "iso",     # "Raw" format containing ISO bytes.
-}
-CD_LOCATIONS = {
-    # Look into optical units devices. Only an ISO format could
-    # be used here (vfat ignored).
-    "cdrom",
-    # Search through physical disks for raw ISO content or vfat filesystems
-    # containing configuration drive's content.
-    "hdd",
-    # Search through partitions for raw ISO content or through volumes
-    # containing configuration drive's content.
-    "partition",
-}
-
-CONFIG_DRIVE_OPTS = [
-    cfg.BoolOpt("raw_hdd", default=True,
-                help="Look for an ISO config drive in raw HDDs",
-                deprecated_name="config_drive_raw_hhd",
-                deprecated_group="DEFAULT",
-                deprecated_for_removal=True),
-    cfg.BoolOpt("cdrom", default=True,
-                help="Look for a config drive in the attached cdrom drives",
-                deprecated_name="config_drive_cdrom",
-                deprecated_group="DEFAULT",
-                deprecated_for_removal=True),
-    cfg.BoolOpt("vfat", default=True,
-                help="Look for a config drive in VFAT filesystems",
-                deprecated_name="config_drive_vfat",
-                deprecated_group="DEFAULT",
-                deprecated_for_removal=True),
-    cfg.ListOpt("types", default=list(CD_TYPES),
-                help="Supported formats of a configuration drive",
-                deprecated_name="config_drive_types",
-                deprecated_group="DEFAULT",),
-    cfg.ListOpt("locations", default=list(CD_LOCATIONS),
-                deprecated_name="config_drive_locations",
-                deprecated_group="DEFAULT",
-                help="Supported configuration drive locations"),
-]
-
-CONF = cfg.CONF
-CONF.register_group(cfg.OptGroup("config_drive"))
-CONF.register_opts(CONFIG_DRIVE_OPTS, "config_drive")
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
+
+CD_TYPES = constant.CD_TYPES
+CD_LOCATIONS = constant.CD_LOCATIONS
 
 
 class ConfigDriveService(baseopenstackservice.BaseOpenStackService):

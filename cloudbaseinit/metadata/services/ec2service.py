@@ -15,29 +15,16 @@
 
 import posixpath
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 from six.moves.urllib import error
 from six.moves.urllib import request
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.utils import network
 
-EC2_OPTS = [
-    cfg.StrOpt("metadata_base_url", default="http://169.254.169.254/",
-               help="The base URL where the service looks for metadata",
-               deprecated_name="ec2_metadata_base_url",
-               deprecated_group="DEFAULT"),
-    cfg.BoolOpt("add_metadata_private_ip_route", default=True,
-                help="Add a route for the metadata ip address to the gateway",
-                deprecated_name="ec2_add_metadata_private_ip_route",
-                deprecated_group="DEFAULT"),
-]
 
-CONF = cfg.CONF
-CONF.register_group(cfg.OptGroup("ec2"))
-CONF.register_opts(EC2_OPTS, "ec2")
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

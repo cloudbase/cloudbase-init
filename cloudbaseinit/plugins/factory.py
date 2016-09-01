@@ -12,40 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.utils import classloader
 
 
-opts = [
-    cfg.ListOpt(
-        'plugins',
-        default=[
-            'cloudbaseinit.plugins.common.mtu.MTUPlugin',
-            'cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin',
-            'cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin',
-            'cloudbaseinit.plugins.windows.createuser.CreateUserPlugin',
-            'cloudbaseinit.plugins.common.networkconfig.NetworkConfigPlugin',
-            'cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin',
-            'cloudbaseinit.plugins.common.sshpublickeys.'
-            'SetUserSSHPublicKeysPlugin',
-            'cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin',
-            'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
-            'cloudbaseinit.plugins.common.setuserpassword.'
-            'SetUserPasswordPlugin',
-            'cloudbaseinit.plugins.windows.winrmlistener.'
-            'ConfigWinRMListenerPlugin',
-            'cloudbaseinit.plugins.windows.winrmcertificateauth.'
-            'ConfigWinRMCertificateAuthPlugin',
-            'cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin',
-        ],
-        help='List of enabled plugin classes, '
-        'to executed in the provided order'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 # Some plugins were moved to plugins.common, in order to

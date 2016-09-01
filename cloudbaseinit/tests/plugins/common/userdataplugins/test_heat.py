@@ -19,11 +19,11 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common.userdataplugins import heat
 
-CONF = cfg.CONF
+CONF = cloudbaseinit_conf.CONF
 
 
 class HeatUserDataHandlerTests(unittest.TestCase):

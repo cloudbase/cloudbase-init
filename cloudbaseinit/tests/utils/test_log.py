@@ -19,10 +19,11 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-from oslo_config import cfg
 import six
 
-CONF = cfg.CONF
+from cloudbaseinit import conf as cloudbaseinit_conf
+
+CONF = cloudbaseinit_conf.CONF
 
 
 class SerialPortHandlerTests(unittest.TestCase):

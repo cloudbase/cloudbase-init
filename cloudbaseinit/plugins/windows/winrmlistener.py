@@ -12,9 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.utils.windows import security
@@ -22,15 +22,7 @@ from cloudbaseinit.utils.windows import winrmconfig
 from cloudbaseinit.utils.windows import x509
 
 
-opts = [
-    cfg.BoolOpt('winrm_enable_basic_auth', default=True,
-                help='Enables basic authentication for the WinRM '
-                'HTTPS listener'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

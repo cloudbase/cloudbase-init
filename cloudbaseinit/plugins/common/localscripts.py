@@ -14,20 +14,12 @@
 
 import os
 
-from oslo_config import cfg
-
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common import fileexecutils
 
-opts = [
-    cfg.StrOpt('local_scripts_path', default=None,
-               help='Path location containing scripts to be executed when '
-                    'the plugin runs'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = cloudbaseinit_conf.CONF
 
 
 class LocalScriptsPlugin(base.BasePlugin):

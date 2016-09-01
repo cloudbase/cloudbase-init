@@ -15,21 +15,14 @@
 
 import os
 
-from oslo_config import cfg
 import six
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common import userdatautils
 from cloudbaseinit.utils import encoding
 
-
-opts = [
-    cfg.StrOpt('heat_config_dir', default='C:\\cfn', help='The directory '
-               'where the Heat configuration files must be saved'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = cloudbaseinit_conf.CONF
 
 
 class HeatPlugin(base.BaseUserDataPlugin):

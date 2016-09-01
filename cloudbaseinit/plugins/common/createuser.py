@@ -14,26 +14,15 @@
 
 import abc
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 import six
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import constants
 
-
-opts = [
-    cfg.StrOpt('username', default='Admin', help='User to be added to the '
-               'system or updated if already existing'),
-    cfg.ListOpt('groups', default=['Administrators'], help='List of local '
-                'groups to which the user specified in \'username\' will '
-                'be added'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 

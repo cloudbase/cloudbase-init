@@ -16,21 +16,12 @@ import logging
 import serial
 import six
 
-from oslo_config import cfg
 from oslo_log import formatters
 from oslo_log import log
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 
-opts = [
-    cfg.StrOpt('logging_serial_port_settings', default=None,
-               help='Serial port logging settings. Format: '
-               '"port,baudrate,parity,bytesize", e.g.: "COM1,115200,N,8". '
-               'Set to None (default) to disable.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-log.register_options(CONF)
+CONF = cloudbaseinit_conf.CONF
 LOG = log.getLogger(__name__)
 
 

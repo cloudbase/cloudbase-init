@@ -19,25 +19,13 @@ import gzip
 import io
 import time
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 import six
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.utils import encoding
 
-
-opts = [
-    cfg.IntOpt('retry_count', default=5,
-               help='Max. number of attempts for fetching metadata in '
-               'case of transient errors'),
-    cfg.FloatOpt('retry_count_interval', default=4,
-                 help='Interval between attempts in case of transient errors, '
-                 'expressed in seconds'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(opts)
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 # Both the custom service(s) and the networking plugin

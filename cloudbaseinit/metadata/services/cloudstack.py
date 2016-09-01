@@ -15,26 +15,17 @@
 import contextlib
 import posixpath
 
-from oslo_config import cfg
 from oslo_log import log as oslo_logging
 from six.moves import http_client
 from six.moves import urllib
 
+from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 
-CLOUDSTACK_OPTS = [
-    cfg.StrOpt("metadata_base_url", default="http://10.1.1.1/",
-               help="The base URL where the service looks for metadata",
-               deprecated_name="cloudstack_metadata_ip",
-               deprecated_group="DEFAULT"),
-]
 
-CONF = cfg.CONF
-CONF.register_group(cfg.OptGroup("cloudstack"))
-CONF.register_opts(CLOUDSTACK_OPTS, "cloudstack")
-
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 BAD_REQUEST = b"bad_request"
