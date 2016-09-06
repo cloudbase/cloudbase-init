@@ -170,20 +170,15 @@ class CloudStackTest(unittest.TestCase):
             response = self._service.get_public_keys()
             self.assertEqual([], response)
 
-    @mock.patch('six.moves.http_client.HTTPConnection')
-    def test_get_password(self, mock_http_connection):
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
+                '._password_client')
+    def test_get_password(self, mock_password_client):
         headers = {"DomU_Request": "send_my_password"}
-        mock_connection = mock.Mock()
-        mock_http_connection.return_value = mock_connection
-        mock_response = mock_connection.getresponse()
-        mock_request = mock_connection.request
-        mock_response.status = 200
-        expected_password = b"password"
-        mock_response.read.side_effect = [expected_password]
-        self._service._router_ip = mock.sentinel.router_ip
+        expected_password = "password"
+        mock_password_client.return_value = expected_password
         expected_output = [
             "Try to get password from the Password Server.",
-            "The password server return a valid password "
+            "The password server returned a valid password "
             "for the current instance."
         ]
 
@@ -191,29 +186,22 @@ class CloudStackTest(unittest.TestCase):
                                    'cloudstack') as snatcher:
             password = self._service._get_password()
 
-        mock_http_connection.assert_called_once_with(
-            mock.sentinel.router_ip, 8080, timeout=cloudstack.TIMEOUT)
-        mock_request.assert_called_once_with("GET", "/", headers=headers)
-
-        self.assertEqual(expected_password.decode(), password)
+        mock_password_client.assert_called_once_with(headers=headers)
+        self.assertEqual(expected_password, password)
         self.assertEqual(expected_output, snatcher.output)
 
-    @mock.patch('six.moves.http_client.HTTPConnection')
-    def test_get_password_fail(self, mock_http_connection):
-        mock_connection = mock.Mock()
-        mock_http_connection.return_value = mock_connection
-        mock_response = mock_connection.getresponse()
-        mock_request = mock_connection.request
-        mock_response.status = 200
-        mock_response.read.side_effect = [b"", cloudstack.BAD_REQUEST,
-                                          cloudstack.SAVED_PASSWORD]
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
+                '._password_client')
+    def test_get_password_fail(self, mock_password_client):
+        mock_password_client.side_effect = ["", cloudstack.BAD_REQUEST,
+                                            cloudstack.SAVED_PASSWORD]
         expected_output = [
             ["Try to get password from the Password Server.",
-             "For this instance the password was already taken from "
-             "the Password Server."],
+             "The password was already taken from the Password Server "
+             "for the current instance."],
 
             ["Try to get password from the Password Server.",
-             "The Password Server did not recognise the request."],
+             "The Password Server did not recognize the request."],
 
             ["Try to get password from the Password Server.",
              "The Password Server did not have any password for the "
@@ -225,21 +213,16 @@ class CloudStackTest(unittest.TestCase):
                 self.assertIsNone(self._service._get_password())
                 self.assertEqual(expected_output.pop(), snatcher.output)
 
-        self.assertEqual(3, mock_request.call_count)
+        self.assertEqual(3, mock_password_client.call_count)
 
-    @mock.patch('six.moves.http_client.HTTPConnection')
-    def test_delete_password(self, mock_http_connection):
-        mock_connection = mock.Mock()
-        mock_http_connection.return_value = mock_connection
-        mock_response = mock_connection.getresponse()
-        mock_request = mock_connection.request
-        mock_response.read.side_effect = [cloudstack.BAD_REQUEST,
-                                          cloudstack.SAVED_PASSWORD]
-        mock_response.status = 400
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack'
+                '._password_client')
+    def test_delete_password(self, mock_password_client):
+        mock_password_client.side_effect = [cloudstack.BAD_REQUEST,
+                                            cloudstack.SAVED_PASSWORD]
         expected_output = [
             'Remove the password for this instance from the '
             'Password Server.',
-            'Removing password failed',
             'Fail to remove the password from the Password Server.',
 
             'Remove the password for this instance from the '
@@ -251,9 +234,8 @@ class CloudStackTest(unittest.TestCase):
         with testutils.LogSnatcher('cloudbaseinit.metadata.services.'
                                    'cloudstack') as snatcher:
             self.assertIsNone(self._service._delete_password())
-            mock_response.status = 200
             self.assertIsNone(self._service._delete_password())
-            self.assertEqual(2, mock_request.call_count)
+            self.assertEqual(2, mock_password_client.call_count)
         for expected, output in zip(expected_output, snatcher.output):
             self.assertTrue(output.startswith(expected))
 
