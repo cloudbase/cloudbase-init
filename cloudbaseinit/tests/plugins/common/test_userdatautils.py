@@ -44,12 +44,12 @@ class UserDataUtilsTest(unittest.TestCase):
         If a command was obtained, then a cleanup will be added in order
         to remove the underlying target path of the command.
         """
-        command = userdatautils._get_command(data)
+        command = userdatautils.get_command(data)
         if command and not isinstance(command, execcmd.CommandExecutor):
             self.addCleanup(_safe_remove, command._target_path)
         return command
 
-    def test__get_command(self, _):
+    def test_get_command(self, _):
         command = self._get_command(b'rem cmd test')
         self.assertIsInstance(command, execcmd.Shell)
 
@@ -83,10 +83,11 @@ class UserDataUtilsTest(unittest.TestCase):
         self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.userdatautils.'
-                '_get_command')
+                'get_command')
     def test_execute_user_data_script_fails(self, mock_get_command, _):
-        mock_get_command.return_value.side_effect = ValueError
-
+        mock_command = mock.Mock()
+        mock_command.execute.side_effect = ValueError
+        mock_get_command.return_value = mock_command
         with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'userdatautils') as snatcher:
             retval = userdatautils.execute_user_data_script(
@@ -94,17 +95,18 @@ class UserDataUtilsTest(unittest.TestCase):
 
         expected_logging = [
             "An error occurred during user_data execution: ''",
-            'User_data script ended with return code: 0'
-        ]
+            'User_data script ended with return code: 0']
         self.assertEqual(0, retval)
         self.assertEqual(expected_logging, snatcher.output)
 
     @mock.patch('cloudbaseinit.plugins.common.userdatautils.'
-                '_get_command')
+                'get_command')
     def test_execute_user_data_script(self, mock_get_command, _):
-        mock_get_command.return_value.return_value = (
+        mock_command = mock.Mock()
+        mock_command.execute.return_value = (
             mock.sentinel.output, mock.sentinel.error, -1
         )
+        mock_get_command.return_value = mock_command
         retval = userdatautils.execute_user_data_script(
             mock.sentinel.user_data)
         self.assertEqual(-1, retval)

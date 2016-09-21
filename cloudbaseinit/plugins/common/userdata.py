@@ -83,11 +83,29 @@ class UserDataPlugin(base.BasePlugin):
         LOG.debug('User data content:\n%s', user_data_str)
         return email.message_from_string(user_data_str).walk()
 
+    @staticmethod
+    def _get_headers(user_data):
+        """Returns the header of the given user data.
+
+        :param user_data: Represents the content of the user data.
+        :rtype: A string chunk containing the header or None.
+        .. note :: In case the content type is not valid,
+                   None will be returned.
+        """
+        content = encoding.get_as_string(user_data)
+        if content:
+            return content.split("\n\n")[0]
+        else:
+            raise exception.CloudbaseInitException("No header could be found."
+                                                   "The user data content is "
+                                                   "either invalid or empty.")
+
     def _process_user_data(self, user_data):
         plugin_status = base.PLUGIN_EXECUTION_DONE
         reboot = False
-        LOG.debug("Processing userdata")
-        if user_data.startswith(b'Content-Type: multipart'):
+        headers = self._get_headers(user_data)
+        if 'Content-Type: multipart' in headers:
+            LOG.debug("Processing userdata")
             user_data_plugins = factory.load_plugins()
             user_handlers = {}
 

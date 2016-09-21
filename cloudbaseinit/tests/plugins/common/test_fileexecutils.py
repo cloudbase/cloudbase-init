@@ -19,7 +19,6 @@ try:
 except ImportError:
     import mock
 
-from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common import fileexecutils
 from cloudbaseinit.tests import testutils
 
@@ -27,26 +26,24 @@ from cloudbaseinit.tests import testutils
 @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
 class TestFileExecutilsPlugin(unittest.TestCase):
 
-    def test_exec_file_no_executor(self, _):
-        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
-                                   'fileexecutils') as snatcher:
-            retval = fileexecutils.exec_file("fake.fake")
+    @mock.patch('cloudbaseinit.plugins.common.userdatautils.'
+                'get_command_from_path')
+    @mock.patch('cloudbaseinit.plugins.common.userdatautils.'
+                'execute_user_data_script')
+    def test_exec_file_no_executor(self, mock_execute_user_data_script,
+                                   mock_get_command, _):
+        mock_get_command.return_value = None
+        with testutils.create_tempfile() as temp:
+            with mock.patch('cloudbaseinit.plugins.common.userdatautils'
+                            '.open', create=True):
+                with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                           'fileexecutils') as snatcher:
+                    retval = fileexecutils.exec_file(temp)
 
-        expected_logging = ['Unsupported script file type: fake']
+        expected_logging = ['No valid extension or header found'
+                            ' in the userdata: %s' % temp]
         self.assertEqual(0, retval)
         self.assertEqual(expected_logging, snatcher.output)
-
-    def test_executors_mapping(self, _):
-        self.assertEqual(fileexecutils.FORMATS["cmd"],
-                         execcmd.Shell)
-        self.assertEqual(fileexecutils.FORMATS["exe"],
-                         execcmd.Shell)
-        self.assertEqual(fileexecutils.FORMATS["sh"],
-                         execcmd.Bash)
-        self.assertEqual(fileexecutils.FORMATS["py"],
-                         execcmd.Python)
-        self.assertEqual(fileexecutils.FORMATS["ps1"],
-                         execcmd.PowershellSysnative)
 
     @mock.patch('cloudbaseinit.plugins.common.execcmd.'
                 'BaseCommand.execute')
@@ -67,12 +64,7 @@ class TestFileExecutilsPlugin(unittest.TestCase):
     @mock.patch('cloudbaseinit.plugins.common.execcmd.'
                 'BaseCommand.execute')
     def test_exec_file_(self, mock_execute, _):
-        mock_execute.return_value = (
-            mock.sentinel.out,
-            mock.sentinel.error,
-            0,
-        )
-
+        mock_execute.return_value = (mock.sentinel.out, mock.sentinel.error, 0)
         retval = fileexecutils.exec_file("fake.py")
         mock_execute.assert_called_once_with()
         self.assertEqual(0, retval)

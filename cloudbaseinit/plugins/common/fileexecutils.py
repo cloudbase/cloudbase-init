@@ -12,35 +12,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-
 from oslo_log import log as oslo_logging
 
-from cloudbaseinit.plugins.common import execcmd
-
+from cloudbaseinit.plugins.common import userdatautils
 
 LOG = oslo_logging.getLogger(__name__)
-
-FORMATS = {
-    "cmd": execcmd.Shell,
-    "exe": execcmd.Shell,
-    "sh": execcmd.Bash,
-    "py": execcmd.Python,
-    "ps1": execcmd.PowershellSysnative,
-}
 
 
 def exec_file(file_path):
     ret_val = 0
-    ext = os.path.splitext(file_path)[1][1:].lower()
-    command = FORMATS.get(ext)
+    command = userdatautils.get_command_from_path(file_path)
     if not command:
-        # Unsupported
-        LOG.warning('Unsupported script file type: %s', ext)
+        # File format not provided or not recognized
+        LOG.debug('No valid extension or header found in the '
+                  'userdata: %s' % file_path)
         return ret_val
-
     try:
-        out, err, ret_val = command(file_path).execute()
+        out, err, ret_val = command.execute()
     except Exception as ex:
         LOG.warning('An error occurred during file execution: \'%s\'', ex)
     else:

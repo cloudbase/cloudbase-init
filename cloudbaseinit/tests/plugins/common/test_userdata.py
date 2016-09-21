@@ -138,6 +138,13 @@ class UserDataPluginTest(unittest.TestCase):
         self.assertEqual(response, mock_message_from_string().walk())
         self.assertEqual(expected_logging, snatcher.output)
 
+    def test_get_header(self):
+        fake_data = "fake-user-data"
+        self.assertEqual(fake_data, self._userdata._get_headers(fake_data))
+        fake_data = None
+        with self.assertRaises(exception.CloudbaseInitException):
+            self._userdata._get_headers(fake_data)
+
     @mock.patch('cloudbaseinit.plugins.common.userdataplugins.factory.'
                 'load_plugins')
     @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
