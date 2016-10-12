@@ -217,6 +217,8 @@ class TestInitManager(unittest.TestCase):
             self._init.configure_host()
         self.assertEqual(expected_logging, snatcher.output)
         mock_check_latest_version.assert_called_once_with()
+        if CONF.reset_service_password:
+            self.osutils.reset_service_password.assert_called_once_with()
         self.osutils.wait_for_boot_completion.assert_called_once_with()
         mock_get_metadata_service.assert_called_once_with()
         fake_service.get_name.assert_called_once_with()

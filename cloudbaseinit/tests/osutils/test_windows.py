@@ -50,12 +50,16 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def setUp(self):
         self._pywintypes_mock = mock.MagicMock()
+        self._pywintypes_mock.error = fake.FakeError
         self._pywintypes_mock.com_error = fake.FakeComError
         self._win32com_mock = mock.MagicMock()
         self._win32process_mock = mock.MagicMock()
         self._win32security_mock = mock.MagicMock()
         self._win32net_mock = mock.MagicMock()
         self._win32netcon_mock = mock.MagicMock()
+        self._win32service_mock = mock.MagicMock()
+        self._winerror_mock = mock.MagicMock()
+        self._winerror_mock.ERROR_SERVICE_DOES_NOT_EXIST = 0x424
         self._wmi_mock = mock.MagicMock()
         self._wmi_mock.x_wmi = WMIError
         self._moves_mock = mock.MagicMock()
@@ -73,6 +77,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
              'win32security': self._win32security_mock,
              'win32net': self._win32net_mock,
              'win32netcon': self._win32netcon_mock,
+             'win32service': self._win32service_mock,
+             'winerror': self._winerror_mock,
              'wmi': self._wmi_mock,
              'six.moves': self._moves_mock,
              'six.moves.xmlrpc_client': self._xmlrpc_client_mock,
@@ -884,13 +890,151 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self.assertEqual('fake name', response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_service')
-    def test_check_service_exists(self, mock_get_service):
-        mock_get_service.return_value = 'not None'
+                '._get_service_handle')
+    def test_check_service(self, mock_get_service_handle):
+        mock_context_manager = mock.MagicMock()
+        mock_context_manager.__enter__.return_value = "fake name"
+        mock_get_service_handle.return_value = mock_context_manager
 
-        response = self._winutils.check_service_exists('fake name')
+        self.assertTrue(self._winutils.check_service_exists("fake_name"))
 
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_handle')
+    def test_check_service_fail(self, mock_get_service_handle):
+        exc = self._pywintypes_mock.error("ERROR_SERVICE_DOES_NOT_EXIST")
+        exc.winerror = self._winerror_mock.ERROR_SERVICE_DOES_NOT_EXIST
+
+        exc2 = self._pywintypes_mock.error("NOT ERROR_SERVICE_DOES_NOT_EXIST")
+        exc2.winerror = None
+
+        mock_context_manager = mock.MagicMock()
+        mock_context_manager.__enter__.side_effect = [exc, exc2]
+        mock_get_service_handle.return_value = mock_context_manager
+
+        self.assertFalse(self._winutils.check_service_exists("fake_name"))
+        self.assertRaises(self._pywintypes_mock.error,
+                          self._winutils.check_service_exists,
+                          "fake_name")
+
+    def test_get_service_handle(self):
+        open_scm = self._win32service_mock.OpenSCManager
+        open_scm.return_value = mock.sentinel.hscm
+        open_service = self._win32service_mock.OpenService
+        open_service.return_value = mock.sentinel.hs
+        close_service = self._win32service_mock.CloseServiceHandle
+        args = ("fake_name", mock.sentinel.service_access,
+                mock.sentinel.scm_access)
+
+        with self._winutils._get_service_handle(*args) as hs:
+            self.assertIs(hs, mock.sentinel.hs)
+
+        open_scm.assert_called_with(None, None, mock.sentinel.scm_access)
+        open_service.assert_called_with(mock.sentinel.hscm, "fake_name",
+                                        mock.sentinel.service_access)
+        close_service.assert_has_calls([mock.call(mock.sentinel.hs),
+                                        mock.call(mock.sentinel.hscm)])
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_handle')
+    def test_set_service_credentials(self, mock_get_service):
+        self._win32service_mock.SERVICE_CHANGE_CONFIG = mock.sentinel.change
+        self._win32service_mock.SERVICE_NO_CHANGE = mock.sentinel.no_change
+        mock_change_service = self._win32service_mock.ChangeServiceConfig
+        mock_context_manager = mock.MagicMock()
+        mock_context_manager.__enter__.return_value = mock.sentinel.hs
+        mock_get_service.return_value = mock_context_manager
+
+        self._winutils.set_service_credentials(
+            mock.sentinel.service, mock.sentinel.user, mock.sentinel.password)
+
+        mock_get_service.assert_called_with(mock.sentinel.service,
+                                            mock.sentinel.change)
+        mock_change_service.assert_called_with(
+            mock.sentinel.hs, mock.sentinel.no_change, mock.sentinel.no_change,
+            mock.sentinel.no_change, None, None, False, None,
+            mock.sentinel.user, mock.sentinel.password, None)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_handle')
+    def test_get_service_username(self, mock_get_service):
+        mock_context_manager = mock.MagicMock()
+        mock_context_manager.__enter__.return_value = mock.sentinel.hs
+        mock_get_service.return_value = mock_context_manager
+        mock_query_service = self._win32service_mock.QueryServiceConfig
+        mock_query_service.return_value = [mock.sentinel.value] * 8
+
+        response = self._winutils.get_service_username(mock.sentinel.service)
+
+        mock_get_service.assert_called_with(mock.sentinel.service)
+        mock_query_service.assert_called_with(mock.sentinel.hs)
+        self.assertIs(response, mock.sentinel.value)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.set_service_credentials')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.set_user_password')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.generate_random_password')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_service_username')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.check_service_exists')
+    def _test_reset_service_password(self, mock_service_exists,
+                                     mock_get_username, mock_generate_password,
+                                     mock_set_password, mock_set_credentials,
+                                     service_exists, service_username):
+        mock_service_exists.return_value = service_exists
+        mock_get_username.return_value = service_username
+        mock_generate_password.return_value = mock.sentinel.password
+
+        with self.snatcher:
+            response = self._winutils.reset_service_password()
+
+        if not service_exists:
+            self.assertEqual(
+                ["Service does not exist: %s" % self._winutils._service_name],
+                self.snatcher.output)
+            self.assertFalse(response)
+            return
+
+        if "\\" not in service_username:
+            self.assertEqual(
+                ["Skipping password reset, service running as a built-in "
+                 "account: %s" % service_username], self.snatcher.output)
+            self.assertFalse(response)
+            return
+
+        domain, username = service_username.split('\\')
+        if domain != ".":
+            self.assertEqual(
+                ["Skipping password reset, service running as a domain "
+                 "account: %s" % service_username], self.snatcher.output)
+            self.assertFalse(response)
+            return
+
+        mock_set_password.assert_called_once_with(username,
+                                                  mock.sentinel.password)
+        mock_set_credentials.assert_called_once_with(
+            self._winutils._service_name, service_username,
+            mock.sentinel.password)
+        self.assertEqual(mock_generate_password.call_count, 1)
         self.assertTrue(response)
+
+    def test_reset_service_password(self):
+        self._test_reset_service_password(
+            service_exists=True, service_username="EXAMPLE.COM\\username")
+
+    def test_reset_service_password_no_service(self):
+        self._test_reset_service_password(service_exists=False,
+                                          service_username=None)
+
+    def test_reset_service_password_built_in_account(self):
+        self._test_reset_service_password(service_exists=True,
+                                          service_username="username")
+
+    def test_reset_service_password_domain_account(self):
+        self._test_reset_service_password(service_exists=True,
+                                          service_username=".\\username")
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service')

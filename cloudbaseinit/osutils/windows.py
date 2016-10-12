@@ -21,6 +21,7 @@ import struct
 import time
 
 from oslo_log import log as oslo_logging
+import pywintypes
 import six
 from six.moves import winreg
 from tzlocal import windows_tz
@@ -29,6 +30,8 @@ import win32net
 import win32netcon
 import win32process
 import win32security
+import win32service
+import winerror
 import wmi
 
 from cloudbaseinit import exception
@@ -681,7 +684,14 @@ class WindowsUtils(base.BaseOSUtils):
             return service_list[0]
 
     def check_service_exists(self, service_name):
-        return self._get_service(service_name) is not None
+        try:
+            with self._get_service_handle(service_name):
+                return True
+        except pywintypes.error as ex:
+            print(ex)
+            if ex.winerror == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
+                return False
+            raise
 
     def get_service_status(self, service_name):
         service = self._get_service(service_name)
@@ -720,6 +730,70 @@ class WindowsUtils(base.BaseOSUtils):
                 'Stopping service %(service_name)s failed with return value:'
                 ' %(ret_val)d' % {'service_name': service_name,
                                   'ret_val': ret_val})
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _get_service_handle(service_name,
+                            service_access=win32service.SERVICE_QUERY_CONFIG,
+                            scm_access=win32service.SC_MANAGER_CONNECT):
+        hscm = win32service.OpenSCManager(None, None, scm_access)
+        hs = None
+        try:
+            hs = win32service.OpenService(hscm, service_name, service_access)
+            yield hs
+        finally:
+            if hs:
+                win32service.CloseServiceHandle(hs)
+            win32service.CloseServiceHandle(hscm)
+
+    def set_service_credentials(self, service_name, username, password):
+        LOG.debug('Setting service credentials: %s', service_name)
+        with self._get_service_handle(
+                service_name, win32service.SERVICE_CHANGE_CONFIG) as hs:
+            win32service.ChangeServiceConfig(
+                hs,
+                win32service.SERVICE_NO_CHANGE,
+                win32service.SERVICE_NO_CHANGE,
+                win32service.SERVICE_NO_CHANGE,
+                None,
+                None,
+                False,
+                None,
+                username,
+                password,
+                None)
+
+    def get_service_username(self, service_name):
+        LOG.debug('Getting service username: %s', service_name)
+        with self._get_service_handle(service_name) as hs:
+            cfg = win32service.QueryServiceConfig(hs)
+            return cfg[7]
+
+    def reset_service_password(self):
+        """This is needed to avoid pass the hash attacks."""
+        if not self.check_service_exists(self._service_name):
+            LOG.info("Service does not exist: %s", self._service_name)
+            return False
+
+        service_username = self.get_service_username(self._service_name)
+        # Ignore builtin accounts
+        if "\\" not in service_username:
+            LOG.info("Skipping password reset, service running as a built-in "
+                     "account: %s", service_username)
+            return False
+        domain, username = service_username.split('\\')
+        if domain != ".":
+            LOG.info("Skipping password reset, service running as a domain "
+                     "account: %s", service_username)
+            return False
+
+        LOG.debug('Resetting password for service user: %s', service_username)
+        maximum_length = self.get_maximum_password_length()
+        password = self.generate_random_password(maximum_length)
+        self.set_user_password(username, password)
+        self.set_service_credentials(
+            self._service_name, service_username, password)
+        return True
 
     def terminate(self):
         # Wait for the service to start. Polling the service "Started" property

@@ -117,6 +117,9 @@ class InitManager(object):
         LOG.info('Cloudbase-Init version: %s', version.get_version())
 
         osutils = osutils_factory.get_os_utils()
+        if CONF.reset_service_password:
+            # Avoid pass the hash attacks from cloned instances
+            osutils.reset_service_password()
         osutils.wait_for_boot_completion()
 
         reboot_required = self._handle_plugins_stage(
