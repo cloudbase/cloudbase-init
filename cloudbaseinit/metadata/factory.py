@@ -34,4 +34,4 @@ def get_metadata_service():
         except Exception as ex:
             LOG.error("Failed to load metadata service '%s'" % class_path)
             LOG.exception(ex)
-    raise exception.CloudbaseInitException("No available service found")
+    raise exception.MetadaNotFoundException("No available service found")

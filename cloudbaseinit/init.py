@@ -18,6 +18,7 @@ import sys
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugins_base
@@ -134,7 +135,12 @@ class InitManager(object):
                 plugins_base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY)
 
         if not (reboot_required and CONF.allow_reboot):
-            service = metadata_factory.get_metadata_service()
+            try:
+                service = metadata_factory.get_metadata_service()
+            except exception.MetadaNotFoundException:
+                LOG.error("No metadata service found")
+                service = None
+        if service:
             LOG.info('Metadata service loaded: \'%s\'' %
                      service.get_name())
 

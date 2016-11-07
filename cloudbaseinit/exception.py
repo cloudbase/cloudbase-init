@@ -30,6 +30,13 @@ class ServiceException(Exception):
     pass
 
 
+class MetadaNotFoundException(CloudbaseInitException):
+
+    """Exception thrown in case no metadata service is found."""
+
+    pass
+
+
 class CertificateVerifyFailed(ServiceException):
 
     """The received certificate is not valid.
