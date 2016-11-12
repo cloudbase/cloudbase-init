@@ -129,3 +129,7 @@ class BaseOSUtils(object):
     def get_service_username(self, service_name):
         """Retrieve the username under which a service runs."""
         raise NotImplementedError()
+
+    def get_current_user(self):
+        """Retrieve the username under which the current thread runs."""
+        raise NotImplementedError()

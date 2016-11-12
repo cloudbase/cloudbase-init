@@ -121,14 +121,6 @@ class GlobalOptions(conf_base.Options):
                      'the password is a clear text password, coming from the '
                      'metadata. The last option is `no`, when the user is '
                      'never forced to change the password.'),
-            cfg.BoolOpt(
-                'reset_service_password', default=True,
-                help='If set to True, the service user password will be '
-                     'reset at each execution with a new random value of '
-                     'appropriate length and complexity, unless the user is '
-                     'a built-in or domain account.'
-                     'This is needed to avoid "pass the hash" attacks on '
-                     'Windows cloned instances.'),
             cfg.ListOpt(
                 'metadata_services',
                 default=[
@@ -199,9 +191,21 @@ class GlobalOptions(conf_base.Options):
                      'plugins ordered by priority.'),
         ]
 
+        self._cli_options = [
+            cfg.BoolOpt(
+                'reset_service_password', default=True,
+                help='If set to True, the service user password will be '
+                     'reset at each execution with a new random value of '
+                     'appropriate length and complexity, unless the user is '
+                     'a built-in or domain account.'
+                     'This is needed to avoid "pass the hash" attacks on '
+                     'Windows cloned instances.'),
+        ]
+
     def register(self):
         """Register the current options to the global ConfigOpts object."""
-        self._config.register_opts(self._options)
+        self._config.register_cli_opts(self._cli_options)
+        self._config.register_opts(self._options + self._cli_options)
 
     def list(self):
         """Return a list which contains all the available options."""

@@ -2114,3 +2114,82 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self.assertEqual('dwForwardNextHop', given_route[2])
         self.assertEqual('dwForwardIfIndex', given_route[3])
         self.assertEqual('dwForwardMetric1', given_route[4])
+
+    def test_get_current_user(self):
+        response = mock.Mock()
+        response.value.split.return_value = mock.sentinel.user
+        secur32 = self._ctypes_mock.windll.secur32
+        self._ctypes_mock.create_unicode_buffer.return_value = response
+        secur32.GetUserNameExW.side_effect = [True, False]
+
+        self.assertIs(self._winutils.get_current_user(), mock.sentinel.user)
+        with self.assert_raises_windows_message("GetUserNameExW failed: %r",
+                                                100):
+            self._winutils.get_current_user()
+
+    @mock.patch('cloudbaseinit.osutils.windows.Win32_STARTUPINFO_W')
+    @mock.patch('cloudbaseinit.osutils.windows.Win32_PROCESS_INFORMATION')
+    @mock.patch('subprocess.list2cmdline')
+    def _test_execute_process_as_user(self, mock_list2cmdline, mock_proc_info,
+                                      mock_startup_info,
+                                      token, args, wait, new_console):
+        advapi32 = self._windll_mock.advapi32
+        advapi32.CreateProcessAsUserW.return_value = True
+        kernel32 = self._ctypes_mock.windll.kernel32
+        kernel32.GetExitCodeProcess.return_value = True
+
+        proc_info = mock.Mock()
+        proc_info.hProcess = wait
+        proc_info.hThread = wait
+        mock_proc_info.return_value = proc_info
+
+        command_line = mock.sentinel.command_line
+        self._ctypes_mock.create_unicode_buffer.return_value = command_line
+
+        self._winutils.execute_process_as_user(token, args, wait, new_console)
+
+        self.assertEqual(advapi32.CreateProcessAsUserW.call_count, 1)
+        if wait:
+            kernel32.WaitForSingleObject.assert_called_once_with(
+                proc_info.hProcess, self._winutils.INFINITE
+            )
+            self.assertEqual(kernel32.GetExitCodeProcess.call_count, 1)
+
+        if wait:
+            self.assertEqual(kernel32.CloseHandle.call_count, 2)
+
+        mock_list2cmdline.assert_called_once_with(args)
+
+    def test_execute_process_as_user(self):
+        self._test_execute_process_as_user(token=mock.sentinel.token,
+                                           args=mock.sentinel.args,
+                                           wait=False, new_console=False)
+
+    def test_execute_process_as_user_with_wait(self):
+        self._test_execute_process_as_user(token=mock.sentinel.token,
+                                           args=mock.sentinel.args,
+                                           wait=False, new_console=False)
+
+    @mock.patch('cloudbaseinit.osutils.windows.Win32_STARTUPINFO_W')
+    @mock.patch('cloudbaseinit.osutils.windows.Win32_PROCESS_INFORMATION')
+    @mock.patch('subprocess.list2cmdline')
+    def test_execute_process_as_user_fail(self, mock_list2cmdline,
+                                          mock_proc_info, mock_startup_info):
+        advapi32 = self._windll_mock.advapi32
+        advapi32.CreateProcessAsUserW.side_effect = [False, True]
+        kernel32 = self._ctypes_mock.windll.kernel32
+        kernel32.GetExitCodeProcess.return_value = False
+        mock_proc_info.hProcess = True
+
+        token = mock.sentinel.token
+        args = mock.sentinel.args
+        new_console = mock.sentinel.new_console
+
+        with self.assert_raises_windows_message("CreateProcessAsUserW "
+                                                "failed: %r", 100):
+            self._winutils.execute_process_as_user(token, args, False,
+                                                   new_console)
+        with self.assert_raises_windows_message("GetExitCodeProcess "
+                                                "failed: %r", 100):
+            self._winutils.execute_process_as_user(token, args, True,
+                                                   new_console)

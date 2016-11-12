@@ -18,6 +18,7 @@ from ctypes import wintypes
 import os
 import re
 import struct
+import subprocess
 import time
 
 from oslo_log import log as oslo_logging
@@ -57,6 +58,7 @@ Ws2_32 = ctypes.windll.Ws2_32
 setupapi = ctypes.windll.setupapi
 msvcrt = ctypes.cdll.msvcrt
 ntdll = ctypes.windll.ntdll
+secur32 = ctypes.windll.secur32
 
 
 class Win32_PROFILEINFO(ctypes.Structure):
@@ -144,6 +146,53 @@ class Win32_STORAGE_DEVICE_NUMBER(ctypes.Structure):
     ]
 
 
+class Win32_STARTUPINFO_W(ctypes.Structure):
+    _fields_ = [
+        ('cb', wintypes.DWORD),
+        ('lpReserved', wintypes.LPWSTR),
+        ('lpDesktop', wintypes.LPWSTR),
+        ('lpTitle', wintypes.LPWSTR),
+        ('dwX', wintypes.DWORD),
+        ('dwY', wintypes.DWORD),
+        ('dwXSize', wintypes.DWORD),
+        ('dwYSize', wintypes.DWORD),
+        ('dwXCountChars', wintypes.DWORD),
+        ('dwYCountChars', wintypes.DWORD),
+        ('dwFillAttribute', wintypes.DWORD),
+        ('dwFlags', wintypes.DWORD),
+        ('wShowWindow', wintypes.WORD),
+        ('cbReserved2', wintypes.WORD),
+        ('lpReserved2', ctypes.POINTER(wintypes.BYTE)),
+        ('hStdInput', wintypes.HANDLE),
+        ('hStdOutput', wintypes.HANDLE),
+        ('hStdError', wintypes.HANDLE),
+    ]
+
+
+class Win32_PROCESS_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ('hProcess', wintypes.HANDLE),
+        ('hThread', wintypes.HANDLE),
+        ('dwProcessId', wintypes.DWORD),
+        ('dwThreadId', wintypes.DWORD),
+    ]
+
+
+advapi32.CreateProcessAsUserW.argtypes = [wintypes.HANDLE,
+                                          wintypes.LPCWSTR,
+                                          wintypes.LPWSTR,
+                                          ctypes.c_void_p,
+                                          ctypes.c_void_p,
+                                          wintypes.BOOL,
+                                          wintypes.DWORD,
+                                          ctypes.c_void_p,
+                                          wintypes.LPCWSTR,
+                                          ctypes.POINTER(
+                                              Win32_STARTUPINFO_W),
+                                          ctypes.POINTER(
+                                              Win32_PROCESS_INFORMATION)]
+advapi32.CreateProcessAsUserW.restype = wintypes.BOOL
+
 msvcrt.malloc.argtypes = [ctypes.c_size_t]
 msvcrt.malloc.restype = ctypes.c_void_p
 
@@ -200,6 +249,11 @@ iphlpapi.GetIpForwardTable.argtypes = [
 iphlpapi.GetIpForwardTable.restype = wintypes.DWORD
 
 Ws2_32.inet_ntoa.restype = ctypes.c_char_p
+
+secur32.GetUserNameExW.argtypes = [wintypes.DWORD,
+                                   wintypes.LPWSTR,
+                                   ctypes.POINTER(wintypes.ULONG)]
+secur32.GetUserNameExW.restype = wintypes.BOOL
 
 setupapi.SetupDiGetClassDevsW.argtypes = [ctypes.POINTER(disk.GUID),
                                           wintypes.LPCWSTR,
@@ -268,6 +322,18 @@ class WindowsUtils(base.BaseOSUtils):
     DIGCF_DEVICEINTERFACE = 0x10
 
     DRIVE_CDROM = 5
+
+    INFINITE = 0xFFFFFFFF
+
+    CREATE_NEW_CONSOLE = 0x10
+
+    LOGON32_LOGON_BATCH = 4
+    LOGON32_LOGON_INTERACTIVE = 2
+    LOGON32_LOGON_SERVICE = 5
+
+    LOGON32_PROVIDER_DEFAULT = 0
+
+    EXTENDED_NAME_FORMAT_SAM_COMPATIBLE = 2
 
     SERVICE_STATUS_STOPPED = "Stopped"
     SERVICE_STATUS_START_PENDING = "Start Pending"
@@ -417,11 +483,17 @@ class WindowsUtils(base.BaseOSUtils):
             pass
 
     def create_user_logon_session(self, username, password, domain='.',
-                                  load_profile=True):
+                                  load_profile=True,
+                                  logon_type=LOGON32_LOGON_INTERACTIVE):
+        LOG.debug("Creating logon session for user: %(domain)s\\%(username)s",
+                  {"username": username, "domain": domain})
+
         token = wintypes.HANDLE()
         ret_val = advapi32.LogonUserW(six.text_type(username),
                                       six.text_type(domain),
-                                      six.text_type(password), 2, 0,
+                                      six.text_type(password),
+                                      logon_type,
+                                      self.LOGON32_PROVIDER_DEFAULT,
                                       ctypes.byref(token))
         if not ret_val:
             raise exception.WindowsCloudbaseInitException(
@@ -438,6 +510,70 @@ class WindowsUtils(base.BaseOSUtils):
                     "Cannot load user profile: %r")
 
         return token
+
+    def get_current_user(self):
+        """Get the user account name from the underlying instance."""
+        buf_len = wintypes.ULONG(512)
+        buf = ctypes.create_unicode_buffer(512)
+
+        ret_val = secur32.GetUserNameExW(
+            self.EXTENDED_NAME_FORMAT_SAM_COMPATIBLE,
+            buf, ctypes.byref(buf_len))
+        if not ret_val:
+            raise exception.WindowsCloudbaseInitException(
+                "GetUserNameExW failed: %r")
+
+        return buf.value.split("\\")
+
+    def execute_process_as_user(self, token, args, wait=True,
+                                new_console=False):
+        """Executes processes as an user.
+
+        :param token: Represents the user logon session token, resulted from
+                      running the 'create_user_logon_session' method.
+        :param args: The arguments with which the process will be runned with.
+        :param wait: Specifies if it's needed to wait for the process
+                     handler to finish up running all the operations
+                     on the process object.
+        :param new_console: Specifies whether the process should run
+                            under a new console or not.
+        :return: The exit code value resulted from the running process.
+        :rtype: int
+        """
+        LOG.debug("Executing process as user, command line: %s", args)
+
+        proc_info = Win32_PROCESS_INFORMATION()
+        startup_info = Win32_STARTUPINFO_W()
+        startup_info.cb = ctypes.sizeof(Win32_STARTUPINFO_W)
+        startup_info.lpDesktop = ""
+
+        flags = self.CREATE_NEW_CONSOLE if new_console else 0
+        cmdline = ctypes.create_unicode_buffer(subprocess.list2cmdline(args))
+
+        try:
+            ret_val = advapi32.CreateProcessAsUserW(
+                token, None, cmdline, None, None, False, flags, None, None,
+                ctypes.byref(startup_info), ctypes.byref(proc_info))
+            if not ret_val:
+                raise exception.WindowsCloudbaseInitException(
+                    "CreateProcessAsUserW failed: %r")
+
+            if wait and proc_info.hProcess:
+                kernel32.WaitForSingleObject(
+                    proc_info.hProcess, self.INFINITE)
+
+                exit_code = wintypes.DWORD()
+                if not kernel32.GetExitCodeProcess(
+                        proc_info.hProcess, ctypes.byref(exit_code)):
+                    raise exception.WindowsCloudbaseInitException(
+                        "GetExitCodeProcess failed: %r")
+
+                return exit_code.value
+        finally:
+            if proc_info.hProcess:
+                kernel32.CloseHandle(proc_info.hProcess)
+            if proc_info.hThread:
+                kernel32.CloseHandle(proc_info.hThread)
 
     def close_user_logon_session(self, token):
         kernel32.CloseHandle(token)
@@ -773,19 +909,19 @@ class WindowsUtils(base.BaseOSUtils):
         """This is needed to avoid pass the hash attacks."""
         if not self.check_service_exists(self._service_name):
             LOG.info("Service does not exist: %s", self._service_name)
-            return False
+            return None
 
         service_username = self.get_service_username(self._service_name)
         # Ignore builtin accounts
         if "\\" not in service_username:
             LOG.info("Skipping password reset, service running as a built-in "
                      "account: %s", service_username)
-            return False
+            return None
         domain, username = service_username.split('\\')
         if domain != ".":
             LOG.info("Skipping password reset, service running as a domain "
                      "account: %s", service_username)
-            return False
+            return None
 
         LOG.debug('Resetting password for service user: %s', service_username)
         maximum_length = self.get_maximum_password_length()
@@ -793,7 +929,7 @@ class WindowsUtils(base.BaseOSUtils):
         self.set_user_password(username, password)
         self.set_service_credentials(
             self._service_name, service_username, password)
-        return True
+        return domain, username, password
 
     def terminate(self):
         # Wait for the service to start. Polling the service "Started" property
