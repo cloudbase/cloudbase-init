@@ -180,6 +180,8 @@ class TestInitManager(unittest.TestCase):
     def test_handle_plugins_stage_no_fast_reboot(self):
         self._test_handle_plugins_stage(fast_reboot=False)
 
+    @mock.patch('cloudbaseinit.init.InitManager.'
+                '_reset_service_password_and_respawn')
     @mock.patch('cloudbaseinit.init.InitManager'
                 '._handle_plugins_stage')
     @mock.patch('cloudbaseinit.init.InitManager._check_latest_version')
@@ -190,10 +192,10 @@ class TestInitManager(unittest.TestCase):
     def _test_configure_host(self, mock_get_metadata_service,
                              mock_get_os_utils, mock_load_plugins,
                              mock_get_version, mock_check_latest_version,
-                             mock_handle_plugins_stage,
+                             mock_handle_plugins_stage, mock_reset_service,
                              expected_logging,
                              version, name, instance_id, reboot=True):
-
+        sys.platform = 'win32'
         mock_get_version.return_value = version
         fake_service = mock.MagicMock()
         fake_plugin = mock.MagicMock()
@@ -218,7 +220,8 @@ class TestInitManager(unittest.TestCase):
         self.assertEqual(expected_logging, snatcher.output)
         mock_check_latest_version.assert_called_once_with()
         if CONF.reset_service_password:
-            self.osutils.reset_service_password.assert_called_once_with()
+            mock_reset_service.assert_called_once_with(self.osutils)
+
         self.osutils.wait_for_boot_completion.assert_called_once_with()
         mock_get_metadata_service.assert_called_once_with()
         fake_service.get_name.assert_called_once_with()
@@ -283,3 +286,57 @@ class TestInitManager(unittest.TestCase):
             mock_partial.return_value)
         mock_partial.assert_called_once_with(
             init.LOG.info, 'Found new version of cloudbase-init %s')
+
+    @mock.patch('os.path.basename')
+    @mock.patch("sys.executable")
+    @mock.patch("sys.argv")
+    @mock.patch("sys.exit")
+    def _test_reset_service_password_and_respawn(self, mock_exit, mock_argv,
+                                                 mock_executable, mock_os_path,
+                                                 credentials, current_user):
+        token = mock.sentinel.token
+        self.osutils.create_user_logon_session.return_value = token
+        self.osutils.execute_process_as_user.return_value = 0
+        self.osutils.reset_service_password.return_value = credentials
+        self.osutils.get_current_user.return_value = current_user
+        expected_logging = []
+        arguments = sys.argv + ["--noreset_service_password"]
+
+        with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
+            self._init._reset_service_password_and_respawn(self.osutils)
+
+        if not credentials:
+            return
+
+        if credentials[1] != current_user[1]:
+            expected_logging = [
+                "No need to respawn process. Current user: "
+                "%(current_user)s. Service user: %(service_user)s" %
+                {"current_user": current_user[1],
+                 "service_user": credentials[1]}
+            ]
+            self.assertEqual(expected_logging, snatcher.output)
+        else:
+            self.osutils.create_user_logon_session.assert_called_once_with(
+                credentials[1], credentials[2], credentials[0],
+                logon_type=self.osutils.LOGON32_LOGON_BATCH)
+            self.osutils.execute_process_as_user.assert_called_once_with(
+                token, arguments)
+            mock_exit.assert_called_once_with(0)
+
+    def test_reset_service_password_and_respawn(self):
+        current_user = [mock.sentinel.domain, mock.sentinel.current_user]
+        self._test_reset_service_password_and_respawn(
+            credentials=None,
+            current_user=current_user
+        )
+        self._test_reset_service_password_and_respawn(
+            credentials=[mock.sentinel.domain, mock.sentinel.user,
+                         mock.sentinel.password],
+            current_user=current_user
+        )
+        self._test_reset_service_password_and_respawn(
+            credentials=[mock.sentinel.domain, mock.sentinel.current_user,
+                         mock.sentinel.password],
+            current_user=current_user
+        )

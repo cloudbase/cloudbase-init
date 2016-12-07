@@ -13,6 +13,7 @@
 #    under the License.
 
 import functools
+import os
 import sys
 
 from oslo_log import log as oslo_logging
@@ -23,6 +24,7 @@ from cloudbaseinit.metadata import factory as metadata_factory
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugins_base
 from cloudbaseinit.plugins import factory as plugins_factory
+from cloudbaseinit.utils import log as logging
 from cloudbaseinit import version
 
 
@@ -114,13 +116,55 @@ class InitManager(object):
 
         return reboot_required
 
-    def configure_host(self):
-        LOG.info('Cloudbase-Init version: %s', version.get_version())
+    @staticmethod
+    def _reset_service_password_and_respawn(osutils):
+        """Avoid pass the hash attacks from cloned instances."""
+        credentials = osutils.reset_service_password()
+        if not credentials:
+            return
 
+        service_domain, service_user, service_password = credentials
+        _, current_user = osutils.get_current_user()
+        # Notes(alexcoman): No need to check domain as password reset applies
+        # to local users only.
+        if current_user != service_user:
+            LOG.debug("No need to respawn process. Current user: "
+                      "%(current_user)s. Service user: "
+                      "%(service_user)s",
+                      {"current_user": current_user,
+                       "service_user": service_user})
+            return
+
+        # Note(alexcoman): In order to avoid conflicts caused by the logging
+        # handlers being shared between the current process and the new one,
+        # any logging handlers for the current logger object will be closed.
+        # By doing so, the next time the logger is called, it will be created
+        # under the newly updated proccess, thus avoiding any issues or
+        # conflicts where the logging can't be done.
+        logging.release_logging_handlers("cloudbaseinit")
+
+        # Note(alexcoman): In some edge cases the sys.args doesn't contain
+        # the python executable. In order to avoid this kind of issue the
+        # sys.executable will be injected into the arguments if it's necessary.
+        arguments = sys.argv + ["--noreset_service_password"]
+        if os.path.basename(arguments[0]).endswith(".py"):
+            arguments.insert(0, sys.executable)
+
+        LOG.info("Respawning current process with updated credentials.")
+        token = osutils.create_user_logon_session(
+            service_user, service_password, service_domain,
+            logon_type=osutils.LOGON32_LOGON_BATCH)
+        exit_code = osutils.execute_process_as_user(token, arguments)
+        LOG.info("Process execution ended with exit code: %s", exit_code)
+        sys.exit(exit_code)
+
+    def configure_host(self):
         osutils = osutils_factory.get_os_utils()
-        if CONF.reset_service_password:
-            # Avoid pass the hash attacks from cloned instances
-            osutils.reset_service_password()
+
+        if CONF.reset_service_password and sys.platform == 'win32':
+            self._reset_service_password_and_respawn(osutils)
+
+        LOG.info('Cloudbase-Init version: %s', version.get_version())
         osutils.wait_for_boot_completion()
 
         reboot_required = self._handle_plugins_stage(
