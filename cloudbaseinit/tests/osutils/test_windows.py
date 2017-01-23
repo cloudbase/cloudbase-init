@@ -325,9 +325,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
             netapi32.NetLocalGroupAddMembers.assert_called_with(
                 0, six.text_type(group_name), 3,
-                self._ctypes_mock.addressof.return_value, 1)
+                self._ctypes_mock.pointer.return_value, 1)
 
-            self._ctypes_mock.addressof.assert_called_once_with(lmi)
+            self._ctypes_mock.pointer.assert_called_once_with(lmi)
             self.assertEqual(lmi.lgrmi3_domainandname,
                              six.text_type(self._USERNAME))
 

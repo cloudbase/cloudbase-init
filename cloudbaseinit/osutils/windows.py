@@ -458,7 +458,7 @@ class WindowsUtils(base.BaseOSUtils):
         lmi.lgrmi3_domainandname = six.text_type(username)
 
         ret_val = netapi32.NetLocalGroupAddMembers(0, six.text_type(groupname),
-                                                   3, ctypes.addressof(lmi), 1)
+                                                   3, ctypes.pointer(lmi), 1)
 
         if ret_val == self.NERR_GroupNotFound:
             raise exception.CloudbaseInitException('Group not found')
