@@ -271,6 +271,14 @@ class GlobalOptions(conf_base.Options):
                 'enable_automatic_updates', default=None,
                 help='If set, enables or disables automatic operating '
                      'system updates.'),
+            cfg.BoolOpt(
+                'metadata_report_provisioning_started', default=False,
+                help='Reports to the metadata service that provisioning has '
+                     'started'),
+            cfg.BoolOpt(
+                'metadata_report_provisioning_completed', default=False,
+                help='Reports to the metadata service that provisioning '
+                     'completed successfully or failed'),
         ]
 
         self._cli_options = [

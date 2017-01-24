@@ -189,6 +189,15 @@ class BaseMetadataService(object):
         """
         return False
 
+    def provisioning_started(self):
+        pass
+
+    def provisioning_completed(self):
+        pass
+
+    def provisioning_failed(self):
+        pass
+
     @property
     def can_post_rdp_cert_thumbprint(self):
         return False

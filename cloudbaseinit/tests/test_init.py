@@ -186,12 +186,13 @@ class TestInitManager(unittest.TestCase):
     def _test_handle_plugins_stage(self, mock_load_plugins,
                                    mock_check_plugin_os_requirements,
                                    mock_exec_plugin,
-                                   reboot=True, fast_reboot=True):
+                                   reboot=True, fast_reboot=True,
+                                   success=True):
         stage = "fake stage"
         service, instance_id = mock.Mock(), mock.Mock()
         plugins = [mock.Mock() for _ in range(3)]
         mock_check_plugin_os_requirements.return_value = True
-        mock_exec_plugin.return_value = reboot
+        mock_exec_plugin.return_value = success, reboot
         mock_load_plugins.return_value = plugins
         requirements_calls = [mock.call(self.osutils, plugin)
                               for plugin in plugins]
@@ -210,7 +211,7 @@ class TestInitManager(unittest.TestCase):
         mock_check_plugin_os_requirements.assert_has_calls(
             requirements_calls[:idx])
         mock_exec_plugin.assert_has_calls(exec_plugin_calls[:idx])
-        self.assertEqual(reboot, response)
+        self.assertEqual((success, reboot), response)
 
     def test_handle_plugins_stage(self):
         self._test_handle_plugins_stage()
@@ -221,6 +222,9 @@ class TestInitManager(unittest.TestCase):
     @testutils.ConfPatcher('allow_reboot', False)
     def test_handle_plugins_stage_no_fast_reboot(self):
         self._test_handle_plugins_stage(fast_reboot=False)
+
+    def test_handle_plugins_stage_stage_fails(self):
+        self._test_handle_plugins_stage(success=False)
 
     @mock.patch('cloudbaseinit.init.InitManager.'
                 '_reset_service_password_and_respawn')
@@ -236,7 +240,8 @@ class TestInitManager(unittest.TestCase):
                              mock_get_version, mock_check_latest_version,
                              mock_handle_plugins_stage, mock_reset_service,
                              expected_logging,
-                             version, name, instance_id, reboot=True):
+                             version, name, instance_id, reboot=True,
+                             last_stage=False):
         sys.platform = 'win32'
         mock_get_version.return_value = version
         fake_service = mock.MagicMock()
@@ -246,7 +251,8 @@ class TestInitManager(unittest.TestCase):
         mock_get_metadata_service.return_value = fake_service
         fake_service.get_name.return_value = name
         fake_service.get_instance_id.return_value = instance_id
-        mock_handle_plugins_stage.side_effect = [False, False, True]
+        mock_handle_plugins_stage.side_effect = [(True, False), (True, False),
+                                                 (last_stage, True)]
         stages = [
             base.PLUGIN_STAGE_PRE_NETWORKING,
             base.PLUGIN_STAGE_PRE_METADATA_DISCOVERY,
@@ -256,13 +262,14 @@ class TestInitManager(unittest.TestCase):
         stage_calls_list[2][1] = fake_service
         stage_calls_list[2][2] = instance_id
         stage_calls = [mock.call(*args) for args in stage_calls_list]
-
         with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
             self._init.configure_host()
         self.assertEqual(expected_logging, snatcher.output)
         mock_check_latest_version.assert_called_once_with()
         if CONF.reset_service_password:
             mock_reset_service.assert_called_once_with(self.osutils)
+        if last_stage:
+            fake_service.provisioning_completed.assert_called_once_with()
 
         self.osutils.wait_for_boot_completion.assert_called_once_with()
         mock_get_metadata_service.assert_called_once_with()
@@ -275,7 +282,8 @@ class TestInitManager(unittest.TestCase):
         else:
             self.assertFalse(self.osutils.reboot.called)
 
-    def _test_configure_host_with_logging(self, extra_logging, reboot=True):
+    def _test_configure_host_with_logging(self, extra_logging, reboot=True,
+                                          last_stage=False):
         instance_id = 'fake id'
         name = 'fake name'
         version = 'version'
@@ -284,17 +292,23 @@ class TestInitManager(unittest.TestCase):
             'Metadata service loaded: %r' % name,
             'Instance id: %s' % instance_id,
         ]
+        if CONF.metadata_report_provisioning_started:
+            expected_logging.insert(2, 'Reporting provisioning started')
+
         self._test_configure_host(
             expected_logging=expected_logging + extra_logging,
             version=version, name=name, instance_id=instance_id,
-            reboot=reboot)
+            reboot=reboot, last_stage=last_stage)
 
+    @testutils.ConfPatcher('metadata_report_provisioning_completed', True)
     @testutils.ConfPatcher('allow_reboot', False)
     @testutils.ConfPatcher('stop_service_on_exit', False)
-    def test_configure_host_no_reboot_no_service_stopping(self):
+    def test_configure_host_no_reboot_no_service_stopping_reporting_done(self):
         self._test_configure_host_with_logging(
             reboot=False,
-            extra_logging=['Plugins execution done'])
+            extra_logging=['Plugins execution done',
+                           'Reporting provisioning completed'],
+            last_stage=True)
 
     @testutils.ConfPatcher('allow_reboot', False)
     @testutils.ConfPatcher('stop_service_on_exit', True)
@@ -305,10 +319,11 @@ class TestInitManager(unittest.TestCase):
                            'Stopping Cloudbase-Init service'])
         self.osutils.terminate.assert_called_once_with()
 
+    @testutils.ConfPatcher('metadata_report_provisioning_completed', True)
     @testutils.ConfPatcher('allow_reboot', True)
-    def test_configure_host_reboot(self):
+    def test_configure_host_reboot_reporting_started_and_failed(self):
         self._test_configure_host_with_logging(
-            extra_logging=['Rebooting'])
+            extra_logging=['Reporting provisioning failed', 'Rebooting'])
 
     @testutils.ConfPatcher('check_latest_version', False)
     @mock.patch('cloudbaseinit.version.check_latest_version')
