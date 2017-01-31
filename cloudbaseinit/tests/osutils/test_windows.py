@@ -1284,6 +1284,46 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_get_volume_label_no_return_value(self):
         self._test_get_volume_label(None)
 
+    def _test_get_volume_path_names_by_mount_point(self, err=False,
+                                                   last_err=None,
+                                                   volume_name=None):
+        mock_mount_point = mock.Mock()
+        self._windll_mock.kernel32.GetLastError.return_value = last_err
+        if err:
+            (self._windll_mock.kernel32.
+                GetVolumeNameForVolumeMountPointW.return_value) = None
+            if last_err in [self._winutils.ERROR_INVALID_NAME,
+                            self._winutils.ERROR_PATH_NOT_FOUND]:
+                self.assertRaises(
+                    exception.ItemNotFoundException,
+                    self._winutils.get_volume_path_names_by_mount_point,
+                    mock_mount_point)
+            else:
+                self.assertRaises(
+                    exception.WindowsCloudbaseInitException,
+                    self._winutils.get_volume_path_names_by_mount_point,
+                    mock_mount_point)
+            return
+        (self._windll_mock.kernel32.
+            GetVolumePathNamesForVolumeNameW.return_value) = volume_name
+        if not volume_name:
+            if last_err != self._winutils.ERROR_MORE_DATA:
+                self.assertRaises(
+                    exception.WindowsCloudbaseInitException,
+                    self._winutils.get_volume_path_names_by_mount_point,
+                    mock_mount_point)
+
+    def test_get_volume_path_names_by_mount_point_not_found(self):
+        self._test_get_volume_path_names_by_mount_point(err=True)
+
+    def test_get_volume_path_names_by_mount_point_failed(self):
+        self._test_get_volume_path_names_by_mount_point(
+            err=True, last_err=self._winutils.ERROR_INVALID_NAME)
+
+    def test_get_volume_path_names_by_mount_point_error(self):
+        self._test_get_volume_path_names_by_mount_point(
+            volume_name=True, last_err=self._winutils.ERROR_MORE_DATA)
+
     @mock.patch('re.search')
     @mock.patch('cloudbaseinit.osutils.base.BaseOSUtils.'
                 'generate_random_password')
@@ -1309,9 +1349,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         if buf_length is None:
             with self.assert_raises_windows_message(
                     "GetLogicalDriveStringsW failed: %r", last_error):
-                self._winutils._get_logical_drives()
+                self._winutils.get_logical_drives()
         else:
-            response = self._winutils._get_logical_drives()
+            response = self._winutils.get_logical_drives()
 
             self._ctypes_mock.create_unicode_buffer.assert_called_with(261)
             mock_get_drives.assert_called_with(260, mock_buf)
@@ -1324,7 +1364,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_get_logical_drives(buf_length=2)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
-                '_get_logical_drives')
+                'get_logical_drives')
     @mock.patch('cloudbaseinit.osutils.windows.kernel32')
     def test_get_cdrom_drives(self, mock_kernel32, mock_get_logical_drives):
         mock_get_logical_drives.return_value = ['drive']
@@ -2268,3 +2308,31 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_set_real_time_clock_utc(self):
         self._test_set_real_time_clock_utc(utc=1)
+
+    def test_get_page_files(self):
+        mock_value = [u'?:\\pagefile.sys']
+        expected_page_files = [(mock_value[0], 0, 0)]
+        self._winreg_mock.QueryValueEx.return_value = [mock_value]
+        res = self._winutils.get_page_files()
+        key = self._winreg_mock.OpenKey.return_value.__enter__.return_value
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Control\\'
+            'Session Manager\\Memory Management')
+        self._winreg_mock.QueryValueEx.assert_called_with(key, 'PagingFiles')
+        self.assertEqual(res, expected_page_files)
+
+    def test_set_page_files(self):
+        mock_path = mock.Mock()
+        page_files = [(mock_path, 0, 0)]
+        self._winutils.set_page_files(page_files)
+        expected_values = ["%s %d %d" % (mock_path, 0, 0)]
+        key = self._winreg_mock.OpenKey.return_value.__enter__.return_value
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Control\\'
+            'Session Manager\\Memory Management',
+            0, self._winreg_mock.KEY_ALL_ACCESS)
+        self._winreg_mock.SetValueEx.assert_called_with(
+            key, 'PagingFiles', 0, self._winreg_mock.REG_MULTI_SZ,
+            expected_values)

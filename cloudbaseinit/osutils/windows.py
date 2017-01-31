@@ -242,6 +242,18 @@ kernel32.HeapFree.argtypes = [wintypes.HANDLE, wintypes.DWORD,
                               wintypes.LPVOID]
 kernel32.HeapFree.restype = wintypes.BOOL
 
+kernel32.GetVolumeNameForVolumeMountPointW.argtypes = [wintypes.LPCWSTR,
+                                                       wintypes.LPWSTR,
+                                                       wintypes.DWORD]
+kernel32.GetVolumeNameForVolumeMountPointW.restype = wintypes.BOOL
+
+kernel32.GetVolumePathNamesForVolumeNameW.argtypes = [wintypes.LPCWSTR,
+                                                      wintypes.LPWSTR,
+                                                      wintypes.DWORD,
+                                                      ctypes.POINTER(
+                                                          wintypes.DWORD)]
+kernel32.GetVolumePathNamesForVolumeNameW.restype = wintypes.BOOL
+
 iphlpapi.GetIpForwardTable.argtypes = [
     ctypes.POINTER(Win32_MIB_IPFORWARDTABLE),
     ctypes.POINTER(wintypes.ULONG),
@@ -294,9 +306,12 @@ GUID_DEVINTERFACE_DISK = disk.GUID(0x53f56307, 0xb6bf, 0x11d0, 0x94, 0xf2,
 class WindowsUtils(base.BaseOSUtils):
     NERR_GroupNotFound = 2220
     NERR_UserNotFound = 2221
+    ERROR_PATH_NOT_FOUND = 3
     ERROR_ACCESS_DENIED = 5
     ERROR_INSUFFICIENT_BUFFER = 122
+    ERROR_INVALID_NAME = 123
     ERROR_NO_DATA = 232
+    ERROR_MORE_DATA = 234
     ERROR_NO_SUCH_MEMBER = 1387
     ERROR_MEMBER_IN_ALIAS = 1378
     ERROR_INVALID_MEMBER = 1388
@@ -1052,6 +1067,38 @@ class WindowsUtils(base.BaseOSUtils):
         if ret_val:
             return label.value
 
+    def get_volume_path_names_by_mount_point(self, mount_point):
+        max_volume_name_len = 50
+        volume_name = ctypes.create_unicode_buffer(max_volume_name_len)
+
+        if not kernel32.GetVolumeNameForVolumeMountPointW(
+                six.text_type(mount_point), volume_name,
+                max_volume_name_len):
+            if kernel32.GetLastError() in [self.ERROR_INVALID_NAME,
+                                           self.ERROR_PATH_NOT_FOUND]:
+                raise exception.ItemNotFoundException(
+                    "Mount point not found: %s" % mount_point)
+            else:
+                raise exception.WindowsCloudbaseInitException(
+                    "Failed to get volume name for mount point: %s. "
+                    "Error: %%r" % mount_point)
+
+        volume_path_names_len = wintypes.DWORD(100)
+        while True:
+            volume_path_names = ctypes.create_unicode_buffer(
+                volume_path_names_len.value)
+            if not kernel32.GetVolumePathNamesForVolumeNameW(
+                    volume_name, volume_path_names, volume_path_names_len,
+                    ctypes.byref(volume_path_names_len)):
+                if kernel32.GetLastError() == self.ERROR_MORE_DATA:
+                    continue
+                else:
+                    raise exception.WindowsCloudbaseInitException(
+                        "Failed to get path names for volume name: %s."
+                        "Error: %%r" % volume_name.value)
+            return [n for n in volume_path_names[
+                :volume_path_names_len.value - 1].split('\0') if n]
+
     def generate_random_password(self, length):
         while True:
             pwd = super(WindowsUtils, self).generate_random_password(length)
@@ -1079,7 +1126,7 @@ class WindowsUtils(base.BaseOSUtils):
 
         return values
 
-    def _get_logical_drives(self):
+    def get_logical_drives(self):
         buf_size = self.MAX_PATH
         buf = ctypes.create_unicode_buffer(buf_size + 1)
         buf_len = kernel32.GetLogicalDriveStringsW(buf_size, buf)
@@ -1090,7 +1137,7 @@ class WindowsUtils(base.BaseOSUtils):
         return self._split_str_buf_list(buf, buf_len)
 
     def get_cdrom_drives(self):
-        drives = self._get_logical_drives()
+        drives = self.get_logical_drives()
         return [d for d in drives if kernel32.GetDriveTypeW(d) ==
                 self.DRIVE_CDROM]
 
@@ -1342,3 +1389,30 @@ class WindowsUtils(base.BaseOSUtils):
                             0, winreg.KEY_ALL_ACCESS) as key:
             winreg.SetValueEx(key, 'RealTimeIsUniversal', 0,
                               winreg.REG_DWORD, 1 if utc else 0)
+
+    def get_page_files(self):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Control\\'
+                            'Session Manager\\Memory Management') as key:
+            values = winreg.QueryValueEx(key, 'PagingFiles')[0]
+
+        page_files = []
+        for value in values:
+            v = value.split(" ")
+            path = v[0]
+            min_size_mb = int(v[1]) if len(v) > 1 else 0
+            max_size_mb = int(v[2]) if len(v) > 2 else 0
+            page_files.append((path, min_size_mb, max_size_mb))
+        return page_files
+
+    def set_page_files(self, page_files):
+        values = []
+        for path, min_size_mb, max_size_mb in page_files:
+            values.append("%s %d %d" % (path, min_size_mb, max_size_mb))
+
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Control\\'
+                            'Session Manager\\Memory Management',
+                            0, winreg.KEY_ALL_ACCESS) as key:
+            winreg.SetValueEx(key, 'PagingFiles', 0,
+                              winreg.REG_MULTI_SZ, values)

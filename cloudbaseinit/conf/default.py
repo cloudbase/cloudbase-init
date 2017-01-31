@@ -215,6 +215,15 @@ class GlobalOptions(conf_base.Options):
                 'display_idle_timeout', default=0,
                 help='The idle timeout, in seconds, before powering off '
                      'the display. Set 0 to leave the display always on'),
+            cfg.ListOpt(
+                'page_file_volume_labels', default=[],
+                help='Labels of volumes on which a Windows page file needs to '
+                     'be created. E.g.: "Temporary Storage"'),
+            cfg.ListOpt(
+                'page_file_volume_mount_points', default=[],
+                help='Volume mount points on which a Windows page file needs '
+                     'to be created. E.g.: '
+                     '"\\\\?\\GLOBALROOT\\device\\Harddisk1\\Partition1\\"'),
         ]
 
         self._cli_options = [
