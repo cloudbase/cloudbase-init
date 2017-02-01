@@ -34,9 +34,15 @@ class NTPClientPluginTests(unittest.TestCase):
     def test_set_ntp_trigger_mode(self):
         mock_osutils = mock.Mock()
         self._ntpclient._set_ntp_trigger_mode(mock_osutils)
-        mock_osutils.execute_system32_process.assert_called_once_with(
-            ["sc.exe", "triggerinfo", ntpclient._W32TIME_SERVICE,
-             "start/networkon", "stop/networkoff"])
+        args = [
+            mock.call.execute_system32_process(
+                ["sc.exe", "triggerinfo", ntpclient._W32TIME_SERVICE,
+                 "delete"]),
+            mock.call.execute_system32_process(
+                ["sc.exe", "triggerinfo", ntpclient._W32TIME_SERVICE,
+                 "start/networkon", "stop/networkoff"])
+        ]
+        mock_osutils.assert_has_calls(args)
 
     @mock.patch('time.sleep')
     @mock.patch('cloudbaseinit.plugins.windows.ntpclient.NTPClientPlugin.'

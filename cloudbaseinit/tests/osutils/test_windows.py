@@ -2193,3 +2193,78 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                                 "failed: %r", 100):
             self._winutils.execute_process_as_user(token, args, True,
                                                    new_console)
+
+    def _test_is_realtime_clock_uct(self, utc=1, exception=False,
+                                    exception_raised=False):
+
+        if exception:
+            eclass = Exception
+            ex = eclass()
+            self.windows_utils.WindowsError = eclass
+            if not exception_raised:
+                ex.winerror = 2
+            else:
+                ex.winerror = mock.sentinel.winerror
+            self._winreg_mock.QueryValueEx.side_effect = ex
+
+        self._winreg_mock.QueryValueEx.return_value = [utc]
+
+        if exception_raised:
+            with self.assertRaises(eclass):
+                self._winutils.is_real_time_clock_utc()
+            response = None
+        else:
+            response = self._winutils.is_real_time_clock_utc()
+
+        if exception_raised:
+            expected_result = None
+        elif exception:
+            expected_result = False
+        else:
+            if utc == 0:
+                expected_result = utc
+            else:
+                expected_result = utc != 0
+
+        self.assertEqual(response, expected_result)
+
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Control\\'
+            'TimeZoneInformation')
+        self._winreg_mock.QueryValueEx.assert_called_with(
+            self._winreg_mock.OpenKey.return_value.__enter__.return_value,
+            'RealTimeIsUniversal')
+
+    def test_is_realtime_clock_utc(self):
+        self._test_is_realtime_clock_uct()
+
+    def test_is_not_realtime_clock_utc(self):
+        self._test_is_realtime_clock_uct(utc=0)
+
+    def test_is_realtime_clock_utc_registry_value_missing(self):
+        self._test_is_realtime_clock_uct(exception=True)
+
+    def test_is_realtime_clock_utc_exception_raised(self):
+        self._test_is_realtime_clock_uct(exception=True,
+                                         exception_raised=True)
+
+    def _test_set_real_time_clock_utc(self, utc):
+        self._winutils.set_real_time_clock_utc(utc)
+
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Control\\'
+            'TimeZoneInformation',
+            0, self._winreg_mock.KEY_ALL_ACCESS)
+
+        key = self._winreg_mock.OpenKey.return_value.__enter__.return_value
+        self._winreg_mock.SetValueEx.assert_called_with(
+            key, 'RealTimeIsUniversal', 0, self._winreg_mock.REG_DWORD,
+            1 if utc else 0)
+
+    def test_set_real_time_clock_utc_set_zero(self):
+        self._test_set_real_time_clock_utc(utc=0)
+
+    def test_set_real_time_clock_utc(self):
+        self._test_set_real_time_clock_utc(utc=1)

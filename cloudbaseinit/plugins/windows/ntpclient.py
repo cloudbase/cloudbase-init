@@ -33,9 +33,12 @@ class NTPClientPlugin(ntpclient.NTPClientPlugin):
         It also changes the current triggers of the service (domain joined
         for instance).
         """
+        args = ["sc.exe", "triggerinfo", _W32TIME_SERVICE, "delete"]
+        osutils.execute_system32_process(args)
+
         args = ["sc.exe", "triggerinfo", _W32TIME_SERVICE,
                 "start/networkon", "stop/networkoff"]
-        return osutils.execute_system32_process(args)
+        osutils.execute_system32_process(args)
 
     def verify_time_service(self, osutils):
         """Verify that the time service is up and try to start it."""

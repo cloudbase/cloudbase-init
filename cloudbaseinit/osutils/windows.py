@@ -1322,3 +1322,23 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "The given timezone name is unrecognised: %r" % timezone_name)
         timezone.Timezone(windows_name).set(self)
+
+    def is_real_time_clock_utc(self):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Control\\'
+                            'TimeZoneInformation') as key:
+            try:
+                utc = winreg.QueryValueEx(key, 'RealTimeIsUniversal')[0]
+                return utc != 0
+            except WindowsError as ex:
+                if ex.winerror == 2:
+                    return False
+                raise
+
+    def set_real_time_clock_utc(self, utc):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Control\\'
+                            'TimeZoneInformation',
+                            0, winreg.KEY_ALL_ACCESS) as key:
+            winreg.SetValueEx(key, 'RealTimeIsUniversal', 0,
+                              winreg.REG_DWORD, 1 if utc else 0)
