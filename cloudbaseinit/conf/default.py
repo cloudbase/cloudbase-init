@@ -224,6 +224,10 @@ class GlobalOptions(conf_base.Options):
                 help='Volume mount points on which a Windows page file needs '
                      'to be created. E.g.: '
                      '"\\\\?\\GLOBALROOT\\device\\Harddisk1\\Partition1\\"'),
+            cfg.BoolOpt(
+                'trim_enabled', default=False,
+                help='Enables or disables TRIM delete notifications for '
+                     'the underlying storage device.'),
         ]
 
         self._cli_options = [
