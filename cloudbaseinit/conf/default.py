@@ -204,6 +204,10 @@ class GlobalOptions(conf_base.Options):
                 'set_unique_boot_disk_id', default=True,
                 help='Sets a new random unique id on the boot disk to avoid '
                      'collisions'),
+            cfg.IntOpt(
+                'display_idle_timeout', default=0,
+                help='The idle timeout, in seconds, before powering off '
+                     'the display. Set 0 to leave the display always on'),
         ]
 
         self._cli_options = [
