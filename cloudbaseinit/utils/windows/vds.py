@@ -316,6 +316,18 @@ class IVdsVolume(comtypes.IUnknown):
     ]
 
 
+class IVdsServiceSAN(comtypes.IUnknown):
+    _iid_ = comtypes.GUID("{fc5d23e8-a88b-41a5-8de0-2d2f73c5a630}")
+
+    _methods_ = [
+        comtypes.COMMETHOD([], comtypes.HRESULT, 'GetSANPolicy',
+                           (['out'], ctypes.POINTER(wintypes.DWORD),
+                            'pSanPolicy')),
+        comtypes.COMMETHOD([], comtypes.HRESULT, 'SetSANPolicy',
+                           (['in'], wintypes.DWORD, 'SanPolicy')),
+    ]
+
+
 def load_vds_service():
     loader = client.CreateObject(CLSID_VdsLoader, interface=IVdsServiceLoader)
     svc = loader.LoadService(None)

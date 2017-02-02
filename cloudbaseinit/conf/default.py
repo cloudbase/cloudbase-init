@@ -81,6 +81,12 @@ class GlobalOptions(conf_base.Options):
                      'Volumes must be specified using a comma separated list '
                      'of volume indexes, e.g.: "1,2"'),
             cfg.StrOpt(
+                'san_policy', default=None,
+                choices=[constant.SAN_POLICY_ONLINE_STR,
+                         constant.SAN_POLICY_OFFLINE_STR,
+                         constant.SAN_POLICY_OFFLINE_SHARED_STR],
+                help='If not None, the SAN policy is set to the given value'),
+            cfg.StrOpt(
                 'local_scripts_path', default=None,
                 help='Path location containing scripts to be executed when '
                      'the plugin runs'),

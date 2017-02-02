@@ -30,6 +30,11 @@ CD_LOCATIONS = {
 }
 
 POLICY_IGNORE_ALL_FAILURES = "ignoreallfailures"
+
+SAN_POLICY_ONLINE_STR = 'OnlineAll'
+SAN_POLICY_OFFLINE_STR = 'OfflineAll'
+SAN_POLICY_OFFLINE_SHARED_STR = 'OfflineShared'
+
 CLEAR_TEXT_INJECTED_ONLY = 'clear_text_injected_only'
 ALWAYS_CHANGE = 'always'
 NEVER_CHANGE = 'no'
