@@ -183,6 +183,13 @@ class BaseMetadataService(object):
         """
         return False
 
+    @property
+    def can_post_rdp_cert_thumbprint(self):
+        return False
+
+    def post_rdp_cert_thumbprint(self, thumbprint):
+        pass
+
 
 class BaseHTTPMetadataService(BaseMetadataService):
 
