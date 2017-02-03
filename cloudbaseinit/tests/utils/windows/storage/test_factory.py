@@ -47,7 +47,7 @@ class TestStorageManager(unittest.TestCase):
             return
 
         self.mock_os.name = "nt"
-        mock_get_os_utils.return_value.check_os_version.return_value = nano
+        mock_get_os_utils.return_value.is_nano_server.return_value = nano
         mock_load_class = mock_class_loader.return_value.load_class
         response = self.factory.get_storage_manager()
         if nano:

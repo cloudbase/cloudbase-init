@@ -30,7 +30,7 @@ def get_storage_manager():
     cl = classloader.ClassLoader()
 
     if os.name == "nt":
-        if osutils.check_os_version(10, 0):
+        if osutils.is_nano_server():
             # VDS is not available on Nano Server
             # WSM supersedes VDS since Windows Server 2012 / Windows 8
             return cl.load_class(class_paths["WSM"])()
