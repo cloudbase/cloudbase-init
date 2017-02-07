@@ -58,29 +58,51 @@ class CreateUserPluginTests(unittest.TestCase):
     @mock.patch.object(CreateUserPlugin, 'post_create_user')
     def _test_execute(self, mock_post_create_user, mock_create_user,
                       mock_get_password, mock_get_os_utils,
-                      user_exists=True,
-                      group_adding_works=True):
+                      user_exists=False, group_adding_works=True,
+                      rename_admin_user=False, rename_admin_taken=False):
         shared_data = {}
         mock_osutils = mock.MagicMock()
         mock_service = mock.MagicMock()
+        mock_service.get_admin_username.return_value = CONF.username
         mock_get_password.return_value = 'password'
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.user_exists.return_value = user_exists
+        if rename_admin_user:
+            mock_osutils.is_builtin_admin.return_value = True
+            if rename_admin_taken:
+                mock_osutils.enum_users.return_value = [CONF.username]
+            else:
+                mock_osutils.enum_users.return_value = ["fake user name"]
         if not group_adding_works:
             mock_osutils.add_user_to_local_group.side_effect = Exception
 
-        with testutils.LogSnatcher("cloudbaseinit.plugins.common."
-                                   "createuser") as snatcher:
-            response = self._create_user.execute(mock_service, shared_data)
+        with testutils.ConfPatcher('rename_admin_user', rename_admin_user):
+            with testutils.LogSnatcher("cloudbaseinit.plugins.common."
+                                       "createuser") as snatcher:
+                response = self._create_user.execute(mock_service, shared_data)
 
         mock_get_os_utils.assert_called_once_with()
         mock_get_password.assert_called_once_with(mock_osutils)
-        mock_osutils.user_exists.assert_called_once_with(CONF.username)
+
         if user_exists:
+            mock_osutils.user_exists.assert_called_once_with(CONF.username)
             mock_osutils.set_user_password.assert_called_once_with(
                 CONF.username, 'password')
             expected_logging = ["Setting password for existing user \"%s\""
                                 % CONF.username]
+        elif rename_admin_user:
+            if rename_admin_taken:
+                expected_logging = [
+                    '"%s" is already the name of the builtin admin '
+                    'user, skipping renaming' % CONF.username
+                ]
+            else:
+                expected_logging = [
+                    'Renaming builtin admin user "{admin_user_name}" '
+                    'to {new_user_name} and setting password'.format(
+                        admin_user_name="fake user name",
+                        new_user_name=CONF.username)
+                ]
         else:
             mock_create_user.assert_called_once_with(
                 CONF.username, 'password',
@@ -110,3 +132,12 @@ class CreateUserPluginTests(unittest.TestCase):
 
     def test_execute_add_to_group_fails(self):
         self._test_execute(group_adding_works=False)
+
+    def test_execute_rename_admin(self):
+        self._test_execute(
+            user_exists=False,
+            rename_admin_user=True)
+
+    def test_execute_rename_admin_taken(self):
+        self._test_execute(rename_admin_user=True,
+                           rename_admin_taken=True)

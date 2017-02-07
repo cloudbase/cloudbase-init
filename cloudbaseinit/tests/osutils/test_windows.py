@@ -2361,3 +2361,92 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_trim_exception(self):
         self._test_trim(err=True)
+
+    def _test_rename_user(self, exc=None):
+        new_username = "new username"
+        user_info = {
+            "name": new_username,
+        }
+        userset_mock = self._win32net_mock.NetUserSetInfo
+        if exc:
+            userset_mock.side_effect = [exc]
+            error_class = (
+                exception.ItemNotFoundException if
+                exc.args[0] == self._winutils.NERR_UserNotFound else
+                exception.CloudbaseInitException)
+            with self.assertRaises(error_class):
+                self._winutils.rename_user(self._USERNAME, new_username)
+            return
+        self._winutils.rename_user(self._USERNAME, new_username)
+        userset_mock.assert_called_once_with(
+            None, self._USERNAME, 0, user_info)
+
+    def test_rename_user(self):
+        self._test_rename_user()
+
+    def test_rename_user_item_not_found(self):
+        exc = self._win32net_mock.error(self._winutils.NERR_UserNotFound,
+                                        *([mock.Mock()] * 2))
+        self._test_rename_user(exc=exc)
+
+    def test_rename_user_failed(self):
+        exc = self._win32net_mock.error(*([mock.Mock()] * 3))
+        self._test_rename_user(exc=exc)
+
+    def _test_enum_users(self, resume_handle=False, exc=None):
+        userenum_mock = self._win32net_mock.NetUserEnum
+
+        if exc is not None:
+            userenum_mock.side_effect = [exc]
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.enum_users()
+            return
+        else:
+            userenum_mock.side_effect = (
+                [([{"name": "fake name"}], mock.sentinel, False)] * 3 +
+                [([{"name": "fake name"}], mock.sentinel, resume_handle)])
+            self._winutils.enum_users()
+
+        result = self._winutils.enum_users()
+        if resume_handle:
+            self.assertEqual(result, ["fake name"] * 3)
+
+    def test_enum_users_exception(self):
+        exc = self._win32net_mock.error(self._win32net_mock.error,
+                                        *([mock.Mock()] * 2))
+        self._test_enum_users(exc=exc)
+
+    def test_enum_users(self):
+        self._test_enum_users(resume_handle=False)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_user_sid')
+    def _test_is_builtin_admin(self, mock_get_user_sid, sid_exists,
+                               sid_startswith, sid_endswith):
+        mock_sid = mock.Mock()
+        mock_sid.startswith.return_value = sid_startswith
+        mock_sid.endswith.return_value = sid_endswith
+        if sid_exists:
+            mock_get_user_sid.return_value = mock_sid
+        else:
+            mock_get_user_sid.return_value = False
+        expected_result = sid_exists and sid_startswith and sid_endswith
+
+        result = self._winutils.is_builtin_admin(mock.sentinel)
+        self.assertEqual(result, expected_result)
+
+    def test_is_builtin_admin_no_sid(self):
+        self._test_is_builtin_admin(sid_exists=False,
+                                    sid_startswith=True, sid_endswith=True)
+
+    def test_is_builtin_admin_sid_no_startswith(self):
+        self._test_is_builtin_admin(sid_exists=True,
+                                    sid_startswith=False, sid_endswith=True)
+
+    def test_is_builtin_admin_sid_no_endswith(self):
+        self._test_is_builtin_admin(sid_exists=True,
+                                    sid_startswith=True, sid_endswith=False)
+
+    def test_is_builtin_admin(self):
+        self._test_is_builtin_admin(sid_exists=True,
+                                    sid_startswith=True, sid_endswith=True)

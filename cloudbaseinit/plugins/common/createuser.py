@@ -54,13 +54,27 @@ class BaseCreateUserPlugin(base.BasePlugin):
         return osutils.generate_random_password(maximum_length)
 
     def execute(self, service, shared_data):
-        user_name = CONF.username
+        user_name = service.get_admin_username() or CONF.username
         shared_data[constants.SHARED_DATA_USERNAME] = user_name
 
         osutils = osutils_factory.get_os_utils()
         password = self._get_password(osutils)
 
-        if osutils.user_exists(user_name):
+        if CONF.rename_admin_user:
+            admin_user_name = [u for u in osutils.enum_users()
+                               if osutils.is_builtin_admin(u)][0]
+
+            if admin_user_name.lower() != user_name.lower():
+                LOG.info('Renaming builtin admin user "%(admin_user_name)s" '
+                         'to %(new_user_name)s and setting password',
+                         {'admin_user_name': admin_user_name,
+                          'new_user_name': user_name})
+                osutils.rename_user(admin_user_name, user_name)
+                osutils.set_user_password(user_name, password)
+            else:
+                LOG.info('"%s" is already the name of the builtin admin '
+                         'user, skipping renaming', user_name)
+        elif osutils.user_exists(user_name):
             LOG.info('Setting password for existing user "%s"', user_name)
             osutils.set_user_password(user_name, password)
         else:

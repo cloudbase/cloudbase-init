@@ -407,6 +407,39 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "Create user failed: %s" % ex.args[2])
 
+    def rename_user(self, username, new_username):
+        user_info = {
+            "name": new_username,
+        }
+        try:
+            win32net.NetUserSetInfo(None, username, 0, user_info)
+        except win32net.error as ex:
+            if ex.args[0] == self.NERR_UserNotFound:
+                raise exception.ItemNotFoundException(
+                    "User not found: %s" % username)
+            else:
+                raise exception.CloudbaseInitException(
+                    "Renaming user failed: %s" % ex.args[2])
+
+    def enum_users(self):
+        usernames = []
+        resume_handle = 0
+        while True:
+            try:
+                users_info, total, resume_handle = win32net.NetUserEnum(
+                    None, 0, win32netcon.FILTER_NORMAL_ACCOUNT, resume_handle)
+            except win32net.error as ex:
+                raise exception.CloudbaseInitException(
+                    "Enumerating users failed: %s" % ex.args[2])
+
+            usernames += [u["name"] for u in users_info]
+            if not resume_handle:
+                return usernames
+
+    def is_builtin_admin(self, username):
+        sid = self.get_user_sid(username)
+        return sid and sid.startswith(u"S-1-5-") and sid.endswith(u"-500")
+
     def _get_user_info(self, username, level):
         try:
             return win32net.NetUserGetInfo(None, username, level)

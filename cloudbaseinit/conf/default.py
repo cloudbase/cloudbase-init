@@ -95,6 +95,10 @@ class GlobalOptions(conf_base.Options):
                 'groups', default=['Administrators'],
                 help='List of local groups to which the user specified in '
                      '"username" will be added'),
+            cfg.BoolOpt(
+                'rename_admin_user', default=False,
+                help='Renames the builtin admin user instead of creating a '
+                     'new user'),
             cfg.StrOpt(
                 'heat_config_dir', default='C:\\cfn',
                 help='The directory where the Heat configuration files must '

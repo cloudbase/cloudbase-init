@@ -54,6 +54,15 @@ class BaseOSUtils(object):
     def create_user(self, username, password, password_expires=False):
         raise NotImplementedError()
 
+    def rename_user(self, username, new_username):
+        raise NotImplementedError()
+
+    def enum_users(self):
+        raise NotImplementedError()
+
+    def is_builtin_admin(self, username):
+        raise NotImplementedError()
+
     def set_user_password(self, username, password, password_expires=False):
         raise NotImplementedError()
 

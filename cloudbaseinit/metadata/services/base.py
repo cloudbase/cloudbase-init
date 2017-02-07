@@ -137,6 +137,9 @@ class BaseMetadataService(object):
         in the namedtuple defined above.
         """
 
+    def get_admin_username(self):
+        pass
+
     def get_admin_password(self):
         pass
 
