@@ -17,6 +17,7 @@ import abc
 import ctypes
 from ctypes import windll
 from ctypes import wintypes
+import random
 import re
 
 import six
@@ -26,6 +27,7 @@ from cloudbaseinit import exception
 
 
 kernel32 = windll.kernel32
+rpcrt4 = windll.rpcrt4
 
 
 class Win32_DiskGeometry(ctypes.Structure):
@@ -57,8 +59,9 @@ class GUID(ctypes.Structure):
         ("data4", wintypes.BYTE * 8)
     ]
 
-    def __init__(self, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8):
-        self.data1 = l
+    def __init__(self, dw=0, w1=0, w2=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0,
+                 b7=0, b8=0):
+        self.data1 = dw
         self.data2 = w1
         self.data3 = w2
         self.data4[0] = b1
@@ -153,19 +156,22 @@ class BaseDevice(object):
     """
 
     GENERIC_READ = 0x80000000
+    GENERIC_WRITE = 0x40000000
     FILE_SHARE_READ = 1
+    FILE_SHARE_WRITE = 2
     OPEN_EXISTING = 3
     FILE_ATTRIBUTE_READONLY = 1
     INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
     FILE_BEGIN = 0
     INVALID_SET_FILE_POINTER = 0xFFFFFFFF
 
-    def __init__(self, path):
+    def __init__(self, path, allow_write=False):
         self._path = path
 
         self._handle = None
         self._sector_size = None
         self._disk_size = None
+        self._allow_write = allow_write
         self.fixed = None
 
     def __repr__(self):
@@ -224,13 +230,22 @@ class BaseDevice(object):
         return buff.raw[:bytes_read.value]    # all bytes without the null byte
 
     def open(self):
+        access = self.GENERIC_READ
+        share_mode = self.FILE_SHARE_READ
+        if self._allow_write:
+            access |= self.GENERIC_WRITE
+            share_mode |= self.FILE_SHARE_WRITE
+            attributes = 0
+        else:
+            attributes = self.FILE_ATTRIBUTE_READONLY
+
         handle = kernel32.CreateFileW(
             ctypes.c_wchar_p(self._path),
-            self.GENERIC_READ,
-            self.FILE_SHARE_READ,
+            access,
+            share_mode,
             0,
             self.OPEN_EXISTING,
-            self.FILE_ATTRIBUTE_READONLY,
+            attributes,
             0)
         if handle == self.INVALID_HANDLE_VALUE:
             raise exception.WindowsCloudbaseInitException(
@@ -298,6 +313,45 @@ class Disk(BaseDevice):
             raise exception.WindowsCloudbaseInitException(
                 "Cannot get disk layout: %r")
         return layout
+
+    @staticmethod
+    def _create_guid():
+        guid = GUID()
+        ret_val = rpcrt4.UuidCreate(ctypes.byref(guid))
+        if ret_val:
+            raise exception.CloudbaseInitException(
+                "UuidCreate failed: %r" % ret_val)
+        return guid
+
+    def set_unique_id(self, unique_id=None):
+        layout = self._get_layout()
+        if layout.PartitionStyle == self.PARTITION_STYLE_MBR:
+            if not unique_id:
+                unique_id = random.randint(-2147483648, 2147483647)
+            layout.Mbr.Signature = unique_id
+        elif layout.PartitionStyle == self.PARTITION_STYLE_GPT:
+            if not unique_id:
+                unique_id = self._create_guid()
+            layout.Gpt.DiskId = unique_id
+        else:
+            raise exception.InvalidStateException(
+                "A unique id can be set on MBR or GPT partitions only")
+
+        bytes_returned = wintypes.DWORD()
+        ret_val = kernel32.DeviceIoControl(
+            self._handle, winioctlcon.IOCTL_DISK_SET_DRIVE_LAYOUT_EX,
+            ctypes.byref(layout), ctypes.sizeof(layout), 0, 0,
+            ctypes.byref(bytes_returned), 0)
+        if not ret_val:
+            raise exception.WindowsCloudbaseInitException(
+                "Cannot set disk layout: %r")
+
+        ret_val = kernel32.DeviceIoControl(
+            self._handle, winioctlcon.IOCTL_DISK_UPDATE_PROPERTIES, 0, 0, 0, 0,
+            ctypes.byref(bytes_returned), 0)
+        if not ret_val:
+            raise exception.WindowsCloudbaseInitException(
+                "Cannot update cached disk properties: %r")
 
     def _get_partition_indexes(self, layout):
         partition_style = layout.PartitionStyle

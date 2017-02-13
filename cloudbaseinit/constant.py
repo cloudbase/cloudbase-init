@@ -29,6 +29,7 @@ CD_LOCATIONS = {
     "partition",
 }
 
+POLICY_IGNORE_ALL_FAILURES = "ignoreallfailures"
 CLEAR_TEXT_INJECTED_ONLY = 'clear_text_injected_only'
 ALWAYS_CHANGE = 'always'
 NEVER_CHANGE = 'no'

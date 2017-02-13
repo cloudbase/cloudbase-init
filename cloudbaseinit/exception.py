@@ -23,6 +23,10 @@ class ItemNotFoundException(CloudbaseInitException):
     pass
 
 
+class InvalidStateException(CloudbaseInitException):
+    pass
+
+
 class ServiceException(Exception):
 
     """Base exception for all the metadata services related errors."""
