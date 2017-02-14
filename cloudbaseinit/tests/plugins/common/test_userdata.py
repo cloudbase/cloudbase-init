@@ -23,6 +23,7 @@ try:
 except ImportError:
     import mock
 
+from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base as metadata_services_base
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import userdata
@@ -50,6 +51,42 @@ class UserDataPluginTest(unittest.TestCase):
         self._userdata = userdata.UserDataPlugin()
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
+
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch('os.unlink')
+    @mock.patch('os.path.isdir')
+    @mock.patch('os.makedirs')
+    @mock.patch('os.path.dirname')
+    @mock.patch('os.path.exists')
+    def _test_write_userdata(self, mock_exists, mock_dirname, mock_makedirs,
+                             mock_is_dir, mock_unlink, mock_get_os_utils,
+                             os_exists_effects=None, is_dir=True):
+        mock_userdata = str(mock.sentinel.user_data)
+        mock_user_data_path = str(mock.sentinel.user_data_path)
+        mock_osutils = mock.Mock()
+        mock_get_os_utils.return_value = mock_osutils
+        mock_exists.side_effect = os_exists_effects
+        mock_is_dir.return_value = is_dir
+        expected_logs = ["Writing userdata to: %s" % mock_user_data_path]
+        if not is_dir:
+            self.assertRaises(
+                exception.CloudbaseInitException,
+                self._userdata._write_userdata,
+                mock_userdata, mock_user_data_path)
+            return
+        with mock.patch('cloudbaseinit.plugins.common.userdata'
+                        '.open', create=True):
+            with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                       'userdata') as snatcher:
+                self._userdata._write_userdata(mock_userdata,
+                                               mock_user_data_path)
+        self.assertEqual(snatcher.output, expected_logs)
+
+    def test_write_userdata_fail(self):
+        self._test_write_userdata(is_dir=False)
+
+    def test_write_userdata(self):
+        self._test_write_userdata(os_exists_effects=(False, True))
 
     @mock.patch('cloudbaseinit.plugins.common.userdata.UserDataPlugin'
                 '._process_user_data')

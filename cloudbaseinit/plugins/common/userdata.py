@@ -13,10 +13,14 @@
 #    under the License.
 
 import email
+import os
 
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base as metadata_services_base
+from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import execcmd
 from cloudbaseinit.plugins.common.userdataplugins import factory
@@ -25,6 +29,7 @@ from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import x509constants
 
 
+CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 
@@ -42,7 +47,35 @@ class UserDataPlugin(base.BasePlugin):
             return base.PLUGIN_EXECUTION_DONE, False
 
         LOG.debug('User data content length: %d' % len(user_data))
-        return self._process_user_data(user_data)
+        if CONF.userdata_save_path:
+            user_data_path = os.path.abspath(
+                os.path.expandvars(CONF.userdata_save_path))
+            self._write_userdata(user_data, user_data_path)
+
+        if CONF.process_userdata:
+            return self._process_user_data(user_data)
+        return base.PLUGIN_EXECUTION_DONE, False
+
+    @staticmethod
+    def _write_userdata(user_data, user_data_path):
+        dir_path = os.path.dirname(user_data_path)
+
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        elif not os.path.isdir(dir_path):
+            raise exception.CloudbaseInitException(
+                'Path "%s" exists but it is not a directory' % dir_path)
+
+        osutils = osutils_factory.get_os_utils()
+        osutils.set_path_admin_acls(dir_path)
+
+        if os.path.exists(user_data_path):
+            osutils.take_path_ownership(user_data_path)
+            os.unlink(user_data_path)
+
+        LOG.debug("Writing userdata to: %s", user_data_path)
+        with open(user_data_path, 'wb') as file:
+            file.write(user_data)
 
     @staticmethod
     def _parse_mime(user_data):
@@ -53,7 +86,7 @@ class UserDataPlugin(base.BasePlugin):
     def _process_user_data(self, user_data):
         plugin_status = base.PLUGIN_EXECUTION_DONE
         reboot = False
-
+        LOG.debug("Processing userdata")
         if user_data.startswith(b'Content-Type: multipart'):
             user_data_plugins = factory.load_plugins()
             user_handlers = {}

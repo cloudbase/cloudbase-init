@@ -152,3 +152,9 @@ class BaseOSUtils(object):
     def enable_trim(self, enable):
         """Enables or disables TRIM delete notifications."""
         raise NotImplementedError()
+
+    def set_path_admin_acls(self, path):
+        raise NotImplementedError()
+
+    def take_path_ownership(self, path, username=None):
+        raise NotImplementedError()

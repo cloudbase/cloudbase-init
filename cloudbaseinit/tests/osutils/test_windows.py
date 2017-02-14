@@ -2450,3 +2450,69 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_is_builtin_admin(self):
         self._test_is_builtin_admin(sid_exists=True,
                                     sid_startswith=True, sid_endswith=True)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                'execute_system32_process')
+    def _test_set_path_admin_acls(self, mock_execute_system32_process,
+                                  ret_val=None):
+        mock_path = mock.sentinel.path
+        expected_logging = ["Assigning admin ACLs on path: %s" % mock_path]
+        expected_call = [
+            "icacls.exe", mock_path, "/inheritance:r", "/grant:r",
+            "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F"]
+        mock_execute_system32_process.return_value = (
+            mock.sentinel.out,
+            mock.sentinel.err,
+            ret_val)
+        with self.snatcher:
+            if ret_val:
+                self.assertRaises(
+                    exception.CloudbaseInitException,
+                    self._winutils.set_path_admin_acls,
+                    mock_path)
+            else:
+                self._winutils.set_path_admin_acls(mock_path)
+        self.assertEqual(self.snatcher.output, expected_logging)
+        mock_execute_system32_process.assert_called_once_with(expected_call)
+
+    def test_test_set_path_admin_acls(self):
+        self._test_set_path_admin_acls()
+
+    def test_test_set_path_admin_acls_fail(self):
+        self._test_set_path_admin_acls(ret_val=1)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                'execute_system32_process')
+    def _test_take_path_ownership(self, mock_execute_system32_process,
+                                  ret_val=None, username=None):
+        mock_path = mock.sentinel.path
+        expected_logging = ["Taking ownership of path: %s" % mock_path]
+        expected_call = ["takeown.exe", "/F", mock_path]
+        mock_execute_system32_process.return_value = (
+            mock.sentinel.out,
+            mock.sentinel.err,
+            ret_val)
+        if username:
+            self.assertRaises(
+                NotImplementedError, self._winutils.take_path_ownership,
+                mock_path, username)
+            return
+        with self.snatcher:
+            if ret_val:
+                self.assertRaises(
+                    exception.CloudbaseInitException,
+                    self._winutils.take_path_ownership,
+                    mock_path, username)
+            else:
+                self._winutils.take_path_ownership(mock_path, username)
+        self.assertEqual(self.snatcher.output, expected_logging)
+        mock_execute_system32_process.assert_called_once_with(expected_call)
+
+    def test_take_path_ownership_username(self):
+        self._test_take_path_ownership(username="fake")
+
+    def test_take_path_ownership_fail(self):
+        self._test_take_path_ownership(ret_val=1)
+
+    def test_take_path_ownership(self):
+        self._test_take_path_ownership()

@@ -1459,3 +1459,27 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 'TRIM configurating failed.\nOutput: %(out)s\nError:'
                 ' %(err)s' % {'out': out, 'err': err})
+
+    def set_path_admin_acls(self, path):
+        LOG.debug("Assigning admin ACLs on path: %s", path)
+        # Sets ACLs for "NT AUTHORITY\SYSTEM" and "BUILTIN\Administrators"
+        # TODO(alexpilotti): replace with SetNamedSecurityInfo
+        (out, err, ret_val) = self.execute_system32_process([
+            "icacls.exe", path, "/inheritance:r", "/grant:r",
+            "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F"])
+        if ret_val:
+            raise exception.CloudbaseInitException(
+                'Failed to set path ACLs.\nOutput: %(out)s\nError:'
+                ' %(err)s' % {'out': out, 'err': err})
+
+    def take_path_ownership(self, path, username=None):
+        if username:
+            raise NotImplementedError()
+        LOG.debug("Taking ownership of path: %s", path)
+        # TODO(alexpilotti): replace with SetNamedSecurityInfo
+        (out, err, ret_val) = self.execute_system32_process([
+            "takeown.exe", "/F", path])
+        if ret_val:
+            raise exception.CloudbaseInitException(
+                'Failed to take path ownership.\nOutput: %(out)s\nError:'
+                ' %(err)s' % {'out': out, 'err': err})

@@ -232,6 +232,16 @@ class GlobalOptions(conf_base.Options):
                 'trim_enabled', default=False,
                 help='Enables or disables TRIM delete notifications for '
                      'the underlying storage device.'),
+            cfg.BoolOpt(
+                'process_userdata', default=True,
+                help='Processes the userdata content based on the type, e.g. '
+                     'executing a PowerShell script'),
+            cfg.StrOpt(
+                'userdata_save_path',
+                default=None,
+                help='Copies the userdata to the given file path. The path '
+                     'can include environment variables that will be expanded,'
+                     ' e.g. "%%SYSTEMDRIVE%%\\CloudbaseInit\\UserData.bin"'),
         ]
 
         self._cli_options = [
