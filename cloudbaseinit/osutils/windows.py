@@ -199,6 +199,10 @@ msvcrt.malloc.restype = ctypes.c_void_p
 msvcrt.free.argtypes = [ctypes.c_void_p]
 msvcrt.free.restype = None
 
+ntdll.RtlGetVersion.argtypes = [
+    ctypes.POINTER(Win32_OSVERSIONINFOEX_W)]
+ntdll.RtlGetVersion.restype = wintypes.DWORD
+
 ntdll.RtlVerifyVersionInfo.argtypes = [
     ctypes.POINTER(Win32_OSVERSIONINFOEX_W),
     wintypes.DWORD, wintypes.ULARGE_INTEGER]
@@ -1020,6 +1024,23 @@ class WindowsUtils(base.BaseOSUtils):
         if ret_val or err:
             raise exception.CloudbaseInitException(
                 'Unable to add route: %s' % err)
+
+    def get_os_version(self):
+        vi = Win32_OSVERSIONINFOEX_W()
+        vi.dwOSVersionInfoSize = ctypes.sizeof(Win32_OSVERSIONINFOEX_W)
+        ret_val = ntdll.RtlGetVersion(ctypes.byref(vi))
+        if ret_val:
+            raise exception.WindowsCloudbaseInitException(
+                "RtlGetVersion failed with error: %s" % ret_val)
+        return {"major_version": vi.dwMajorVersion,
+                "minor_version": vi.dwMinorVersion,
+                "build_number": vi.dwBuildNumber,
+                "platform_id": vi.dwPlatformId,
+                "csd_version": vi.szCSDVersion,
+                "service_pack_major": vi.wServicePackMajor,
+                "service_pack_minor": vi.wServicePackMinor,
+                "suite_mask": vi.wSuiteMask,
+                "product_type": vi.wProductType}
 
     def check_os_version(self, major, minor, build=0):
         vi = Win32_OSVERSIONINFOEX_W()

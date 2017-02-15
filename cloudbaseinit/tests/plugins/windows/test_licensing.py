@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
+import importlib
 import unittest
 
 try:
@@ -20,90 +20,138 @@ try:
 except ImportError:
     import mock
 
-from cloudbaseinit import exception
 from cloudbaseinit.plugins.common import base
-from cloudbaseinit.plugins.windows import licensing
 from cloudbaseinit.tests import testutils
+
+
+MODPATH = "cloudbaseinit.plugins.windows.licensing"
 
 
 class WindowsLicensingPluginTests(unittest.TestCase):
 
     def setUp(self):
+        self._wmi_mock = mock.MagicMock()
+        self._module_patcher = mock.patch.dict(
+            'sys.modules', {
+                'wmi': self._wmi_mock})
+        self.snatcher = testutils.LogSnatcher(MODPATH)
+        self._module_patcher.start()
+        licensing = importlib.import_module(MODPATH)
         self._licensing = licensing.WindowsLicensingPlugin()
 
-    def _test_run_slmgr(self, sysnative, exit_code):
-        mock_osutils = mock.MagicMock()
-        get_system32_dir_calls = [mock.call()]
-        cscript_path = os.path.join('cscrypt path', "cscript.exe")
-        slmgr_path = os.path.join('slmgr path', "slmgr.vbs")
+    def tearDown(self):
+        self._module_patcher.stop()
 
-        mock_osutils.check_sysnative_dir_exists.return_value = sysnative
-        mock_osutils.get_sysnative_dir.return_value = 'cscrypt path'
-        if not sysnative:
-            mock_osutils.get_system32_dir.side_effect = ['cscrypt path',
-                                                         'slmgr path']
+    @testutils.ConfPatcher('set_kms_product_key', True)
+    @testutils.ConfPatcher('set_avma_product_key', True)
+    def _test_set_product_key(self, description=None,
+                              license_family=None, is_current=None):
+        mock_service = mock.Mock()
+        mock_manager = mock.Mock()
+        fake_key = mock.sentinel.key
+        mock_service.get_use_avma_licensing.return_value = None
+        mock_manager.get_kms_product.return_value = (description,
+                                                     license_family,
+                                                     is_current)
+        mock_manager.get_volume_activation_product_key.return_value = fake_key
+        with self.snatcher:
+            self._licensing._set_product_key(mock_service, mock_manager)
+        mock_manager.get_kms_product.assert_called_once_with()
+        if is_current:
+            expected_logs = ['Product "%s" is already the current one, '
+                             'no need to set a product key' % description]
+            self.assertEqual(self.snatcher.output, expected_logs)
+            return
         else:
-            mock_osutils.get_system32_dir.return_value = 'slmgr path'
-        mock_osutils.execute_process.return_value = ('fake output', None,
-                                                     exit_code)
+            mock_service.get_use_avma_licensing.assert_called_once_with()
+            (mock_manager.get_volume_activation_product_key.
+                assert_called_once_with(None, 'AVMA'))
+            mock_manager.set_product_key.assert_called_once_with(fake_key)
 
-        if exit_code:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._licensing._run_slmgr,
-                              mock_osutils, ['fake args'])
-        else:
-            response = self._licensing._run_slmgr(osutils=mock_osutils,
-                                                  args=['fake args'])
-            self.assertEqual('fake output', response)
+    def test_set_product_key(self):
+        self._test_set_product_key()
 
-        mock_osutils.check_sysnative_dir_exists.assert_called_once_with()
-        if sysnative:
-            mock_osutils.get_sysnative_dir.assert_called_once_with()
-        else:
-            get_system32_dir_calls.append(mock.call())
+    def test_set_product_key_is_current(self):
+        self._test_set_product_key(is_current=True)
 
-        mock_osutils.execute_process.assert_called_once_with(
-            [cscript_path, slmgr_path, 'fake args'],
-            shell=False, decode_output=True)
-        self.assertEqual(get_system32_dir_calls,
-                         mock_osutils.get_system32_dir.call_args_list)
+    def test_set_kms_host(self):
+        mock_service = mock.Mock()
+        mock_manager = mock.Mock()
+        mock_host = "127.0.0.1:1688"
+        expected_host_call = mock_host.split(':')
+        mock_service.get_kms_host.return_value = mock_host
+        expected_logs = ["Setting KMS host: %s" % mock_host]
+        with self.snatcher:
+            self._licensing._set_kms_host(mock_service, mock_manager)
+        self.assertEqual(self.snatcher.output, expected_logs)
+        mock_manager.set_kms_host.assert_called_once_with(*expected_host_call)
 
-    def test_run_slmgr_sysnative(self):
-        self._test_run_slmgr(sysnative=True, exit_code=None)
+    def test_activate_windows(self):
+        activate_result = mock.Mock()
+        mock_service = mock.Mock()
+        mock_manager = mock.Mock()
+        mock_manager.activate_windows.return_value = activate_result
+        expected_logs = [
+            "Activating Windows",
+            "Activation result:\n%s" % activate_result]
+        with testutils.ConfPatcher('activate_windows', True):
+            with self.snatcher:
+                self._licensing._activate_windows(mock_service, mock_manager)
+        self.assertEqual(self.snatcher.output, expected_logs)
+        mock_manager.activate_windows.assert_called_once_with()
 
-    def test_run_slmgr_not_sysnative(self):
-        self._test_run_slmgr(sysnative=False, exit_code=None)
-
-    def test_run_slmgr_exit_code(self):
-        self._test_run_slmgr(sysnative=True, exit_code='fake exit code')
-
+    @mock.patch(MODPATH + ".WindowsLicensingPlugin._activate_windows")
+    @mock.patch(MODPATH + ".WindowsLicensingPlugin._set_kms_host")
+    @mock.patch(MODPATH + ".WindowsLicensingPlugin._set_product_key")
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
-    @mock.patch('cloudbaseinit.plugins.windows.licensing'
-                '.WindowsLicensingPlugin._run_slmgr')
-    def _test_execute(self, mock_run_slmgr, mock_get_os_utils,
-                      activate_windows=None, nano=False):
+    @mock.patch('cloudbaseinit.utils.windows.licensing.get_licensing_manager')
+    def _test_execute(self, mock_get_licensing_manager,
+                      mock_get_os_utils,
+                      mock_set_product_key,
+                      mock_set_kms_host,
+                      mock_activate_windows,
+                      nano=False, is_eval=True):
+        mock_service = mock.Mock()
+        mock_manager = mock.Mock()
+        mock_get_licensing_manager.return_value = mock_manager
         mock_osutils = mock.MagicMock()
         mock_osutils.is_nano_server.return_value = nano
-        run_slmgr_calls = [mock.call(mock_osutils, ['/dlv'])]
         mock_get_os_utils.return_value = mock_osutils
-
-        with testutils.ConfPatcher('activate_windows', activate_windows):
-            response = self._licensing.execute(service=None, shared_data=None)
+        mock_manager.is_eval.return_value = is_eval
+        mock_manager.get_licensing_info.return_value = "fake"
+        expected_logs = []
+        with self.snatcher:
+            response = self._licensing.execute(service=mock_service,
+                                               shared_data=None)
 
         mock_get_os_utils.assert_called_once_with()
         if nano:
+            expected_logs = ["Licensing info and activation are "
+                             "not available on Nano Server"]
+            self.assertEqual(self.snatcher.output, expected_logs)
             return    # no activation available
-        if activate_windows:
-            run_slmgr_calls.append(mock.call(mock_osutils, ['/ato']))
+        else:
+            if not is_eval:
+                mock_set_product_key.assert_called_once_with(mock_service,
+                                                             mock_manager)
+                mock_set_kms_host.assert_called_once_with(mock_service,
+                                                          mock_manager)
+                mock_activate_windows.assert_called_once_with(mock_service,
+                                                              mock_manager)
+            else:
+                expected_logs.append("Evaluation license, skipping activation"
+                                     ". Evaluation end date: %s" % is_eval)
+            expected_logs.append('Microsoft Windows license info:\nfake')
+            mock_manager.get_licensing_info.assert_called_once_with()
 
-        self.assertEqual(run_slmgr_calls, mock_run_slmgr.call_args_list)
         self.assertEqual((base.PLUGIN_EXECUTION_DONE, False), response)
+        self.assertEqual(self.snatcher.output, expected_logs)
 
-    def test_execute_activate_windows_true(self):
-        self._test_execute(activate_windows=True)
-
-    def test_execute_activate_windows_false(self):
-        self._test_execute(activate_windows=False)
-
-    def test_execute_activate_windows_nano(self):
+    def test_execute_nano(self):
         self._test_execute(nano=True)
+
+    def test_execute_is_evaluated(self):
+        self._test_execute()
+
+    def test_execute(self):
+        self._test_execute(is_eval=False)

@@ -98,6 +98,9 @@ class BaseOSUtils(object):
                          metric):
         raise NotImplementedError()
 
+    def get_os_version(self):
+        raise NotImplementedError()
+
     def check_os_version(self, major, minor, build=0):
         raise NotImplementedError()
 
