@@ -159,6 +159,7 @@ class InitManager(object):
         sys.exit(exit_code)
 
     def configure_host(self):
+        service = None
         osutils = osutils_factory.get_os_utils()
 
         if CONF.reset_service_password and sys.platform == 'win32':
@@ -183,7 +184,6 @@ class InitManager(object):
                 service = metadata_factory.get_metadata_service()
             except exception.MetadaNotFoundException:
                 LOG.error("No metadata service found")
-                service = None
         if service:
             LOG.info('Metadata service loaded: \'%s\'' %
                      service.get_name())
