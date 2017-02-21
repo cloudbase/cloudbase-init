@@ -31,6 +31,10 @@ class CloudStackOptions(conf_base.Options):
                 help="The base URL where the service looks for metadata",
                 deprecated_name="cloudstack_metadata_ip",
                 deprecated_group="DEFAULT"),
+            cfg.IntOpt(
+                "password_server_port", default=8080,
+                help="The port number used by the Password Server."
+            ),
             cfg.BoolOpt(
                 "https_allow_insecure", default=False,
                 help="Whether to disable the validation of HTTPS "

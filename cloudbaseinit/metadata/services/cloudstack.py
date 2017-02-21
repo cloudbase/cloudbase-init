@@ -27,25 +27,34 @@ from cloudbaseinit.utils import encoding
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
-BAD_REQUEST = b"bad_request"
-SAVED_PASSWORD = b"saved_password"
+BAD_REQUEST = "bad_request"
+SAVED_PASSWORD = "saved_password"
 TIMEOUT = 10
 
 
 class CloudStack(base.BaseHTTPMetadataService):
 
+    """Metadata service for Apache CloudStack.
+
+    Apache CloudStack is an open source software designed to deploy and
+    manage large networks of virtual machines, as a highly available,
+    highly scalable Infrastructure as a Service (IaaS) cloud computing
+    platform.
+    """
+
     def __init__(self):
-        # Note: The base url used by the current metadata service will be
-        #       updated later by the `_test_api` method.
         super(CloudStack, self).__init__(
+            # Note(alexcoman): The base url used by the current metadata
+            # service will be updated later by the `_test_api` method.
             base_url=None,
             https_allow_insecure=CONF.cloudstack.https_allow_insecure,
             https_ca_bundle=CONF.cloudstack.https_ca_bundle)
 
         self._osutils = osutils_factory.get_os_utils()
-        self._router_ip = None
+        self._metadata_host = None
 
-    def _get_path(self, resource, version="latest"):
+    @staticmethod
+    def _get_path(resource, version="latest"):
         """Get the relative path for the received resource."""
         return posixpath.normpath(
             posixpath.join(version, "meta-data", resource))
@@ -68,7 +77,7 @@ class CloudStack(base.BaseHTTPMetadataService):
 
         LOG.debug('Available services: %s', response)
         netloc = urllib.parse.urlparse(metadata_url).netloc
-        self._router_ip = netloc.split(":")[0]
+        self._metadata_host = netloc.split(":")[0]
         return True
 
     def load(self):
@@ -114,13 +123,37 @@ class CloudStack(base.BaseHTTPMetadataService):
             ssh_keys.append(ssh_key)
         return ssh_keys
 
+    def _password_client(self, body=None, headers=None, decode=True):
+        """Client for the Password Server."""
+        port = CONF.cloudstack.password_server_port
+        with contextlib.closing(http_client.HTTPConnection(
+                self._metadata_host, port, timeout=TIMEOUT)) as connection:
+            try:
+                connection.request("GET", "/", body=body, headers=headers)
+                response = connection.getresponse()
+            except http_client.HTTPException as exc:
+                LOG.error("Request failed: %s", exc)
+                raise
+
+            content = response.read()
+            if decode:
+                content = encoding.get_as_string(content)
+
+            if response.status != 200:
+                raise http_client.HTTPException(
+                    "%(status)s %(reason)s - %(message)r",
+                    {"status": response.status, "reason": response.reason,
+                     "message": content})
+
+        return content
+
     def _get_password(self):
         """Get the password from the Password Server.
 
         The Password Server can be found on the DHCP_SERVER on the port 8080.
         .. note:
             The Password Server can return the following values:
-                * `bad_request`:    the Password Server did not recognise
+                * `bad_request`:    the Password Server did not recognize
                                     the request
                 * `saved_password`: the password was already deleted from
                                     the Password Server
@@ -132,44 +165,32 @@ class CloudStack(base.BaseHTTPMetadataService):
         headers = {"DomU_Request": "send_my_password"}
         password = None
 
-        with contextlib.closing(http_client.HTTPConnection(
-                self._router_ip, 8080, timeout=TIMEOUT)) as connection:
-            for _ in range(CONF.retry_count):
-                try:
-                    connection.request("GET", "/", headers=headers)
-                    response = connection.getresponse()
-                except http_client.HTTPException as exc:
-                    LOG.exception(exc)
-                    continue
+        for _ in range(CONF.retry_count):
+            try:
+                content = self._password_client(headers=headers).strip()
+            except http_client.HTTPConnection as exc:
+                LOG.error("Getting password failed: %s", exc)
+                continue
 
-                if response.status != 200:
-                    LOG.warning("Getting password failed: %(status)s "
-                                "%(reason)s - %(message)r",
-                                {"status": response.status,
-                                 "reason": response.reason,
-                                 "message": response.read()})
-                    continue
+            if not content:
+                LOG.warning("The Password Server did not have any "
+                            "password for the current instance.")
+                continue
 
-                content = response.read().strip()
-                if not content:
-                    LOG.warning("The Password Server did not have any "
-                                "password for the current instance.")
-                    continue
-
-                if content == BAD_REQUEST:
-                    LOG.error("The Password Server did not recognise the "
-                              "request.")
-                    break
-
-                if content == SAVED_PASSWORD:
-                    LOG.warning("For this instance the password was already "
-                                "taken from the Password Server.")
-                    break
-
-                LOG.info("The password server return a valid password "
-                         "for the current instance.")
-                password = encoding.get_as_string(content)
+            if content == BAD_REQUEST:
+                LOG.error("The Password Server did not recognize the "
+                          "request.")
                 break
+
+            if content == SAVED_PASSWORD:
+                LOG.warning("The password was already taken from the "
+                            "Password Server for the current instance.")
+                break
+
+            LOG.info("The password server returned a valid password "
+                     "for the current instance.")
+            password = content
+            break
 
         return password
 
@@ -182,21 +203,15 @@ class CloudStack(base.BaseHTTPMetadataService):
         LOG.debug("Remove the password for this instance from the "
                   "Password Server.")
         headers = {"DomU_Request": "saved_password"}
-        connection = http_client.HTTPConnection(self._router_ip, 8080,
-                                                timeout=TIMEOUT)
+
         for _ in range(CONF.retry_count):
-            connection.request("GET", "/", headers=headers)
-            response = connection.getresponse()
-            if response.status != 200:
-                LOG.warning("Removing password failed: %(status)s "
-                            "%(reason)s - %(message)r",
-                            {"status": response.status,
-                             "reason": response.reason,
-                             "message": response.read()})
+            try:
+                content = self._password_client(headers=headers).strip()
+            except http_client.HTTPConnection as exc:
+                LOG.error("Removing password failed: %s", exc)
                 continue
 
-            content = response.read()
-            if content != BAD_REQUEST:    # comparing bytes with bytes
+            if content != BAD_REQUEST:
                 LOG.info("The password was removed from the Password Server.")
                 break
         else:
