@@ -12,15 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import conf as cloudbaseinit_conf
-from cloudbaseinit import exception
+from cloudbaseinit import constant
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base
-
+from cloudbaseinit.utils.windows import licensing
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
@@ -28,27 +26,55 @@ LOG = oslo_logging.getLogger(__name__)
 
 class WindowsLicensingPlugin(base.BasePlugin):
 
-    def _run_slmgr(self, osutils, args):
-        if osutils.check_sysnative_dir_exists():
-            cscript_dir = osutils.get_sysnative_dir()
+    def _set_product_key(self, service, manager):
+        if not CONF.set_kms_product_key and not CONF.set_avma_product_key:
+            return
+
+        description, license_family, is_current = manager.get_kms_product()
+        if is_current:
+            LOG.info('Product "%s" is already the current one, no need to set '
+                     'a product key', description)
         else:
-            cscript_dir = osutils.get_system32_dir()
+            use_avma = service.get_use_avma_licensing()
+            if use_avma is None:
+                use_avma = CONF.set_avma_product_key
+            LOG.debug("Use AVMA: %s", use_avma)
 
-        # Not SYSNATIVE, as it is already executed by a x64 process
-        slmgr_dir = osutils.get_system32_dir()
+            product_key = None
+            if use_avma:
+                product_key = manager.get_volume_activation_product_key(
+                    license_family, constant.VOL_ACT_AVMA)
+                if not product_key:
+                    LOG.error("AVMA product key not found for this OS")
 
-        cscript_path = os.path.join(cscript_dir, "cscript.exe")
-        slmgr_path = os.path.join(slmgr_dir, "slmgr.vbs")
+            if not product_key and CONF.set_kms_product_key:
+                product_key = manager.get_volume_activation_product_key(
+                    license_family, constant.VOL_ACT_KMS)
+                if not product_key:
+                    LOG.error("KMS product key not found for this OS")
 
-        (out, err, exit_code) = osutils.execute_process(
-            [cscript_path, slmgr_path] + args, shell=False, decode_output=True)
+            if product_key:
+                LOG.info("Setting product key: %s", product_key)
+                manager.set_product_key(product_key)
 
-        if exit_code:
-            raise exception.CloudbaseInitException(
-                'slmgr.vbs failed with error code %(exit_code)s.\n'
-                'Output: %(out)s\nError: %(err)s' % {'exit_code': exit_code,
-                                                     'out': out, 'err': err})
-        return out
+    def _set_kms_host(self, service, manager):
+        kms_host = service.get_kms_host() or CONF.kms_host
+        if kms_host:
+            LOG.info("Setting KMS host: %s", kms_host)
+            manager.set_kms_host(*kms_host.split(':'))
+
+    def _activate_windows(self, service, manager):
+        if CONF.activate_windows:
+            # note(alexpilotti): KMS clients activate themselves
+            # so this could be skipped if a KMS host is set
+            LOG.info("Activating Windows")
+            activation_result = manager.activate_windows()
+            LOG.debug("Activation result:\n%s" % activation_result)
+
+    def _log_licensing_info(self, manager):
+        if CONF.log_licensing_info:
+            license_info = manager.get_licensing_info()
+            LOG.info('Microsoft Windows license info:\n%s' % license_info)
 
     def execute(self, service, shared_data):
         osutils = osutils_factory.get_os_utils()
@@ -57,12 +83,18 @@ class WindowsLicensingPlugin(base.BasePlugin):
             LOG.info("Licensing info and activation are not available on "
                      "Nano Server")
         else:
-            license_info = self._run_slmgr(osutils, ['/dlv'])
-            LOG.info('Microsoft Windows license info:\n%s' % license_info)
+            manager = licensing.get_licensing_manager()
 
-            if CONF.activate_windows:
-                LOG.info("Activating Windows")
-                activation_result = self._run_slmgr(osutils, ['/ato'])
-                LOG.debug("Activation result:\n%s" % activation_result)
+            eval_end_date = manager.is_eval()
+            if eval_end_date:
+                LOG.info("Evaluation license, skipping activation. "
+                         "Evaluation end date: %s", eval_end_date)
+            else:
+                self._set_product_key(service, manager)
+                self._set_kms_host(service, manager)
+                self._activate_windows(service, manager)
+                manager.refresh_status()
+
+            self._log_licensing_info(manager)
 
         return base.PLUGIN_EXECUTION_DONE, False

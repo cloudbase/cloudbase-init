@@ -70,6 +70,19 @@ class GlobalOptions(conf_base.Options):
                 'activate_windows', default=False,
                 help='Activates Windows automatically'),
             cfg.BoolOpt(
+                'set_kms_product_key', default=False,
+                help='Sets the KMS product key for this operating system'),
+            cfg.BoolOpt(
+                'set_avma_product_key', default=False,
+                help='Sets the AVMA product key for this operating system'),
+            cfg.StrOpt(
+                'kms_host', default=None,
+                help='The KMS host address in form <host>[:<port>], '
+                     'e.g: "kmshost:1688"'),
+            cfg.BoolOpt(
+                'log_licensing_info', default=True,
+                help='Logs the operating system licensing information'),
+            cfg.BoolOpt(
                 'winrm_enable_basic_auth', default=True,
                 help='Enables basic authentication for the WinRM '
                      'HTTPS listener'),
