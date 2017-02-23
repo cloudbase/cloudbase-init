@@ -29,6 +29,11 @@ CONF = cloudbaseinit_conf.CONF
 
 class NetworkUtilsTest(unittest.TestCase):
 
+    @mock.patch('six.moves.urllib.request.urlopen')
+    def test_check_url(self, mock_url_open):
+        mock_url_open.return_value = None
+        self.assertTrue(network.check_url("fake_url"))
+
     @mock.patch('sys.platform', new='win32')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('six.moves.urllib.parse.urlparse')

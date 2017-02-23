@@ -92,6 +92,14 @@ class DHCPUtilsTests(unittest.TestCase):
         self._test_parse_dhcp_reply(message_type=2, id_reply=9999,
                                     equals_cookie=True)
 
+    def test_parse_dhcp_reply_false(self):
+        self._test_parse_dhcp_reply(message_type=2, id_reply=111,
+                                    equals_cookie=True)
+
+    def test_parse_dhcp_reply_cookie_false(self):
+        self._test_parse_dhcp_reply(message_type=2, id_reply=9999,
+                                    equals_cookie=False)
+
     def test_parse_dhcp_reply_other_message_type(self):
         self._test_parse_dhcp_reply(message_type=3, id_reply=9999,
                                     equals_cookie=True)
@@ -160,6 +168,12 @@ class DHCPUtilsTests(unittest.TestCase):
                                                       'fake int')
         mock_socket().close.assert_called_once_with()
         self.assertEqual('fake replied options', response)
+
+    @mock.patch('cloudbaseinit.utils.dhcp._bind_dhcp_client_socket')
+    def test_get_dhcp_options_timeout(self, mock_client_socket):
+        mock_client_socket.side_effect = [socket.timeout]
+        dhcp.get_dhcp_options(dhcp_host='fake host',
+                              requested_options=['fake option'])
 
     def test__bind_dhcp_client_socket_bind_succeeds(self):
         mock_socket = mock.Mock()

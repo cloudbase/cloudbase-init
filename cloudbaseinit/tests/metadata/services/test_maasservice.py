@@ -91,6 +91,15 @@ class MaaSHttpServiceTest(unittest.TestCase):
         self.assertEqual('"consumer_secret%26token_secret"',
                          auth_parts['oauth_signature'])
 
+    @mock.patch('cloudbaseinit.metadata.services.base.'
+                'BaseHTTPMetadataService._http_request')
+    @mock.patch('cloudbaseinit.metadata.services.maasservice.MaaSHttpService'
+                '._get_oauth_headers')
+    def test_http_request(self, mock_ouath_headers, mock_http_request):
+        mock_url = "fake.url"
+        self._maasservice._http_request(mock_url)
+        mock_http_request.assert_called_once_with(mock_url, None, {})
+
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")
     def test_get_host_name(self, mock_get_cache_data):

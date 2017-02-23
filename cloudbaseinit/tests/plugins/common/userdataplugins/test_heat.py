@@ -13,6 +13,7 @@
 #    under the License.
 
 import os
+import sys
 import unittest
 
 try:
@@ -53,9 +54,11 @@ class HeatUserDataHandlerTests(unittest.TestCase):
                 '.HeatPlugin._check_dir')
     @mock.patch('cloudbaseinit.utils.encoding.write_file')
     def _test_process(self, mock_write_file, mock_check_dir,
-                      mock_execute_user_data_script, filename):
+                      mock_execute_user_data_script, filename, payloads=False):
         mock_part = mock.MagicMock()
         mock_part.get_filename.return_value = filename
+        if payloads is True and sys.version_info < (3, 0):
+            mock_part.get_payload.return_value = filename.decode()
         response = self._heat.process(mock_part)
 
         path = os.path.join(CONF.heat_config_dir, filename)
@@ -74,6 +77,10 @@ class HeatUserDataHandlerTests(unittest.TestCase):
 
     def test_process(self):
         self._test_process(filename=self._heat._heat_user_data_filename)
+
+    def test_process_payload(self):
+        self._test_process(filename=self._heat._heat_user_data_filename,
+                           payloads=True)
 
     def test_process_content_other_data(self):
         self._test_process(filename='other data')

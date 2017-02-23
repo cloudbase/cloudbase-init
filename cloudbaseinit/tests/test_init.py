@@ -64,6 +64,13 @@ class TestInitManager(unittest.TestCase):
                 instance_id + "/" + self._init._PLUGINS_CONFIG_SECTION,
                 response)
 
+    def test_get_plugin_section_id(self):
+        fake_id = "100"
+        self._test_get_plugin_section(instance_id=fake_id)
+
+    def test_get_plugin_section_no_id(self):
+        self._test_get_plugin_section(instance_id=None)
+
     @mock.patch('cloudbaseinit.init.InitManager._get_plugins_section')
     def test_get_plugin_status(self, mock_get_plugins_section):
         self.osutils.get_config_value.return_value = 1
@@ -108,6 +115,21 @@ class TestInitManager(unittest.TestCase):
                                                            fake_name, status)
             self.assertTrue(response)
 
+    def test_exec_plugin_exception_occurs(self):
+        fake_name = 'fake name'
+        mock_plugin = mock.MagicMock()
+        mock_plugin.get_name.return_value = fake_name
+        mock_plugin.execute.side_effect = Exception
+        expected_logging = ["Executing plugin 'fake name'",
+                            "plugin 'fake name' failed with error ''"]
+        with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
+            self._init._exec_plugin(osutils=self.osutils,
+                                    service='fake service',
+                                    plugin=mock_plugin,
+                                    instance_id='fake id',
+                                    shared_data='shared data')
+        self.assertEqual(expected_logging, snatcher.output[:2])
+
     def test_exec_plugin_execution_done(self):
         self._test_exec_plugin(base.PLUGIN_EXECUTION_DONE)
 
@@ -135,6 +157,26 @@ class TestInitManager(unittest.TestCase):
 
     def test_check_plugin_os_requirements_other_requirenments(self):
         self._test_check_plugin_os_requirements(('linux', (5, 2)))
+
+    def test_check_plugins_os_not_min_os_version(self):
+        sys.platform = 'win32'
+        fake_name = 'fake name'
+        self.plugin.get_name.return_value = fake_name
+        self.plugin.get_os_requirements.return_value = ('win32', 0)
+        response = self._init._check_plugin_os_requirements(self.osutils,
+                                                            self.plugin)
+        self.plugin.get_name.assert_called_once_with()
+        self.assertTrue(response)
+
+    def test_check_plugins_os_not_supported(self):
+        fake_name = 'fake name'
+        self.plugin.get_name.return_value = fake_name
+        mock_osutils = mock.MagicMock()
+        mock_osutils.check_os_version.return_value = None
+        self.plugin.get_os_requirements.return_value = ('win32', (5, 2))
+        response = self._init._check_plugin_os_requirements(mock_osutils,
+                                                            self.plugin)
+        self.assertFalse(response)
 
     @mock.patch('cloudbaseinit.init.InitManager.'
                 '_exec_plugin')

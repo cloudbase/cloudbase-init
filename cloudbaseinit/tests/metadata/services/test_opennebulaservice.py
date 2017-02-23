@@ -334,3 +334,14 @@ class TestLoadedOpenNebulaService(_TestOpenNebulaService):
             network_details,
             self._service.get_network_details()
         )
+
+    @mock.patch("cloudbaseinit.metadata.services"
+                ".opennebulaservice.OpenNebulaService._get_cache_data")
+    def test_get_network_details_exception(self, mock_get_cache):
+        mock_mac = mock_address = mock.MagicMock()
+        mock_mac.upper.return_value = None
+        mock_address.side_effect = None
+        exc = base.NotExistingMetadataException
+        mock_get_cache.side_effect = [mock_mac, mock_address, exc, exc]
+        result_details = self._service.get_network_details()
+        self.assertEqual(result_details, [])

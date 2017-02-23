@@ -24,6 +24,7 @@ from cloudbaseinit.utils import encoding
 class TestEncoding(unittest.TestCase):
 
     def test_get_as_string(self):
+        self.assertIsNone(encoding.get_as_string(None))
         content_map = [
             ("data", "data"),
             (b"data", "data"),
@@ -40,7 +41,8 @@ class TestEncoding(unittest.TestCase):
             (("w", "r"), "my test\ndata\n\n", False),
             (("wb", "rb"), "\r\n".join((chr(x) for x in
                                         (32, 125, 0))).encode(), False),
-            (("wb", "rb"), "my test\ndata\n\n", True)
+            (("wb", "rb"), "my test\ndata\n\n", True),
+            (("wb", "rb"), u"my test\n data", True)
         ]
         with testutils.create_tempdir() as temp:
             fd, path = tempfile.mkstemp(dir=temp)
