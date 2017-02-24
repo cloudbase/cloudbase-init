@@ -94,20 +94,49 @@ class CRYPT_KEY_PROV_INFO(ctypes.Structure):
     ]
 
 
+class CRYPT_DECRYPT_MESSAGE_PARA(ctypes.Structure):
+    _fields_ = [
+        ('cbSize', wintypes.DWORD),
+        ('dwMsgAndCertEncodingType', wintypes.DWORD),
+        ('cCertStore', wintypes.DWORD),
+        ('rghCertStore', ctypes.POINTER(wintypes.HANDLE)),
+        ('dwFlags', wintypes.DWORD),
+    ]
+
+
+class CERT_KEY_CONTEXT(ctypes.Structure):
+    _fields_ = [
+        ('cbSize', wintypes.DWORD),
+        ('hNCryptKey', wintypes.HANDLE),
+        ('dwKeySpec', wintypes.DWORD),
+    ]
+
+
+AT_KEYEXCHANGE = 1
 AT_SIGNATURE = 2
 CERT_NAME_UPN_TYPE = 8
 CERT_SHA1_HASH_PROP_ID = 3
 CERT_STORE_ADD_REPLACE_EXISTING = 3
+CERT_STORE_PROV_MEMORY = wintypes.LPSTR(2)
 CERT_STORE_PROV_SYSTEM = wintypes.LPSTR(10)
-CERT_SYSTEM_STORE_CURRENT_USER = 65536
-CERT_SYSTEM_STORE_LOCAL_MACHINE = 131072
+CERT_SYSTEM_STORE_CURRENT_USER = 0x10000
+CERT_SYSTEM_STORE_LOCAL_MACHINE = 0x20000
 CERT_X500_NAME_STR = 3
+CERT_STORE_ADD_NEW = 1
+CERT_STORE_OPEN_EXISTING_FLAG = 0x4000
+CERT_STORE_CREATE_NEW_FLAG = 0x2000
+CRYPT_SILENT = 64
 CRYPT_MACHINE_KEYSET = 32
 CRYPT_NEWKEYSET = 8
 CRYPT_STRING_BASE64 = 1
-PKCS_7_ASN_ENCODING = 65536
+PKCS_7_ASN_ENCODING = 0x10000
 PROV_RSA_FULL = 1
 X509_ASN_ENCODING = 1
+CERT_FIND_ANY = 0
+CERT_FIND_SHA1_HASH = 0x10000
+CERT_KEY_PROV_INFO_PROP_ID = 2
+CERT_KEY_CONTEXT_PROP_ID = 5
+
 szOID_PKIX_KP_SERVER_AUTH = b"1.3.6.1.5.5.7.3.1"
 szOID_RSA_SHA1RSA = b"1.2.840.113549.1.1.5"
 
@@ -243,3 +272,61 @@ crypt32.CertGetCertificateContextProperty.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(wintypes.DWORD)]
 CertGetCertificateContextProperty = crypt32.CertGetCertificateContextProperty
+
+crypt32.CryptBinaryToStringW.restype = wintypes.BOOL
+crypt32.CryptBinaryToStringW.argtypes = [
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.LPWSTR,
+    ctypes.POINTER(wintypes.DWORD)]
+CryptBinaryToString = crypt32.CryptBinaryToStringW
+
+crypt32.CryptDecryptMessage.restype = wintypes.BOOL
+crypt32.CryptDecryptMessage.argtypes = [
+    ctypes.POINTER(CRYPT_DECRYPT_MESSAGE_PARA),
+    ctypes.c_void_p,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    ctypes.POINTER(wintypes.DWORD),
+    ctypes.c_void_p]
+CryptDecryptMessage = crypt32.CryptDecryptMessage
+
+crypt32.CertAddCertificateLinkToStore.restype = wintypes.BOOL
+crypt32.CertAddCertificateLinkToStore.argtypes = [
+    wintypes.HANDLE,
+    ctypes.POINTER(CERT_CONTEXT),
+    wintypes.DWORD,
+    ctypes.c_void_p
+]
+CertAddCertificateLinkToStore = crypt32.CertAddCertificateLinkToStore
+
+crypt32.CertFindCertificateInStore.restype = ctypes.POINTER(CERT_CONTEXT)
+crypt32.CertFindCertificateInStore.argtypes = [
+    wintypes.HANDLE,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.DWORD,
+    ctypes.c_void_p,
+    ctypes.c_void_p]
+CertFindCertificateInStore = crypt32.CertFindCertificateInStore
+
+crypt32.CertSetCertificateContextProperty.restype = wintypes.BOOL
+crypt32.CertSetCertificateContextProperty.argtypes = [
+    ctypes.POINTER(CERT_CONTEXT),
+    wintypes.DWORD,
+    wintypes.DWORD,
+    ctypes.c_void_p]
+CertSetCertificateContextProperty = crypt32.CertSetCertificateContextProperty
+
+crypt32.PFXImportCertStore.restype = wintypes.HANDLE
+crypt32.PFXImportCertStore.argtypes = [
+    ctypes.POINTER(CRYPTOAPI_BLOB),
+    wintypes.LPCWSTR,
+    wintypes.DWORD]
+PFXImportCertStore = crypt32.PFXImportCertStore
+
+crypt32.CertDeleteCertificateFromStore.restype = wintypes.BOOL
+crypt32.CertDeleteCertificateFromStore.argtypes = [
+    ctypes.POINTER(CERT_CONTEXT)]
+CertDeleteCertificateFromStore = crypt32.CertDeleteCertificateFromStore

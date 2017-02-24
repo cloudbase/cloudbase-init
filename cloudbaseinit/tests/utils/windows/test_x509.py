@@ -30,7 +30,9 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         self._ctypes = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
-            'sys.modules', {'ctypes': self._ctypes})
+            'sys.modules',
+            {'ctypes': self._ctypes,
+             'ctypes.windll': mock.MagicMock()})
 
         self._module_patcher.start()
 
@@ -122,8 +124,8 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                     self.x509.cryptoapi.PROV_RSA_FULL,
                     self.x509.cryptoapi.CRYPT_MACHINE_KEYSET)
                 mock_CryptGenKey.assert_called_with(
-                    mock_HANDLE(), self.x509.cryptoapi.AT_SIGNATURE,
-                    0x08000000, mock_HANDLE())
+                    mock_HANDLE(), self.x509.cryptoapi.AT_KEYEXCHANGE,
+                    0x08000000, mock_byref(mock_HANDLE()))
                 mock_CryptDestroyKey.assert_called_once_with(
                     mock_HANDLE())
                 mock_CryptReleaseContext.assert_called_once_with(
@@ -188,9 +190,9 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                                       mock_uuid4, mock_get_cert_thumprint,
                                       mock_generate_key,
                                       mock_add_system_time_interval,
-                                      mock_malloc, mock_free, certstr,
-                                      certificate, enhanced_key, store_handle,
-                                      context_to_store):
+                                      mock_malloc, mock_free,
+                                      certstr, certificate, enhanced_key,
+                                      store_handle, context_to_store):
 
         mock_POINTER = self._ctypes.POINTER
         mock_byref = self._ctypes.byref
@@ -202,8 +204,8 @@ class CryptoAPICertManagerTests(unittest.TestCase):
         mock_CertStrToName.return_value = certstr
         mock_CertOpenStore.return_value = store_handle
         mock_CertAddCertificateContextToStore.return_value = context_to_store
-        if (certstr is None or certificate is None or enhanced_key is None
-                or store_handle is None or context_to_store is None):
+        if (certstr is None or certificate is None or enhanced_key is None or
+                store_handle is None or context_to_store is None):
             self.assertRaises(self.x509.cryptoapi.CryptoAPIException,
                               self._x509_manager.create_self_signed_cert,
                               'fake subject', 10, True,
@@ -239,7 +241,8 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 mock_CertCreateSelfSignCertificate())
             mock_free.assert_called_once_with(mock_cast())
 
-            self.assertEqual(mock_get_cert_thumprint.return_value, response)
+            self.assertEqual(response,
+                             mock_get_cert_thumprint.return_value)
 
         mock_generate_key.assert_called_once_with('fake_name', True)
 
@@ -435,3 +438,265 @@ class CryptoAPICertManagerTests(unittest.TestCase):
     def test_import_cert_CertGetNameString_fail(self):
         self._test_import_cert(crypttstr=True, store_handle='fake handle',
                                add_enc_cert='fake encoded cert', upn_len=3)
+
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertAddCertificateContextToStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CertOpenStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertFindCertificateInStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertFreeCertificateContext')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CertCloseStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.PFXImportCertStore')
+    @mock.patch('ctypes.pointer')
+    @mock.patch('ctypes.POINTER')
+    @mock.patch('ctypes.cast')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CRYPTOAPI_BLOB')
+    def _test_import_pfx_certificate(self, mock_blob, mock_cast, mock_POINTER,
+                                     mock_pointer, mock_import_cert_store,
+                                     mock_cert_close_store,
+                                     mock_cert_free_context,
+                                     mock_find_cert_in_store,
+                                     mock_cert_open_store, mock_add_cert_store,
+                                     import_store_handle, cert_context_p,
+                                     store_handle, machine_keyset=True,
+                                     add_cert_to_store=True):
+
+        self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE = \
+            mock.sentinel.local_machine
+        self.x509.cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER = \
+            mock.sentinel.current_user
+        self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM = \
+            mock.sentinel.store_prov_system
+        self.x509.cryptoapi.CERT_STORE_ADD_REPLACE_EXISTING = \
+            mock.sentinel.cert_add_replace_existing
+
+        if import_store_handle:
+            import_store_handle = mock.sentinel.import_store_handle
+        if cert_context_p:
+            cert_context_p = mock.sentinel.cert_context_p
+        if store_handle:
+            store_handle = mock.sentinel.store_handle
+
+        mock_blob.return_value = mock.sentinel.pfx_blob
+        mock_import_cert_store.return_value = import_store_handle
+        mock_find_cert_in_store.return_value = cert_context_p
+        mock_cert_open_store.return_value = store_handle
+        mock_add_cert_store.return_value = add_cert_to_store
+
+        if (not import_store_handle or not cert_context_p or
+                not store_handle or not add_cert_to_store):
+            with self.assertRaises(self.x509.cryptoapi.CryptoAPIException):
+                self._x509_manager.import_pfx_certificate(
+                    str(mock.sentinel.pfx_data), machine_keyset=machine_keyset)
+        else:
+            self._x509_manager.import_pfx_certificate(
+                str(mock.sentinel.pfx_data), machine_keyset=machine_keyset)
+
+        mock_blob.assert_called_once_with()
+        mock_cast.assert_called_with(
+            str(mock.sentinel.pfx_data), mock_POINTER.return_value)
+        mock_import_cert_store.assert_called_with(
+            mock_pointer.return_value, None, 0)
+        mock_pointer.assert_called_once_with(mock_blob.return_value)
+        if import_store_handle:
+            if cert_context_p:
+                if machine_keyset:
+                    flags = mock.sentinel.local_machine
+                else:
+                    flags = mock.sentinel.current_user
+                mock_cert_open_store.assert_called_once_with(
+                    mock.sentinel.store_prov_system, 0, 0, flags,
+                    six.text_type(self.x509.STORE_NAME_MY))
+                if store_handle:
+                    mock_add_cert_store.assert_called_once_with(
+                        mock_cert_open_store.return_value, cert_context_p,
+                        mock.sentinel.cert_add_replace_existing, None)
+        call_args = []
+        if import_store_handle:
+            call_args += [mock.call(import_store_handle, 0)]
+        elif store_handle:
+            call_args += [mock.call(store_handle, 0)]
+        mock_cert_close_store.assert_has_calls(call_args)
+        if cert_context_p:
+            mock_cert_free_context.assert_called_once_with(cert_context_p)
+
+    def test_import_pfx_certificate_no_import_store_handle(self):
+        self._test_import_pfx_certificate(
+            import_store_handle=None, cert_context_p=None, store_handle=None)
+
+    def test_import_pfx_certificate_no_cert_context_p(self):
+        self._test_import_pfx_certificate(
+            import_store_handle=True, cert_context_p=None, store_handle=None)
+
+    def test_import_pfx_certificate_no_store_handle(self):
+        self._test_import_pfx_certificate(
+            import_store_handle=True, cert_context_p=True, store_handle=None)
+
+    def test_import_pfx_certificate_not_added(self):
+        self._test_import_pfx_certificate(
+            import_store_handle=True, cert_context_p=True, store_handle=True,
+            add_cert_to_store=False)
+
+    def test_import_pfx_certificate(self):
+        self._test_import_pfx_certificate(
+            import_store_handle=True, cert_context_p=True, store_handle=True,
+            machine_keyset=False)
+
+    def test_get_thumbprint_buffer(self):
+        mock_result = mock.Mock()
+        mock_result.contents = mock.sentinel.contents
+        self._ctypes.cast = mock.Mock(return_value=mock_result)
+        thumbprint_str = '5c5350ff'
+        result = self._x509_manager._get_thumbprint_buffer(
+            thumbprint_str)
+        self.assertEqual(result, mock_result.contents)
+
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CertCloseStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertFindCertificateInStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CertOpenStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.CRYPTOAPI_BLOB')
+    def _test_find_certificate_in_store(self, mock_blob, mock_OpenStore,
+                                        mock_FindCertificateInStore,
+                                        mock_CloseStore, machine_keyset=True,
+                                        store_handle=True,
+                                        cert_context_p=True):
+        self._x509_manager._get_thumbprint_buffer = mock.Mock()
+        (self._x509_manager._get_thumbprint_buffer.
+            return_value) = str(mock.sentinel.thumbprint)
+        mock_blob.return_value = mock.Mock()
+        mock_OpenStore.return_value = store_handle
+        mock_FindCertificateInStore.return_value = cert_context_p
+        if not store_handle or not cert_context_p:
+            with self.assertRaises(self.x509.cryptoapi.CryptoAPIException):
+                self._x509_manager._find_certificate_in_store(
+                    mock.sentinel.thumbprint_str, machine_keyset)
+        else:
+            result = self._x509_manager._find_certificate_in_store(
+                mock.sentinel.thumbprint_str, machine_keyset)
+            self.assertEqual(result, cert_context_p)
+
+        self._x509_manager._get_thumbprint_buffer.assert_called_once_with(
+            mock.sentinel.thumbprint_str)
+        mock_blob.assert_called_once_with()
+        if store_handle:
+            mock_CloseStore.assert_called_once_with(store_handle, 0)
+
+    def test_find_certificate_in_store(self):
+        self._test_find_certificate_in_store(machine_keyset=None)
+
+    def test_find_certificate_in_store_no_store_handle(self):
+        self._test_find_certificate_in_store(store_handle=False)
+
+    def test_find_certificate_in_store_no_cert_context_p(self):
+        self._test_find_certificate_in_store(cert_context_p=False)
+
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertFreeCertificateContext')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertDeleteCertificateFromStore')
+    def _test_delete_certificate_from_store(self, mock_delete_cert,
+                                            mock_free_cert,
+                                            cert_context_p=True,
+                                            delete_cert=True):
+        self._x509_manager._find_certificate_in_store = mock.Mock()
+        (self._x509_manager._find_certificate_in_store.
+            return_value) = cert_context_p
+        mock_delete_cert.return_value = delete_cert
+
+        if not cert_context_p or not delete_cert:
+            with self.assertRaises(self.x509.cryptoapi.CryptoAPIException):
+                self._x509_manager.delete_certificate_from_store(
+                    mock.sentinel.thumbprint_str, mock.sentinel.machine_keyset,
+                    mock.sentinel.store_name)
+        else:
+            self._x509_manager.delete_certificate_from_store(
+                mock.sentinel.thumbprint_str, mock.sentinel.machine_keyset,
+                mock.sentinel.store_name)
+
+        self._x509_manager._find_certificate_in_store.assert_called_once_with(
+            mock.sentinel.thumbprint_str, mock.sentinel.machine_keyset,
+            mock.sentinel.store_name)
+        if not cert_context_p:
+            self.assertEqual(mock_delete_cert.call_count, 0)
+        else:
+            mock_free_cert.assert_called_once_with(cert_context_p)
+
+    def test_delete_certificate_from_store(self):
+        self._test_delete_certificate_from_store()
+
+    def test_delete_certificate_from_store_no_cert_context_p(self):
+        self._test_delete_certificate_from_store(cert_context_p=False)
+
+    def test_delete_certificate_from_store_delete_cert_failed(self):
+        self._test_delete_certificate_from_store(delete_cert=False)
+
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertFreeCertificateContext')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CRYPT_DECRYPT_MESSAGE_PARA')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertCloseStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertDeleteCertificateFromStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CryptDecryptMessage')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertAddCertificateLinkToStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CertOpenStore')
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CryptStringToBinaryW')
+    def _test_decode_pkcs7_base64_blob(self, mock_StringToBinary,
+                                       mock_OpenStore, mock_AddCert,
+                                       mock_Decrypt, mock_DeleteCert,
+                                       mock_CloseStore, mock_decrypt_para,
+                                       mock_FreeCert,
+                                       string_to_binary_data=True,
+                                       store_handle=True,
+                                       string_to_binary_data_value=True,
+                                       add_cert=True, decrypt_by_ref=True,
+                                       decrypt_by_pointer=True):
+        data = str(mock.sentinel.data)
+        self._x509_manager._find_certificate_in_store = mock.Mock()
+        mock_StringToBinary.side_effect = [
+            string_to_binary_data, string_to_binary_data_value]
+        mock_OpenStore.return_value = store_handle
+        mock_AddCert.return_value = add_cert
+        mock_Decrypt.side_effect = [decrypt_by_ref, decrypt_by_pointer]
+
+        if (string_to_binary_data and store_handle and add_cert and
+                string_to_binary_data_value and decrypt_by_ref and
+                decrypt_by_pointer):
+            result = self._x509_manager.decode_pkcs7_base64_blob(
+                data, mock.sentinel.thumbprint_str,
+                mock.sentinel.machine_keyset, mock.sentinel.store_name)
+            self.assertEqual(
+                result, bytes(self._ctypes.create_string_buffer.return_value))
+        else:
+            with self.assertRaises(self.x509.cryptoapi.CryptoAPIException):
+                self._x509_manager.decode_pkcs7_base64_blob(
+                    data, mock.sentinel.thumbprint_str,
+                    mock.sentinel.machine_keyset, mock.sentinel.store_name)
+
+    def test_decode_pkcs7_base64_blob(self):
+        self._test_decode_pkcs7_base64_blob()
+
+    def test_decode_pkcs7_base64_blob_encrypt_data_fails(self):
+        self._test_decode_pkcs7_base64_blob(string_to_binary_data=False)
+
+    def test_decode_pkcs7_base64_blob_no_store_handle(self):
+        self._test_decode_pkcs7_base64_blob(store_handle=False)
+
+    def test_decode_pkcs7_base64_blob_encrypt_data_value_fails(self):
+        self._test_decode_pkcs7_base64_blob(string_to_binary_data_value=False)
+
+    def test_decode_pkcs7_base64_blob_add_certificate_fails(self):
+        self._test_decode_pkcs7_base64_blob(add_cert=False)
+
+    def test_decode_pkcs7_base64_blob_decrypt_by_ref_fails(self):
+        self._test_decode_pkcs7_base64_blob(decrypt_by_ref=False)
+
+    def test_decode_pkcs7_base64_blob_decrypt_by_pointer_fails(self):
+        self._test_decode_pkcs7_base64_blob(decrypt_by_pointer=False)

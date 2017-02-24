@@ -19,6 +19,7 @@ import uuid
 
 import six
 
+from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import cryptoapi
 from cloudbaseinit.utils import x509constants
 
@@ -40,6 +41,26 @@ X509_END_DATE_INTERVAL = 10 * 365 * 24 * 60 * 60 * 10000000
 
 
 class CryptoAPICertManager(object):
+    @staticmethod
+    def _get_thumprint_str(thumbprint, size):
+        thumbprint_ar = ctypes.cast(
+            thumbprint,
+            ctypes.POINTER(ctypes.c_ubyte *
+                           size)).contents
+
+        thumbprint_str = ""
+        for b in thumbprint_ar:
+            thumbprint_str += "%02x" % b
+        return thumbprint_str
+
+    @staticmethod
+    def _get_thumbprint_buffer(thumbprint_str):
+        thumbprint_bytes = encoding.hex_to_bytes(thumbprint_str)
+        return ctypes.cast(
+            ctypes.create_string_buffer(thumbprint_bytes),
+            ctypes.POINTER(wintypes.BYTE *
+                           len(thumbprint_bytes))).contents
+
     def _get_cert_thumprint(self, cert_context_p):
         thumbprint = None
 
@@ -61,15 +82,7 @@ class CryptoAPICertManager(object):
                     thumbprint, ctypes.byref(thumprint_len)):
                 raise cryptoapi.CryptoAPIException()
 
-            thumbprint_ar = ctypes.cast(
-                thumbprint,
-                ctypes.POINTER(ctypes.c_ubyte *
-                               thumprint_len.value)).contents
-
-            thumbprint_str = ""
-            for b in thumbprint_ar:
-                thumbprint_str += "%02x" % b
-            return thumbprint_str
+            return self._get_thumprint_str(thumbprint, thumprint_len.value)
         finally:
             if thumbprint:
                 free(thumbprint)
@@ -100,9 +113,12 @@ class CryptoAPICertManager(object):
 
             # RSA 2048 bits
             if not cryptoapi.CryptGenKey(crypt_prov_handle,
-                                         cryptoapi.AT_SIGNATURE,
-                                         0x08000000, key_handle):
+                                         cryptoapi.AT_KEYEXCHANGE,
+                                         0x08000000,
+                                         ctypes.byref(key_handle)):
                 raise cryptoapi.CryptoAPIException()
+
+            return key_handle
         finally:
             if key_handle:
                 cryptoapi.CryptDestroyKey(key_handle)
@@ -171,7 +187,7 @@ class CryptoAPICertManager(object):
             key_prov_info.dwProvType = cryptoapi.PROV_RSA_FULL
             key_prov_info.cProvParam = None
             key_prov_info.rgProvParam = None
-            key_prov_info.dwKeySpec = cryptoapi.AT_SIGNATURE
+            key_prov_info.dwKeySpec = cryptoapi.AT_KEYEXCHANGE
 
             if machine_keyset:
                 key_prov_info.dwFlags = cryptoapi.CRYPT_MACHINE_KEYSET
@@ -242,6 +258,190 @@ class CryptoAPICertManager(object):
         for remove in removal:
             cert_data = cert_data.replace(remove, "")
         return cert_data
+
+    def _find_certificate_in_store(self, thumbprint_str, machine_keyset=True,
+                                   store_name=STORE_NAME_MY):
+        store_handle = None
+
+        thumbprint = self._get_thumbprint_buffer(thumbprint_str)
+        hash_blob = cryptoapi.CRYPTOAPI_BLOB()
+        hash_blob.cbData = len(thumbprint)
+        hash_blob.pbData = thumbprint
+
+        try:
+            flags = cryptoapi.CERT_STORE_OPEN_EXISTING_FLAG
+            if machine_keyset:
+                flags |= cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE
+            else:
+                flags |= cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER
+
+            store_handle = cryptoapi.CertOpenStore(
+                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
+                six.text_type(store_name))
+            if not store_handle:
+                raise cryptoapi.CryptoAPIException()
+
+            cert_context_p = cryptoapi.CertFindCertificateInStore(
+                store_handle,
+                cryptoapi.X509_ASN_ENCODING | cryptoapi.PKCS_7_ASN_ENCODING,
+                0,
+                cryptoapi.CERT_FIND_SHA1_HASH,
+                ctypes.pointer(hash_blob),
+                None)
+            if not cert_context_p:
+                raise cryptoapi.CryptoAPIException()
+
+            return cert_context_p
+        finally:
+            if store_handle:
+                cryptoapi.CertCloseStore(store_handle, 0)
+
+    def delete_certificate_from_store(self, thumbprint_str,
+                                      machine_keyset=True,
+                                      store_name=STORE_NAME_MY):
+        cert_context_p = None
+
+        try:
+            cert_context_p = self._find_certificate_in_store(
+                thumbprint_str, machine_keyset, store_name)
+            if not cert_context_p:
+                raise cryptoapi.CryptoAPIException()
+
+            if not cryptoapi.CertDeleteCertificateFromStore(cert_context_p):
+                raise cryptoapi.CryptoAPIException()
+        finally:
+            if cert_context_p:
+                cryptoapi.CertFreeCertificateContext(cert_context_p)
+
+    def import_pfx_certificate(self, pfx_data, pfx_password=None,
+                               machine_keyset=True, store_name=STORE_NAME_MY):
+        cert_context_p = None
+        import_store_handle = None
+        store_handle = None
+
+        try:
+            pfx_blob = cryptoapi.CRYPTOAPI_BLOB()
+            pfx_blob.cbData = len(pfx_data)
+            pfx_blob.pbData = ctypes.cast(
+                pfx_data, ctypes.POINTER(wintypes.BYTE))
+
+            import_store_handle = cryptoapi.PFXImportCertStore(
+                ctypes.pointer(pfx_blob), pfx_password, 0)
+            if not import_store_handle:
+                raise cryptoapi.CryptoAPIException()
+
+            cert_context_p = cryptoapi.CertFindCertificateInStore(
+                import_store_handle,
+                cryptoapi.X509_ASN_ENCODING | cryptoapi.PKCS_7_ASN_ENCODING,
+                0, cryptoapi.CERT_FIND_ANY, None, None)
+            if not cert_context_p:
+                raise cryptoapi.CryptoAPIException()
+
+            if machine_keyset:
+                flags = cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE
+            else:
+                flags = cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER
+
+            store_handle = cryptoapi.CertOpenStore(
+                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
+                six.text_type(store_name))
+            if not store_handle:
+                raise cryptoapi.CryptoAPIException()
+
+            if not cryptoapi.CertAddCertificateContextToStore(
+                    store_handle, cert_context_p,
+                    cryptoapi.CERT_STORE_ADD_REPLACE_EXISTING, None):
+                raise cryptoapi.CryptoAPIException()
+
+        finally:
+            if import_store_handle:
+                cryptoapi.CertCloseStore(import_store_handle, 0)
+            if cert_context_p:
+                cryptoapi.CertFreeCertificateContext(cert_context_p)
+            if store_handle:
+                cryptoapi.CertCloseStore(store_handle, 0)
+
+    def decode_pkcs7_base64_blob(self, data, thumbprint_str,
+                                 machine_keyset=True,
+                                 store_name=STORE_NAME_MY):
+        base64_data = data.replace('\r', '').replace('\n', '')
+        store_handle = None
+        cert_context_p = None
+
+        try:
+            data_encoded_len = wintypes.DWORD()
+
+            if not cryptoapi.CryptStringToBinaryW(
+                    base64_data, len(base64_data),
+                    cryptoapi.CRYPT_STRING_BASE64,
+                    None, ctypes.byref(data_encoded_len),
+                    None, None):
+                raise cryptoapi.CryptoAPIException()
+
+            data_encoded = ctypes.cast(
+                ctypes.create_string_buffer(data_encoded_len.value),
+                ctypes.POINTER(wintypes.BYTE))
+
+            if not cryptoapi.CryptStringToBinaryW(
+                    base64_data, len(base64_data),
+                    cryptoapi.CRYPT_STRING_BASE64,
+                    data_encoded, ctypes.byref(data_encoded_len),
+                    None, None):
+                raise cryptoapi.CryptoAPIException()
+
+            store_handle = cryptoapi.CertOpenStore(
+                cryptoapi.CERT_STORE_PROV_MEMORY,
+                cryptoapi.X509_ASN_ENCODING | cryptoapi.PKCS_7_ASN_ENCODING,
+                None, cryptoapi.CERT_STORE_CREATE_NEW_FLAG, None)
+            if not store_handle:
+                raise cryptoapi.CryptoAPIException()
+
+            cert_context_p = self._find_certificate_in_store(
+                thumbprint_str, machine_keyset, store_name)
+
+            if not cryptoapi.CertAddCertificateLinkToStore(
+                    store_handle, cert_context_p,
+                    cryptoapi.CERT_STORE_ADD_NEW, None):
+                raise cryptoapi.CryptoAPIException()
+
+            para = cryptoapi.CRYPT_DECRYPT_MESSAGE_PARA()
+            para.cbSize = ctypes.sizeof(cryptoapi.CRYPT_DECRYPT_MESSAGE_PARA)
+            para.dwMsgAndCertEncodingType = (cryptoapi.X509_ASN_ENCODING |
+                                             cryptoapi.PKCS_7_ASN_ENCODING)
+            para.cCertStore = 1
+            para.rghCertStore = ctypes.pointer(wintypes.HANDLE(store_handle))
+            para.dwFlags = cryptoapi.CRYPT_SILENT
+
+            data_decoded_len = wintypes.DWORD()
+            if not cryptoapi.CryptDecryptMessage(
+                    ctypes.byref(para),
+                    data_encoded,
+                    data_encoded_len,
+                    None,
+                    ctypes.byref(data_decoded_len),
+                    None):
+                raise cryptoapi.CryptoAPIException()
+
+            data_decoded_buf = ctypes.create_string_buffer(
+                data_decoded_len.value)
+            data_decoded = ctypes.cast(
+                data_decoded_buf, ctypes.POINTER(wintypes.BYTE))
+
+            if not cryptoapi.CryptDecryptMessage(
+                    ctypes.pointer(para),
+                    data_encoded,
+                    data_encoded_len,
+                    data_decoded,
+                    ctypes.byref(data_decoded_len),
+                    None):
+                raise cryptoapi.CryptoAPIException()
+
+            return bytes(data_decoded_buf)
+        finally:
+            if cert_context_p:
+                cryptoapi.CertFreeCertificateContext(cert_context_p)
+            if store_handle:
+                cryptoapi.CertCloseStore(store_handle, 0)
 
     def import_cert(self, cert_data, machine_keyset=True,
                     store_name=STORE_NAME_MY):

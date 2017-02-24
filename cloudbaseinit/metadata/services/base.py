@@ -157,6 +157,9 @@ class BaseMetadataService(object):
     def get_winrm_listeners_configuration(self):
         pass
 
+    def get_server_certs(self):
+        pass
+
     def get_client_auth_certs(self):
         pass
 

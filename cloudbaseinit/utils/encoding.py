@@ -38,3 +38,10 @@ def write_file(target_path, data, mode='wb'):
 
     with open(target_path, mode) as f:
         f.write(data)
+
+
+def hex_to_bytes(value):
+    if six.PY2:
+        return value.decode("hex")
+    else:
+        return bytes.fromhex(value)
