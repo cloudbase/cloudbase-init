@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import conf as cloudbaseinit_conf
@@ -50,54 +52,95 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
 
         return True
 
-    def execute(self, service, shared_data):
-        osutils = osutils_factory.get_os_utils()
+    @contextlib.contextmanager
+    def _check_uac_remote_restrictions(self, osutils):
         security_utils = security.WindowsSecurityUtils()
-
-        if not self._check_winrm_service(osutils):
-            return base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False
-
         # On Windows Vista, 2008, 2008 R2 and 7, changing the configuration of
         # the winrm service will fail with an "Access is denied" error if the
         # User Account Control remote restrictions are enabled.
         # The solution to this issue is to temporarily disable the User Account
         # Control remote restrictions.
         # https://support.microsoft.com/kb/951016
-        disable_uac_remote_restrictions = (osutils.check_os_version(6, 0) and
-                                           not osutils.check_os_version(6, 2)
-                                           and security_utils
-                                           .get_uac_remote_restrictions())
-
+        disable_uac_remote_restrictions = (
+            osutils.check_os_version(6, 0) and
+            not osutils.check_os_version(6, 2) and
+            security_utils.get_uac_remote_restrictions())
         try:
             if disable_uac_remote_restrictions:
                 LOG.debug("Disabling UAC remote restrictions")
                 security_utils.set_uac_remote_restrictions(enable=False)
-
-            winrm_config = winrmconfig.WinRMConfig()
-            winrm_config.set_auth_config(basic=CONF.winrm_enable_basic_auth)
-
-            cert_manager = x509.CryptoAPICertManager()
-            cert_thumbprint = cert_manager.create_self_signed_cert(
-                self._cert_subject)
-
-            protocol = winrmconfig.LISTENER_PROTOCOL_HTTPS
-
-            if winrm_config.get_listener(protocol=protocol):
-                winrm_config.delete_listener(protocol=protocol)
-
-            winrm_config.create_listener(cert_thumbprint=cert_thumbprint,
-                                         protocol=protocol)
-
-            listener_config = winrm_config.get_listener(protocol=protocol)
-            listener_port = listener_config.get("Port")
-
-            rule_name = "WinRM %s" % protocol
-            osutils.firewall_create_rule(rule_name, listener_port,
-                                         osutils.PROTOCOL_TCP)
-
+            yield
         finally:
             if disable_uac_remote_restrictions:
                 LOG.debug("Enabling UAC remote restrictions")
                 security_utils.set_uac_remote_restrictions(enable=True)
+
+    def _configure_winrm_listener(self, osutils, winrm_config, protocol,
+                                  cert_thumbprint=None):
+        if winrm_config.get_listener(protocol=protocol):
+            winrm_config.delete_listener(protocol=protocol)
+
+        winrm_config.create_listener(cert_thumbprint=cert_thumbprint,
+                                     protocol=protocol)
+
+        listener_config = winrm_config.get_listener(protocol=protocol)
+        listener_port = listener_config.get("Port")
+
+        rule_name = "WinRM %s" % protocol
+        osutils.firewall_create_rule(rule_name, listener_port,
+                                     osutils.PROTOCOL_TCP)
+
+    def _get_winrm_listeners_config(self, service):
+        listeners_config = service.get_winrm_listeners_configuration()
+        if listeners_config is None:
+            listeners_config = []
+            if CONF.winrm_configure_http_listener:
+                listeners_config.append(
+                    {"protocol": winrmconfig.LISTENER_PROTOCOL_HTTP})
+            if CONF.winrm_configure_https_listener:
+                listeners_config.append(
+                    {"protocol": winrmconfig.LISTENER_PROTOCOL_HTTPS})
+        return listeners_config
+
+    def _create_self_signed_certificate(self):
+        LOG.info("Generating self signed certificate for WinRM HTTPS listener")
+        cert_manager = x509.CryptoAPICertManager()
+        cert_thumbprint = cert_manager.create_self_signed_cert(
+            self._cert_subject)
+        return cert_thumbprint
+
+    def execute(self, service, shared_data):
+        osutils = osutils_factory.get_os_utils()
+
+        if not self._check_winrm_service(osutils):
+            return base.PLUGIN_EXECUTE_ON_NEXT_BOOT, False
+
+        listeners_config = self._get_winrm_listeners_config(service)
+
+        if not listeners_config:
+            LOG.info("No WinRM listener configuration provided")
+        else:
+            with self._check_uac_remote_restrictions(osutils):
+                winrm_config = winrmconfig.WinRMConfig()
+                winrm_config.set_auth_config(
+                    basic=CONF.winrm_enable_basic_auth)
+
+                for listener_config in listeners_config:
+                    protocol = listener_config["protocol"].upper()
+
+                    cert_thumb = None
+                    if protocol == winrmconfig.LISTENER_PROTOCOL_HTTPS:
+                        cert_thumb = listener_config.get(
+                            "certificate_thumbprint")
+                        if not cert_thumb:
+                            cert_thumb = self._create_self_signed_certificate()
+
+                    LOG.info("Configuring WinRM listener for protocol: "
+                             "%(protocol)s, certificate thumbprint: "
+                             "%(cert_thumb)s",
+                             {"protocol": protocol,
+                              "cert_thumb": cert_thumb})
+                    self._configure_winrm_listener(
+                        osutils, winrm_config, protocol, cert_thumb)
 
         return base.PLUGIN_EXECUTION_DONE, False

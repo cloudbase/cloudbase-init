@@ -342,7 +342,7 @@ class WinRMConfigTests(unittest.TestCase):
             '</p:CertificateThumbPrint>'
             '<p:URLPrefix>wsman</p:URLPrefix>'
             '</p:Listener>' % {"enabled": True,
-                               "cert_thumbprint": None})
+                               "cert_thumbprint": ""})
 
     @mock.patch('xml.etree.ElementTree.fromstring')
     @mock.patch('xml.etree.ElementTree.tostring')
