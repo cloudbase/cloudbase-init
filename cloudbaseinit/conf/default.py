@@ -279,6 +279,18 @@ class GlobalOptions(conf_base.Options):
                 'metadata_report_provisioning_completed', default=False,
                 help='Reports to the metadata service that provisioning '
                      'completed successfully or failed'),
+            cfg.StrOpt(
+                'ephemeral_disk_volume_label', default=None,
+                help='Ephemeral disk volume label, e.g.: "Temporary Storage"'),
+            cfg.StrOpt(
+                'ephemeral_disk_volume_mount_point', default=None,
+                help='Ephemeral disk volume mount point, e.g.:'
+                     '"\\\\?\\GLOBALROOT\\device\\Harddisk1\\Partition1\\"'),
+            cfg.StrOpt(
+                'ephemeral_disk_data_loss_warning_path', default=None,
+                help='Ephemeral disk data loss warning path, relative to the '
+                     'ephemeral disk volume path. E.g.: '
+                     'DATALOSS_WARNING_README.txt'),
         ]
 
         self._cli_options = [
