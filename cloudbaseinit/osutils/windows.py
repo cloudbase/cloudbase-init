@@ -367,6 +367,31 @@ class WindowsUtils(base.BaseOSUtils):
     SERVICE_START_MODE_MANUAL = "Manual"
     SERVICE_START_MODE_DISABLED = "Disabled"
 
+    _SERVICE_START_TYPE_MAP = {
+        SERVICE_START_MODE_AUTOMATIC:
+        win32service.SERVICE_AUTO_START,
+        SERVICE_START_MODE_MANUAL:
+        win32service.SERVICE_DEMAND_START,
+        SERVICE_START_MODE_DISABLED:
+        win32service.SERVICE_DISABLED}
+
+    _SERVICE_STATUS_MAP = {
+        win32service.SERVICE_CONTINUE_PENDING:
+        SERVICE_STATUS_CONTINUE_PENDING,
+        win32service.SERVICE_PAUSE_PENDING:
+        SERVICE_STATUS_PAUSE_PENDING,
+        win32service.SERVICE_PAUSED:
+        SERVICE_STATUS_PAUSED,
+        win32service.SERVICE_RUNNING:
+        SERVICE_STATUS_RUNNING,
+        win32service.SERVICE_START_PENDING:
+        SERVICE_STATUS_START_PENDING,
+        win32service.SERVICE_STOP_PENDING:
+        SERVICE_STATUS_STOP_PENDING,
+        win32service.SERVICE_STOPPED:
+        SERVICE_STATUS_STOPPED,
+    }
+
     ComputerNamePhysicalDnsHostname = 5
 
     _config_key = 'SOFTWARE\\Cloudbase Solutions\\Cloudbase-Init\\'
@@ -865,13 +890,8 @@ class WindowsUtils(base.BaseOSUtils):
             else:
                 raise ex
 
-    def _get_service(self, service_name):
-        conn = wmi.WMI(moniker='//./root/cimv2')
-        service_list = conn.Win32_Service(Name=service_name)
-        if len(service_list):
-            return service_list[0]
-
     def check_service_exists(self, service_name):
+        LOG.debug("Checking if service exists: %s", service_name)
         try:
             with self._get_service_handle(service_name):
                 return True
@@ -882,57 +902,110 @@ class WindowsUtils(base.BaseOSUtils):
             raise
 
     def get_service_status(self, service_name):
-        service = self._get_service(service_name)
-        return service.State
+        LOG.debug("Getting service status for: %s", service_name)
+        with self._get_service_handle(
+                service_name, win32service.SERVICE_QUERY_STATUS) as hs:
+            service_status = win32service.QueryServiceStatusEx(hs)
+            state = service_status['CurrentState']
+
+            return self._SERVICE_STATUS_MAP.get(
+                state, WindowsUtils.SERVICE_STATUS_UNKNOWN)
 
     def get_service_start_mode(self, service_name):
-        service = self._get_service(service_name)
-        return service.StartMode
+        LOG.debug("Getting service start mode for: %s", service_name)
+        with self._get_service_handle(
+                service_name, win32service.SERVICE_QUERY_CONFIG) as hs:
+            service_config = win32service.QueryServiceConfig(hs)
+
+            start_type = service_config[1]
+            return [k for k, v in self._SERVICE_START_TYPE_MAP.items()
+                    if v == start_type][0]
 
     def set_service_start_mode(self, service_name, start_mode):
         # TODO(alexpilotti): Handle the "Delayed Start" case
-        service = self._get_service(service_name)
-        (ret_val,) = service.ChangeStartMode(start_mode)
-        if ret_val != 0:
-            raise exception.CloudbaseInitException(
-                'Setting service %(service_name)s start mode failed with '
-                'return value: %(ret_val)d' % {'service_name': service_name,
-                                               'ret_val': ret_val})
+        LOG.debug("Setting service start mode for: %s", service_name)
+        start_type = self._get_win32_start_type(start_mode)
+
+        with self._get_service_handle(
+                service_name, win32service.SERVICE_CHANGE_CONFIG) as hs:
+            win32service.ChangeServiceConfig(
+                hs, win32service.SERVICE_NO_CHANGE,
+                start_type, win32service.SERVICE_NO_CHANGE,
+                None, None, False, None, None, None, None)
 
     def start_service(self, service_name):
         LOG.debug('Starting service %s', service_name)
-        service = self._get_service(service_name)
-        (ret_val,) = service.StartService()
-        if ret_val != 0:
-            raise exception.CloudbaseInitException(
-                'Starting service %(service_name)s failed with return value: '
-                '%(ret_val)d' % {'service_name': service_name,
-                                 'ret_val': ret_val})
+        with self._get_service_handle(
+                service_name, win32service.SERVICE_START) as hs:
+            win32service.StartService(hs, service_name)
 
-    def stop_service(self, service_name):
+    def stop_service(self, service_name, wait=False):
         LOG.debug('Stopping service %s', service_name)
-        service = self._get_service(service_name)
-        (ret_val,) = service.StopService()
-        if ret_val != 0:
-            raise exception.CloudbaseInitException(
-                'Stopping service %(service_name)s failed with return value:'
-                ' %(ret_val)d' % {'service_name': service_name,
-                                  'ret_val': ret_val})
+        with self._get_service_handle(
+                service_name,
+                win32service.SERVICE_STOP |
+                win32service.SERVICE_QUERY_STATUS) as hs:
+            win32service.ControlService(hs, win32service.SERVICE_CONTROL_STOP)
+            if wait:
+                while True:
+                    service_status = win32service.QueryServiceStatusEx(hs)
+                    state = service_status['CurrentState']
+                    if state == win32service.SERVICE_STOPPED:
+                        return
+                    time.sleep(.1)
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _get_service_control_manager(
+            scm_access=win32service.SC_MANAGER_CONNECT):
+        hscm = win32service.OpenSCManager(None, None, scm_access)
+        try:
+            yield hscm
+        finally:
+            win32service.CloseServiceHandle(hscm)
 
     @staticmethod
     @contextlib.contextmanager
     def _get_service_handle(service_name,
                             service_access=win32service.SERVICE_QUERY_CONFIG,
                             scm_access=win32service.SC_MANAGER_CONNECT):
-        hscm = win32service.OpenSCManager(None, None, scm_access)
-        hs = None
-        try:
+        with WindowsUtils._get_service_control_manager(scm_access) as hscm:
             hs = win32service.OpenService(hscm, service_name, service_access)
-            yield hs
-        finally:
-            if hs:
+            try:
+                yield hs
+            finally:
                 win32service.CloseServiceHandle(hs)
-            win32service.CloseServiceHandle(hscm)
+
+    @staticmethod
+    def _get_win32_start_type(start_mode):
+        start_type = WindowsUtils._SERVICE_START_TYPE_MAP.get(start_mode)
+        if not start_type:
+            raise exception.InvalidStateException(
+                "Invalid service start mode: %s" % start_mode)
+        return start_type
+
+    def create_service(self, service_name, display_name, path, start_mode,
+                       username=None, password=None):
+        LOG.debug('Creating service %s', service_name)
+        start_type = self._get_win32_start_type(start_mode)
+
+        with WindowsUtils._get_service_control_manager(
+                scm_access=win32service.SC_MANAGER_CREATE_SERVICE) as hscm:
+            hs = win32service.CreateService(
+                hscm, service_name, display_name,
+                win32service.SERVICE_ALL_ACCESS,
+                win32service.SERVICE_WIN32_OWN_PROCESS,
+                start_type,
+                win32service.SERVICE_ERROR_NORMAL,
+                path, None, False, None,
+                username, password)
+            win32service.CloseServiceHandle(hs)
+
+    def delete_service(self, service_name):
+        LOG.debug('Deleting service %s', service_name)
+        with self._get_service_handle(
+                service_name, win32service.SERVICE_ALL_ACCESS) as hs:
+            win32service.DeleteService(hs)
 
     def set_service_credentials(self, service_name, username, password):
         LOG.debug('Setting service credentials: %s', service_name)
