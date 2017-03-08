@@ -12,11 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ctypes
 import wmi
 
 from oslo_log import log as oslo_logging
+from six.moves import winreg
 
 from cloudbaseinit import exception
+from cloudbaseinit.utils.windows import kernel32
 from cloudbaseinit.utils.windows.storage import base
 
 LOG = oslo_logging.getLogger(__name__)
@@ -50,3 +53,42 @@ class WSMStorageManager(base.BaseStorageManager):
                     if ret_val:
                         raise exception.CloudbaseInitException(
                             "Resize failed with error: %s" % ret_val)
+
+    def get_san_policy(self):
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            'SYSTEM\\CurrentControlSet\\Services\\partmgr\\'
+                            'Parameters') as key:
+            try:
+                san_policy = winreg.QueryValueEx(key, 'SanPolicy')[0]
+            except WindowsError as ex:
+                if ex.winerror != 2:
+                    raise
+                san_policy = base.SAN_POLICY_OFFLINE_SHARED
+            return san_policy
+
+    def set_san_policy(self, san_policy):
+        if san_policy != base.SAN_POLICY_ONLINE:
+            raise exception.CloudbaseInitException(
+                "Only SAN_POLICY_ONLINE is currently supported")
+        handle = kernel32.CreateFileW(
+            u"\\\\.\\PartmgrControl",
+            kernel32.GENERIC_READ | kernel32.GENERIC_WRITE,
+            kernel32.FILE_SHARE_READ | kernel32.FILE_SHARE_WRITE,
+            None, kernel32.OPEN_EXISTING, 0, None)
+
+        if handle == kernel32.INVALID_HANDLE_VALUE:
+            raise exception.WindowsCloudbaseInitException(
+                "Cannot access PartmgrControl: %r")
+
+        try:
+            input_data_online = ctypes.c_int64(0x100000008)
+            input_data_size = 8
+            control_code = 0x7C204
+
+            if not kernel32.DeviceIoControl(
+                    handle, control_code, ctypes.addressof(input_data_online),
+                    input_data_size, None, 0, None, None):
+                raise exception.WindowsCloudbaseInitException(
+                    "DeviceIoControl failed: %r")
+        finally:
+            kernel32.CloseHandle(handle)

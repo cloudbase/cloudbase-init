@@ -196,3 +196,10 @@ class CloudbaseInitTestBase(unittest.TestCase):
 
         expected_msg = expected_msg % mock_format_error.return_value
         self.assertEqual(expected_msg, cm.exception.args[0])
+
+
+class FakeWindowsError(Exception):
+    """WindowsError is available on Windows only."""
+
+    def __init__(self, errno):
+        self.errno = errno

@@ -22,23 +22,35 @@ except ImportError:
     import mock
 
 from cloudbaseinit import exception
+from cloudbaseinit.tests import testutils
+from cloudbaseinit.utils.windows.storage import base
 
 
 class TestWSMStorageManager(unittest.TestCase):
 
     def setUp(self):
+        self._mock_ctypes = mock.MagicMock()
         self.mock_wmi = mock.MagicMock()
+        self._moves_mock = mock.MagicMock()
+        self._winreg_mock = self._moves_mock.winreg
+        self._kernel32_mock = mock.MagicMock()
 
         patcher = mock.patch.dict(
             "sys.modules",
             {
-                "wmi": self.mock_wmi
+                "wmi": self.mock_wmi,
+                "six.moves": self._moves_mock,
+                "ctypes": self._mock_ctypes,
+                "oslo_log": mock.MagicMock()
             }
         )
         patcher.start()
         self.addCleanup(patcher.stop)
         wsm_store = importlib.import_module(
             "cloudbaseinit.utils.windows.storage.wsm_storage_manager")
+
+        wsm_store.WindowsError = testutils.FakeWindowsError
+        wsm_store.kernel32 = self._kernel32_mock
         self.wsm = wsm_store.WSMStorageManager()
 
     def test_init(self):
@@ -104,3 +116,77 @@ class TestWSMStorageManager(unittest.TestCase):
 
     def test_extend_volumes(self):
         self._test_extend_volumes()
+
+    def _test_get_san_policy(self, fail=False, errno=None):
+        key = self._winreg_mock.OpenKey.return_value.__enter__.return_value
+
+        self._winreg_mock.QueryValueEx.return_value = [mock.sentinel.policy]
+
+        error = testutils.FakeWindowsError(None)
+        error.winerror = errno
+
+        if fail:
+            self._winreg_mock.QueryValueEx.side_effect = [error]
+
+            if errno != 2:
+                self.assertRaises(testutils.FakeWindowsError,
+                                  self.wsm.get_san_policy)
+            else:
+                response = self.wsm.get_san_policy()
+                self.assertEqual(response, base.SAN_POLICY_OFFLINE_SHARED)
+            return
+
+        response = self.wsm.get_san_policy()
+
+        self.assertEqual(response, mock.sentinel.policy)
+
+        self._winreg_mock.QueryValueEx.assert_called_once_with(
+            key, 'SanPolicy')
+
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SYSTEM\\CurrentControlSet\\Services\\partmgr\\Parameters')
+
+    def test_get_san_policy(self):
+        self._test_get_san_policy()
+
+    def test_get_san_policy_fail(self):
+        self._test_get_san_policy(fail=True, errno=1)
+
+    def test_get_san_policy_not_found(self):
+        self._test_get_san_policy(fail=True, errno=2)
+
+    def _test_set_san_policy(self, policy=None, error=False,
+                             device_error=False):
+        if policy != base.SAN_POLICY_ONLINE:
+            self.assertRaises(
+                exception.CloudbaseInitException,
+                self.wsm.set_san_policy, policy)
+            return
+
+        if error:
+            mock_filew = self._kernel32_mock.CreateFileW
+            mock_filew.return_value = self._kernel32_mock.INVALID_HANDLE_VALUE
+
+            self.assertRaises(
+                exception.WindowsCloudbaseInitException,
+                self.wsm.set_san_policy, policy)
+            return
+
+        if device_error:
+            self._kernel32_mock.DeviceIoControl.return_value = False
+            self.assertRaises(exception.WindowsCloudbaseInitException,
+                              self.wsm.set_san_policy, policy)
+
+        self._kernel32_mock.CloseHandle.assert_called_once_with(
+            self._kernel32_mock.CreateFileW())
+
+    def test_set_san_policy_not_supported(self):
+        self._test_set_san_policy(policy=base.SAN_POLICY_OFFLINE)
+
+    def test_set_san_policy_error(self):
+        self._test_set_san_policy(policy=base.SAN_POLICY_ONLINE, error=True)
+
+    def test_set_san_policy_device_error(self):
+        self._test_set_san_policy(policy=base.SAN_POLICY_ONLINE,
+                                  device_error=True)

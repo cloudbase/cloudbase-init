@@ -20,6 +20,16 @@ from ctypes import wintypes
 ERROR_BUFFER_OVERFLOW = 111
 ERROR_NO_DATA = 232
 
+GENERIC_READ = 0x80000000
+GENERIC_WRITE = 0x40000000
+
+FILE_SHARE_READ = 1
+FILE_SHARE_WRITE = 2
+
+OPEN_EXISTING = 3
+
+INVALID_HANDLE_VALUE = wintypes.HANDLE(-1)
+
 
 class GUID(ctypes.Structure):
     _fields_ = [
@@ -54,3 +64,22 @@ HeapAlloc.restype = wintypes.LPVOID
 HeapFree = windll.kernel32.HeapFree
 HeapFree.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPVOID]
 HeapFree.restype = wintypes.BOOL
+
+CreateFileW = windll.kernel32.CreateFileW
+CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD,
+                        wintypes.DWORD, wintypes.LPVOID,
+                        wintypes.DWORD, wintypes.DWORD,
+                        wintypes.HANDLE]
+CreateFileW.restype = wintypes.HANDLE
+
+DeviceIoControl = windll.kernel32.DeviceIoControl
+DeviceIoControl.argtypes = [wintypes.HANDLE, wintypes.DWORD,
+                            wintypes.LPVOID, wintypes.DWORD,
+                            wintypes.LPVOID, wintypes.DWORD,
+                            ctypes.POINTER(wintypes.DWORD),
+                            wintypes.LPVOID]
+DeviceIoControl.restype = wintypes.BOOL
+
+CloseHandle = windll.kernel32.CloseHandle
+CloseHandle.argtypes = [wintypes.HANDLE]
+CloseHandle.restype = wintypes.BOOL

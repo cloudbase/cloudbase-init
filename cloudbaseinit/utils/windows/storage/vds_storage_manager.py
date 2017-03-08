@@ -37,6 +37,16 @@ def _enumerate(query):
 
 
 class VDSStorageManager(base.BaseStorageManager):
+
+    def __init__(self, *args, **kwargs):
+        super(VDSStorageManager, self).__init__(*args, **kwargs)
+        self._vds_service = None
+
+    def _get_vds_service(self):
+        if not self._vds_service:
+            self._vds_service = vds.load_vds_service()
+        return self._vds_service
+
     def _extend_volumes(self, pack, volume_indexes):
         for unk in _enumerate(pack.QueryVolumes()):
             volume = unk.QueryInterface(vds.IVdsVolume)
@@ -128,10 +138,20 @@ class VDSStorageManager(base.BaseStorageManager):
                 for unk in _enumerate(provider.QueryPacks())]
 
     def extend_volumes(self, volume_indexes=None):
-        svc = vds.load_vds_service()
+        svc = self._get_vds_service()
         providers = self._query_providers(svc)
 
         for provider in providers:
             packs = self._query_packs(provider)
             for pack in packs:
                 self._extend_volumes(pack, volume_indexes)
+
+    def get_san_policy(self):
+        svc = self._get_vds_service()
+        svc_san = svc.QueryInterface(vds.IVdsServiceSAN)
+        return svc_san.GetSANPolicy()
+
+    def set_san_policy(self, san_policy):
+        svc = self._get_vds_service()
+        svc_san = svc.QueryInterface(vds.IVdsServiceSAN)
+        svc_san.SetSANPolicy(san_policy)

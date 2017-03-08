@@ -28,7 +28,6 @@ def get_storage_manager():
 
     osutils = osutils_factory.get_os_utils()
     cl = classloader.ClassLoader()
-
     if os.name == "nt":
         if osutils.is_nano_server():
             # VDS is not available on Nano Server
