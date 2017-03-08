@@ -32,7 +32,7 @@ from cloudbaseinit.utils.windows import vfat
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
-CONFIG_DRIVE_LABEL = 'config-2'
+CONFIG_DRIVE_LABEL = 'cidata'
 MAX_SECTOR_SIZE = 4096
 # Absolute offset values and the ISO magic string.
 OFFSET_BOOT_RECORD = 0x8000
