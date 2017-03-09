@@ -138,6 +138,31 @@ class BaseOSUtils(object):
         """Set the username and password for a given service."""
         raise NotImplementedError()
 
+    def create_service(self, service_name, display_name, path, start_mode,
+                       username=None, password=None):
+        raise NotImplementedError()
+
+    def delete_service(self, service_name):
+        raise NotImplementedError()
+
+    def get_service_status(self, service_name):
+        raise NotImplementedError()
+
+    def check_service_exists(self, service_name):
+        raise NotImplementedError()
+
+    def get_service_start_mode(self, service_name):
+        raise NotImplementedError()
+
+    def set_service_start_mode(self, service_name, start_mode):
+        raise NotImplementedError()
+
+    def start_service(self, service_name):
+        raise NotImplementedError()
+
+    def stop_service(self, service_name, wait=False):
+        raise NotImplementedError()
+
     def get_service_username(self, service_name):
         """Retrieve the username under which a service runs."""
         raise NotImplementedError()

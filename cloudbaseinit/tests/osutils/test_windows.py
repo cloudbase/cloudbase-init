@@ -879,16 +879,6 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         ret_vals = [[1], [7]]
         self._test_wait_for_boot_completion(ret_vals=ret_vals)
 
-    def test_get_service(self):
-        conn = self._wmi_mock.WMI
-        conn.return_value.Win32_Service.return_value = ['fake name']
-
-        response = self._winutils._get_service('fake name')
-
-        conn.assert_called_with(moniker='//./root/cimv2')
-        conn.return_value.Win32_Service.assert_called_with(Name='fake name')
-        self.assertEqual('fake name', response)
-
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service_handle')
     def test_check_service(self, mock_get_service_handle):
@@ -933,6 +923,48 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                         mock.sentinel.service_access)
         close_service.assert_has_calls([mock.call(mock.sentinel.hs),
                                         mock.call(mock.sentinel.hscm)])
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_control_manager')
+    def test_create_service(self, mock_get_service_control_manager):
+        mock_hs = mock.MagicMock()
+        mock_service_name = "fake name"
+        mock_start_mode = "Automatic"
+        mock_display_name = mock.sentinel.mock_display_name
+        mock_path = mock.sentinel.path
+        mock_get_service_control_manager.return_value = mock_hs
+        with self.snatcher:
+            self._winutils.create_service(mock_service_name,
+                                          mock_display_name,
+                                          mock_path,
+                                          mock_start_mode)
+            self.assertEqual(["Creating service fake name"],
+                             self.snatcher.output)
+
+        mock_get_service_control_manager.assert_called_once_with(
+            scm_access=self._win32service_mock.SC_MANAGER_CREATE_SERVICE)
+        self._win32service_mock.CreateService.assert_called_once_with(
+            mock_hs.__enter__(), mock_service_name, mock_display_name,
+            self._win32service_mock.SERVICE_ALL_ACCESS,
+            self._win32service_mock.SERVICE_WIN32_OWN_PROCESS,
+            self._win32service_mock.SERVICE_AUTO_START,
+            self._win32service_mock.SERVICE_ERROR_NORMAL,
+            mock_path, None, False, None, None, None)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_handle')
+    def test_delete_service(self, mock_get_service_handle):
+        mock_hs = mock.MagicMock()
+        fake_service_name = "fake name"
+        mock_get_service_handle.return_value = mock_hs
+        with self.snatcher:
+            self._winutils.delete_service(fake_service_name)
+            self.assertEqual(["Deleting service fake name"],
+                             self.snatcher.output)
+        self._win32service_mock.DeleteService.assert_called_once_with(
+            mock_hs.__enter__())
+        mock_get_service_handle.assert_called_once_with(
+            fake_service_name, self._win32service_mock.SERVICE_ALL_ACCESS)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_service_handle')
@@ -1037,96 +1069,100 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                           service_username=".\\username")
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_service')
-    def test_get_service_status(self, mock_get_service):
-        mock_service = mock.MagicMock()
-        mock_get_service.return_value = mock_service
+                '._get_service_handle')
+    def test_get_service_status(self, mock_get_service_handle):
+        mock_hs = mock.MagicMock()
+        fake_service_name = "fake name"
+        fake_status = {'CurrentState': 'fake-status'}
+        mock_get_service_handle.return_value = mock_hs
+        expected_log = ["Getting service status for: %s" % fake_service_name]
+        self._win32service_mock.QueryServiceStatusEx.return_value = fake_status
+        with self.snatcher:
+            response = self._winutils.get_service_status(fake_service_name)
 
-        response = self._winutils.get_service_status('fake name')
-
-        self.assertEqual(mock_service.State, response)
-
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_service')
-    def test_get_service_start_mode(self, mock_get_service):
-        mock_service = mock.MagicMock()
-        mock_get_service.return_value = mock_service
-
-        response = self._winutils.get_service_start_mode('fake name')
-
-        self.assertEqual(mock_service.StartMode, response)
-
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_service')
-    def _test_set_service_start_mode(self, mock_get_service, ret_val):
-        mock_service = mock.MagicMock()
-        mock_get_service.return_value = mock_service
-        mock_service.ChangeStartMode.return_value = (ret_val,)
-
-        if ret_val != 0:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.set_service_start_mode,
-                              'fake name', 'fake mode')
-        else:
-            self._winutils.set_service_start_mode('fake name', 'fake mode')
-
-        mock_service.ChangeStartMode.assert_called_once_with('fake mode')
-
-    def test_set_service_start_mode(self):
-        self._test_set_service_start_mode(ret_val=0)
-
-    def test_set_service_start_mode_exception(self):
-        self._test_set_service_start_mode(ret_val=1)
+        self._win32service_mock.QueryServiceStatusEx.assert_called_once_with(
+            mock_hs.__enter__())
+        mock_get_service_handle.assert_called_once_with(
+            fake_service_name, self._win32service_mock.SERVICE_QUERY_STATUS)
+        self.assertEqual(self.snatcher.output, expected_log)
+        self.assertEqual("Unknown", response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_service')
-    def _test_start_service(self, mock_get_service, ret_val):
-        mock_service = mock.MagicMock()
-        mock_get_service.return_value = mock_service
-        mock_service.StartService.return_value = (ret_val,)
+                '._get_service_handle')
+    def test_get_service_start_mode(self, mock_get_service_handle):
+        mock_hs = mock.MagicMock()
+        fake_service_name = "fake name"
+        mock_mode = self._win32service_mock.SERVICE_AUTO_START
+        fake_status = ['', mock_mode]
+        mock_get_service_handle.return_value = mock_hs
+        expected_mode = "Automatic"
+        expected_log = [
+            "Getting service start mode for: %s" % fake_service_name]
+        self._win32service_mock.QueryServiceConfig.return_value = fake_status
 
-        if ret_val != 0:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.start_service,
-                              'fake name')
-        else:
-            with self.snatcher:
-                self._winutils.start_service('fake name')
+        with self.snatcher:
+            response = self._winutils.get_service_start_mode(fake_service_name)
+
+        self._win32service_mock.QueryServiceConfig.assert_called_once_with(
+            mock_hs.__enter__())
+        mock_get_service_handle.assert_called_once_with(
+            fake_service_name, self._win32service_mock.SERVICE_QUERY_CONFIG)
+        self.assertEqual(self.snatcher.output, expected_log)
+        self.assertEqual(expected_mode, response)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_handle')
+    def test_set_service_start_mode(self, mock_get_service_handle):
+        mock_hs = mock.MagicMock()
+        fake_service_name = "fake name"
+        fake_start_mode = "Automatic"
+        mock_get_service_handle.return_value = mock_hs
+        with self.snatcher:
+            self._winutils.set_service_start_mode(fake_service_name,
+                                                  fake_start_mode)
+            self.assertEqual(["Setting service start mode for: fake name"],
+                             self.snatcher.output)
+        self._win32service_mock.ChangeServiceConfig.assert_called_once_with(
+            mock_hs.__enter__(),
+            self._win32service_mock.SERVICE_NO_CHANGE,
+            self._win32service_mock.SERVICE_AUTO_START,
+            self._win32service_mock.SERVICE_NO_CHANGE,
+            None, None, False, None, None, None, None)
+        mock_get_service_handle.assert_called_once_with(
+            fake_service_name,
+            self._win32service_mock.SERVICE_CHANGE_CONFIG)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_service_handle')
+    def test_start_service(self, mock_get_service_handle):
+        mock_hs = mock.MagicMock()
+        fake_service_name = "fake name"
+        mock_get_service_handle.return_value = mock_hs
+        with self.snatcher:
+            self._winutils.start_service(fake_service_name)
             self.assertEqual(["Starting service fake name"],
                              self.snatcher.output)
-
-        mock_service.StartService.assert_called_once_with()
-
-    def test_start_service(self):
-        self._test_set_service_start_mode(ret_val=0)
-
-    def test_start_service_exception(self):
-        self._test_set_service_start_mode(ret_val=1)
+        self._win32service_mock.StartService.assert_called_once_with(
+            mock_hs.__enter__(), fake_service_name)
+        mock_get_service_handle.assert_called_once_with(
+            fake_service_name, self._win32service_mock.SERVICE_START)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_service')
-    def _test_stop_service(self, mock_get_service, ret_val):
-        mock_service = mock.MagicMock()
-        mock_get_service.return_value = mock_service
-        mock_service.StopService.return_value = (ret_val,)
-
-        if ret_val != 0:
-            self.assertRaises(exception.CloudbaseInitException,
-                              self._winutils.stop_service,
-                              'fake name')
-        else:
-            with self.snatcher:
-                self._winutils.stop_service('fake name')
+                '._get_service_handle')
+    def test_stop_service(self, mock_get_service_handle):
+        mock_hs = mock.MagicMock()
+        fake_service_name = "fake name"
+        mock_get_service_handle.return_value = mock_hs
+        with self.snatcher:
+            self._winutils.stop_service(fake_service_name)
             self.assertEqual(["Stopping service fake name"],
                              self.snatcher.output)
-
-        mock_service.StopService.assert_called_once_with()
-
-    def test_stop_service(self):
-        self._test_stop_service(ret_val=0)
-
-    def test_stop_service_exception(self):
-        self._test_stop_service(ret_val=1)
+        self._win32service_mock.ControlService.assert_called_once_with(
+            mock_hs.__enter__(),
+            self._win32service_mock.SERVICE_CONTROL_STOP)
+        mock_get_service_handle.assert_called_once_with(
+            fake_service_name, self._win32service_mock.SERVICE_STOP |
+            self._win32service_mock.SERVICE_QUERY_STATUS)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.stop_service')
