@@ -896,7 +896,6 @@ class WindowsUtils(base.BaseOSUtils):
             with self._get_service_handle(service_name):
                 return True
         except pywintypes.error as ex:
-            print(ex)
             if ex.winerror == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
                 return False
             raise
