@@ -158,7 +158,7 @@ class UserDataPluginTest(unittest.TestCase):
 
         response = self._userdata._process_user_data(user_data=user_data)
 
-        if user_data.startswith(b'Content-Type: multipart'):
+        if b'Content-Type: multipart' in user_data:
             mock_load_plugins.assert_called_once_with()
             mock_parse_mime.assert_called_once_with(user_data)
             mock_process_part.assert_called_once_with(mock_part,
