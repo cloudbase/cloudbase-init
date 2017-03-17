@@ -202,6 +202,10 @@ class BaseMetadataService(object):
     def get_use_avma_licensing(self):
         pass
 
+    def get_enable_automatic_updates(self):
+        """Check if the metadata provider enforces automatic updates."""
+        pass
+
 
 class BaseHTTPMetadataService(BaseMetadataService):
 
