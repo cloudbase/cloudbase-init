@@ -55,6 +55,10 @@ class EC2Service(base.BaseHTTPMetadataService):
         return self._get_cache_data('%s/meta-data/instance-id' %
                                     self._metadata_version, decode=True)
 
+     def get_user_data(self):
+        return self._get_cache_data('%s/user-data' %
+                                    self._metadata_version)                                   
+
     def get_public_keys(self):
         ssh_keys = []
 
