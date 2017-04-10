@@ -88,3 +88,11 @@ class EC2ServiceTest(unittest.TestCase):
                        'idx': 'key'}, decode=True)]
         self.assertEqual(expected, mock_get_cache_data.call_args_list)
         self.assertEqual(['fake key'], response)
+
+    @mock.patch('cloudbaseinit.metadata.services.ec2service.EC2Service'
+                '._get_cache_data')
+    def test_get_user_data(self, mock_get_cache_data):
+        response = self._service.get_user_data()
+        path = '%s/user-data' % self._service._metadata_version
+        mock_get_cache_data.assert_called_once_with(path)
+        self.assertEqual(mock_get_cache_data.return_value, response)
