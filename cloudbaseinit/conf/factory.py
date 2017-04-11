@@ -21,6 +21,7 @@ _OPT_PATHS = (
     'cloudbaseinit.conf.ec2.EC2Options',
     'cloudbaseinit.conf.maas.MAASOptions',
     'cloudbaseinit.conf.openstack.OpenStackOptions',
+    'cloudbaseinit.conf.azure.AzureOptions',
 )
 
 

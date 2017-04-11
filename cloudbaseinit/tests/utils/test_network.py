@@ -88,3 +88,11 @@ class NetworkUtilsTest(unittest.TestCase):
         }
         for v6, v4 in netmask_map.items():
             self.assertEqual(v4, network.netmask6_to_4_truncate(v6))
+
+    @mock.patch('socket.socket')
+    def test_get_local_ip(self, mock_socket):
+        mock_socket.return_value = mock.Mock()
+        mock_socket().getsockname.return_value = ["fake name"]
+        res = network.get_local_ip("fake address")
+        self.assertEqual(res, "fake name")
+        mock_socket().connect.assert_called_with(("fake address", 8000))

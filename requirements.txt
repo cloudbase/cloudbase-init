@@ -11,6 +11,7 @@ oauthlib
 netifaces
 PyYAML
 requests
+untangle==1.1.1
 pywin32;sys_platform=="win32"
 comtypes;sys_platform=="win32"
 wmi;sys_platform=="win32"

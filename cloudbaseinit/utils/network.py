@@ -29,6 +29,12 @@ LOG = oslo_logging.getLogger(__name__)
 MAX_URL_CHECK_RETRIES = 3
 
 
+def get_local_ip(address=None):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect((address or "<broadcast>", 8000))
+    return s.getsockname()[0]
+
+
 def check_url(url, retries_count=MAX_URL_CHECK_RETRIES):
     for i in range(0, MAX_URL_CHECK_RETRIES):
         try:

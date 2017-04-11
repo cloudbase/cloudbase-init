@@ -50,12 +50,12 @@ class DHCPUtilsTests(unittest.TestCase):
         data += b'\x00' * 128
         data += dhcp._DHCP_COOKIE
         data += b'\x35\x01\x01'
-        data += b'\x3c' + struct.pack('b', len('fake id')) + 'fake id'.encode(
+        data += b'\x3c' + struct.pack('B', len('fake id')) + 'fake id'.encode(
             'ascii')
         data += b'\x3d\x07\x01'
         data += fake_mac_address_b
-        data += b'\x37' + struct.pack('b', len([100]))
-        data += struct.pack('b', 100)
+        data += b'\x37' + struct.pack('B', len([100]))
+        data += struct.pack('B', 100)
         data += dhcp._OPTION_END
 
         response = dhcp._get_dhcp_request_data(
@@ -154,7 +154,6 @@ class DHCPUtilsTests(unittest.TestCase):
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         mock_socket().bind.assert_called_once_with(('', 68))
         mock_socket().settimeout.assert_called_once_with(5)
-        mock_socket().connect.assert_called_once_with(('fake host', 67))
         mock_socket().getsockname.assert_called_once_with()
         mock_get_mac_address_by_local_ip.assert_called_once_with(
             'fake local ip')
@@ -162,7 +161,8 @@ class DHCPUtilsTests(unittest.TestCase):
                                                            'fake mac',
                                                            ['fake option'],
                                                            'cloudbase-init')
-        mock_socket().send.assert_called_once_with('fake data')
+        mock_socket().sendto.assert_called_once_with(
+            'fake data', ('fake host', 67))
         mock_socket().recv.assert_called_once_with(1024)
         mock_parse_dhcp_reply.assert_called_once_with(mock_socket().recv(),
                                                       'fake int')
