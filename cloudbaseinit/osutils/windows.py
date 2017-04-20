@@ -1227,6 +1227,9 @@ class WindowsUtils(base.BaseOSUtils):
                 :volume_path_names_len.value - 1].split('\0') if n]
 
     def generate_random_password(self, length):
+        if length < 3:
+            raise exception.CloudbaseInitException(
+                "Password can not have less than 3 characters!")
         while True:
             pwd = super(WindowsUtils, self).generate_random_password(length)
             # Make sure that the Windows complexity requirements are met:

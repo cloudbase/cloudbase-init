@@ -1376,6 +1376,12 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         mock_generate_random_password.assert_called_once_with(length)
         self.assertEqual('Passw0rd', response)
 
+    def test_generate_random_password_less_than_3(self):
+        with self.assertRaises(exception.CloudbaseInitException) as ex:
+            self._winutils.generate_random_password(2)
+        self.assertEqual(str(ex.exception),
+                         "Password can not have less than 3 characters!")
+
     def _test_get_logical_drives(self, buf_length, last_error=None):
         mock_buf = mock.MagicMock()
         mock_buf.__getitem__.side_effect = ['1', '\x00']

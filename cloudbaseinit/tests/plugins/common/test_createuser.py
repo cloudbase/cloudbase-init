@@ -42,13 +42,17 @@ class CreateUserPluginTests(unittest.TestCase):
         self._create_user = CreateUserPlugin()
 
     def test_get_password(self):
+        password = "fake password"
         mock_osutils = mock.MagicMock()
-        mock_osutils.generate_random_password.return_value = 'fake password'
-        response = self._create_user._get_password(mock_osutils)
-        mock_osutils.get_maximum_password_length.assert_called_once_with()
-        length = mock_osutils.get_maximum_password_length()
-        mock_osutils.generate_random_password.assert_called_once_with(length)
-        self.assertEqual('fake password', response)
+        max_length = len(password)
+        mock_osutils.generate_random_password.return_value = "*" * max_length
+        with testutils.ConfPatcher('user_password_length', len(password)):
+            response = self._create_user._get_password(mock_osutils)
+
+        mock_osutils.generate_random_password.assert_called_once_with(
+            max_length)
+        self.assertEqual("*" * max_length, response)
+        self.assertEqual(len(response), max_length)
 
     @testutils.ConfPatcher('groups', ['Admins'])
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')

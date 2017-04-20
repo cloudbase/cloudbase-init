@@ -291,6 +291,10 @@ class GlobalOptions(conf_base.Options):
                 help='Ephemeral disk data loss warning path, relative to the '
                      'ephemeral disk volume path. E.g.: '
                      'DATALOSS_WARNING_README.txt'),
+            cfg.IntOpt(
+                'user_password_length', default=20,
+                help='The length of the generated password for the user '
+                     'defined by the `username` config option.'),
         ]
 
         self._cli_options = [
