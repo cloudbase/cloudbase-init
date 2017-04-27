@@ -98,7 +98,7 @@ class PageFilesPluginTest(unittest.TestCase):
         self._test_get_page_file_volumes_by_label(drives=mock_drives)
 
     def test_get_page_file_volumes_by_label_drive_found(self):
-        fake_label = mock.Mock()
+        fake_label = "fake_label"
         mock_drives = [mock.sentinel.fake_drive]
         mock_labels = fake_label
         mock_conf_labels = [fake_label]

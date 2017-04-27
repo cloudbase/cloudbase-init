@@ -33,7 +33,7 @@ class NTPClientPluginTests(unittest.TestCase):
         self._ntpclient = ntpclient.NTPClientPlugin()
         self.snatcher = testutils.LogSnatcher(MODULE_PATH)
 
-    @testutils.ConfPatcher("real_time_clock_utc", "fake time")
+    @testutils.ConfPatcher("real_time_clock_utc", True)
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('cloudbaseinit.utils.dhcp.get_dhcp_options')
     @mock.patch(MODULE_PATH + '.NTPClientPlugin.verify_time_service')
@@ -59,15 +59,9 @@ class NTPClientPluginTests(unittest.TestCase):
         mock_options_data.get.return_value = ntp_data
 
         expected_logging = []
-        reboot_required = False
+        reboot_required = not is_real_time
 
-        if is_real_time:
-            mock_time = "fake time"
-        else:
-            mock_time = "fake value"
-            reboot_required = True
-
-        mock_osutils.is_real_time_clock_utc.return_value = mock_time
+        mock_osutils.is_real_time_clock_utc.return_value = is_real_time
 
         with self.snatcher:
             with testutils.ConfPatcher('ntp_enable_service', enable_service):
@@ -81,8 +75,8 @@ class NTPClientPluginTests(unittest.TestCase):
         mock_osutils.is_real_time_clock_utc.assert_called_once_with()
         if not is_real_time:
             mock_osutils.set_real_time_clock_utc.assert_called_once_with(
-                "fake time")
-            expected_logging.append('RTC set to UTC: %s' % mock_time)
+                True)
+            expected_logging.append('RTC set to UTC: %s' % is_real_time)
         if enable_service:
             mock_verify_time_service.assert_called_once_with(mock_osutils)
             expected_logging.append('NTP client service enabled')

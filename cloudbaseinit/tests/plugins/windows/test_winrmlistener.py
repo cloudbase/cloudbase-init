@@ -245,8 +245,9 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
                 "certificate_thumbprint": certificate_thumbprint
             }
             mock_get_winrm_listeners.return_value = [listener_config]
+        winrm_enable_basic_auth = mock.Mock(spec=bool)
         with testutils.ConfPatcher('winrm_enable_basic_auth',
-                                   str(mock.sentinel.winrm_enable_basic_auth)):
+                                   winrm_enable_basic_auth):
             result = self._winrmlistener.execute(
                 mock.sentinel.service, mock.sentinel.shared_data)
 
@@ -260,7 +261,7 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
                 mock_check_restrictions.assert_called_once_with(mock_osutils)
                 mock_WinRMConfig.assert_called_once_with()
                 mock_winrm_config.set_auth_config.assert_called_once_with(
-                    basic=str(mock.sentinel.winrm_enable_basic_auth))
+                    basic=winrm_enable_basic_auth)
                 winrmconfig = importlib.import_module('cloudbaseinit.utils.'
                                                       'windows.winrmconfig')
                 if (protocol == winrmconfig.LISTENER_PROTOCOL_HTTPS and

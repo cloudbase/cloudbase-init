@@ -46,7 +46,7 @@ class LocalScriptsPluginTests(unittest.TestCase):
     @mock.patch('cloudbaseinit.plugins.common.execcmd'
                 '.get_plugin_return_value')
     @testutils.ConfPatcher('local_scripts_path',
-                           mock.sentinel.mock_local_scripts_path)
+                           'fake_local_scripts_path')
     @mock.patch('cloudbaseinit.plugins.common.localscripts'
                 '.LocalScriptsPlugin._get_files_in_dir')
     @mock.patch('cloudbaseinit.plugins.common.fileexecutils.exec_file')
@@ -65,7 +65,7 @@ class LocalScriptsPluginTests(unittest.TestCase):
         response = self._localscripts.execute(mock_service, shared_data=None)
 
         mock_get_files_in_dir.assert_called_once_with(
-            mock.sentinel.mock_local_scripts_path)
+            'fake_local_scripts_path')
         mock_exec_file.assert_called_with(fake_path)
         mock_get_plugin_return_value.assert_any_call(1001)
         mock_get_plugin_return_value.assert_any_call(1002)

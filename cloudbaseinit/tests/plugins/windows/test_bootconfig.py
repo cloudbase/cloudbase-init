@@ -21,6 +21,7 @@ except ImportError:
     import mock
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import constant
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.tests import testutils
 
@@ -51,7 +52,8 @@ class BootConfigPluginTest(unittest.TestCase):
         self.bcd_config = bootconfig.BCDConfigPlugin()
         self.snatcher = testutils.LogSnatcher(MODPATH)
 
-    @testutils.ConfPatcher("bcd_boot_status_policy", True)
+    @testutils.ConfPatcher("bcd_boot_status_policy",
+                           constant.POLICY_IGNORE_ALL_FAILURES)
     @mock.patch("cloudbaseinit.utils.windows.bootconfig."
                 "set_boot_status_policy")
     def _test_execute_policy_plugin(self, mock_set_boot_status_policy,

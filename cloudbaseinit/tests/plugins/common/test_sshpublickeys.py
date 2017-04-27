@@ -34,7 +34,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
-    @testutils.ConfPatcher('username', mock.sentinel.username)
+    @testutils.ConfPatcher('username', 'fake_username')
     @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
     @mock.patch('os.path')
     @mock.patch('os.makedirs')
@@ -60,7 +60,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
                                                              fake_shared_data)
                 mock_service.get_public_keys.assert_called_with()
                 mock_osutils.get_user_home.assert_called_with(
-                    mock.sentinel.username)
+                    'fake_username')
                 self.assertEqual(2, mock_os_path.join.call_count)
                 mock_os_makedirs.assert_called_once_with(mock_os_path.join())
 
