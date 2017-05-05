@@ -215,6 +215,9 @@ class BaseMetadataService(object):
         """Check if the metadata provider enforces automatic updates."""
         pass
 
+    def get_ephemeral_disk_data_loss_warning(self):
+        raise NotExistingMetadataException()
+
 
 class BaseHTTPMetadataService(BaseMetadataService):
 
