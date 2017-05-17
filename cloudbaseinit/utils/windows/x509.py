@@ -236,7 +236,8 @@ class CryptoAPICertManager(object):
                     cryptoapi.CERT_STORE_ADD_REPLACE_EXISTING, None):
                 raise cryptoapi.CryptoAPIException()
 
-            return self._get_cert_thumprint(cert_context_p)
+            return (self._get_cert_thumprint(cert_context_p),
+                    self._get_cert_str(cert_context_p))
 
         finally:
             if store_handle:
@@ -245,6 +246,26 @@ class CryptoAPICertManager(object):
                 cryptoapi.CertFreeCertificateContext(cert_context_p)
             if subject_encoded:
                 free(subject_encoded)
+
+    def _get_cert_str(self, cert_context_p):
+        ch_cer_str = wintypes.DWORD(0)
+        if not cryptoapi.CryptBinaryToString(
+                cert_context_p.contents.pbCertEncoded,
+                cert_context_p.contents.cbCertEncoded,
+                cryptoapi.CRYPT_STRING_BASE64,
+                None, ctypes.byref(ch_cer_str)):
+            raise cryptoapi.CryptoAPIException()
+
+        cer_str = ctypes.create_unicode_buffer(ch_cer_str.value)
+        if not cryptoapi.CryptBinaryToString(
+                cert_context_p.contents.pbCertEncoded,
+                cert_context_p.contents.cbCertEncoded,
+                cryptoapi.CRYPT_STRING_BASE64,
+                cer_str,
+                ctypes.byref(ch_cer_str)):
+            raise cryptoapi.CryptoAPIException()
+
+        return cer_str.value
 
     def _get_cert_base64(self, cert_data):
         """Remove certificate header and footer and also new lines."""

@@ -200,7 +200,7 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
         mock_cert_mgr = mock.MagicMock()
         mock_CryptoAPICertManager.return_value = mock_cert_mgr
         mock_cert_mgr.create_self_signed_cert.return_value = \
-            mock.sentinel.cert_thumbprint
+            mock.sentinel.cert_thumbprint, mock.sentinel.cert_str
         result = self._winrmlistener._create_self_signed_certificate()
         self.assertEqual(result, mock.sentinel.cert_thumbprint)
         mock_CryptoAPICertManager.assert_called_once_with()

@@ -145,6 +145,8 @@ class CryptoAPICertManagerTests(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.windows.x509.free')
     @mock.patch('cloudbaseinit.utils.windows.x509.malloc')
+    @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager.'
+                '_get_cert_str')
     @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
                 '._add_system_time_interval')
     @mock.patch('cloudbaseinit.utils.windows.x509.CryptoAPICertManager'
@@ -190,6 +192,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                                       mock_uuid4, mock_get_cert_thumprint,
                                       mock_generate_key,
                                       mock_add_system_time_interval,
+                                      mock_get_cert_str,
                                       mock_malloc, mock_free,
                                       certstr, certificate, enhanced_key,
                                       store_handle, context_to_store):
@@ -241,8 +244,8 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                 mock_CertCreateSelfSignCertificate())
             mock_free.assert_called_once_with(mock_cast())
 
-            self.assertEqual(response,
-                             mock_get_cert_thumprint.return_value)
+            self.assertEqual((mock_get_cert_thumprint.return_value,
+                              mock_get_cert_str.return_value), response)
 
         mock_generate_key.assert_called_once_with('fake_name', True)
 
@@ -700,3 +703,41 @@ class CryptoAPICertManagerTests(unittest.TestCase):
 
     def test_decode_pkcs7_base64_blob_decrypt_by_pointer_fails(self):
         self._test_decode_pkcs7_base64_blob(decrypt_by_pointer=False)
+
+    @mock.patch('cloudbaseinit.utils.windows.cryptoapi.'
+                'CryptBinaryToString')
+    def _test_get_cert_str(self, mock_CryptBinaryToString, works):
+        mock_DWORD = self._ctypes.wintypes.DWORD
+        mock_DWORD.return_value = mock.Mock()
+        mock_cert_context_p = mock.Mock()
+        if not all(works):
+            mock_CryptBinaryToString.side_effect = works
+            with self.assertRaises(self.x509.cryptoapi.CryptoAPIException):
+                self._x509_manager._get_cert_str(mock_cert_context_p)
+        else:
+            mock_create_unicode_buffer = self._ctypes.create_unicode_buffer
+            mock_cer_str = mock.Mock()
+            mock_create_unicode_buffer.return_value = mock_cer_str
+            result = self._x509_manager._get_cert_str(mock_cert_context_p)
+            self.assertEqual(result, mock_cer_str.value)
+        mock_DWORD.assert_called_once_with(0)
+        calls = [mock.call(mock_cert_context_p.contents.pbCertEncoded,
+                           mock_cert_context_p.contents.cbCertEncoded,
+                           self.x509.cryptoapi.CRYPT_STRING_BASE64,
+                           None, self._ctypes.byref.return_value)]
+        if all(works):
+            calls += [mock.call(mock_cert_context_p.contents.pbCertEncoded,
+                                mock_cert_context_p.contents.cbCertEncoded,
+                                self.x509.cryptoapi.CRYPT_STRING_BASE64,
+                                mock_create_unicode_buffer.return_value,
+                                self._ctypes.byref.return_value)]
+        self.assertTrue(calls, mock_CryptBinaryToString.calls)
+
+    def test_get_cert_str_fails(self):
+        self._test_get_cert_str(works=[False, False])
+
+    def test_get_cert_str_fails_2(self):
+        self._test_get_cert_str(works=[False, True])
+
+    def test_get_cert_str(self):
+        self._test_get_cert_str(works=[True, True])

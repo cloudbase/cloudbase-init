@@ -105,7 +105,7 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
     def _create_self_signed_certificate(self):
         LOG.info("Generating self signed certificate for WinRM HTTPS listener")
         cert_manager = x509.CryptoAPICertManager()
-        cert_thumbprint = cert_manager.create_self_signed_cert(
+        cert_thumbprint, _ = cert_manager.create_self_signed_cert(
             self._cert_subject)
         return cert_thumbprint
 
