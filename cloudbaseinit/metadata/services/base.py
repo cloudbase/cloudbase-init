@@ -160,6 +160,9 @@ class BaseMetadataService(object):
     def get_server_certs(self):
         pass
 
+    def get_vm_agent_package_provisioning_data(self):
+        pass
+
     def get_client_auth_certs(self):
         pass
 

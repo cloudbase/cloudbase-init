@@ -52,6 +52,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._pywintypes_mock = mock.MagicMock()
         self._pywintypes_mock.error = fake.FakeError
         self._pywintypes_mock.com_error = fake.FakeComError
+        self._win32api_mock = mock.MagicMock()
         self._win32com_mock = mock.MagicMock()
         self._win32process_mock = mock.MagicMock()
         self._win32security_mock = mock.MagicMock()
@@ -72,7 +73,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
         _module_patcher = mock.patch.dict(
             'sys.modules',
-            {'win32com': self._win32com_mock,
+            {'win32api': self._win32api_mock,
+             'win32com': self._win32com_mock,
              'win32process': self._win32process_mock,
              'win32security': self._win32security_mock,
              'win32net': self._win32net_mock,
@@ -2552,3 +2554,36 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_take_path_ownership(self):
         self._test_take_path_ownership()
+
+    def _test_check_dotnet_is_installed(self, version):
+        if str(version) != "4":
+            self.assertRaises(exception.CloudbaseInitException,
+                              self._winutils.check_dotnet_is_installed,
+                              version)
+            return
+        res = self._winutils.check_dotnet_is_installed(version)
+        key = self._winreg_mock.OpenKey.return_value.__enter__.return_value
+        self._winreg_mock.OpenKey.assert_called_with(
+            self._winreg_mock.HKEY_LOCAL_MACHINE,
+            'SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\'
+            'v%s\\Full' % version)
+        self._winreg_mock.QueryValueEx.assert_called_with(
+            key, 'Install')
+        self.assertTrue(res)
+
+    def test_check_dotnet_is_installed_not_v4(self):
+        fake_version = 1
+        self._test_check_dotnet_is_installed(fake_version)
+
+    def test_check_dotnet_is_installed_v4(self):
+        fake_version = 4
+        self._test_check_dotnet_is_installed(fake_version)
+
+    def test_get_file_version(self):
+        mock_path = mock.sentinel.fake_path
+        mock_info = mock.MagicMock()
+        self._win32api_mock.GetFileVersionInfo.return_value = mock_info
+        res = self._winutils.get_file_version(mock_path)
+        self._win32api_mock.GetFileVersionInfo.assert_called_once_with(
+            mock_path, '\\')
+        self.assertIsNotNone(res)

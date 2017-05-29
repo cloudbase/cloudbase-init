@@ -26,6 +26,7 @@ import pywintypes
 import six
 from six.moves import winreg
 from tzlocal import windows_tz
+import win32api
 from win32com import client
 import win32net
 import win32netcon
@@ -1576,3 +1577,26 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 'Failed to take path ownership.\nOutput: %(out)s\nError:'
                 ' %(err)s' % {'out': out, 'err': err})
+
+    def check_dotnet_is_installed(self, version):
+        # See: https://msdn.microsoft.com/en-us/library/hh925568(v=vs.110).aspx
+        if str(version) != "4":
+            raise exception.CloudbaseInitException(
+                "Only checking for version 4 is supported at the moment")
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'SOFTWARE\\'
+                                'Microsoft\\NET Framework Setup\\NDP\\'
+                                'v%s\\Full' % version) as key:
+                return winreg.QueryValueEx(key, 'Install')[0] != 0
+        except WindowsError as ex:
+            if ex.winerror == 2:
+                return False
+            else:
+                raise
+
+    def get_file_version(self, path):
+        info = win32api.GetFileVersionInfo(path, '\\')
+        ms = info['FileVersionMS']
+        ls = info['FileVersionLS']
+        return (win32api.HIWORD(ms), win32api.LOWORD(ms),
+                win32api.HIWORD(ls), win32api.LOWORD(ls))
