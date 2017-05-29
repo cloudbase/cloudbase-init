@@ -52,23 +52,20 @@ class SerialPortHandler(logging.StreamHandler):
 
     def __init__(self):
         super(SerialPortHandler, self).__init__(None)
-        self.stream = None
+        self.stream = self._open()
 
     @staticmethod
     def _open():
         serial_port = None
         if CONF.logging_serial_port_settings:
             settings = CONF.logging_serial_port_settings.split(',')
-            try:
-                serial_port = serial.Serial(port=settings[0],
-                                            baudrate=int(settings[1]),
-                                            parity=settings[2],
-                                            bytesize=int(settings[3]))
-                if not serial_port.isOpen():
-                    serial_port.open()
-                serial_port.write = _safe_write(serial_port.write)
-            except serial.SerialException as exc:
-                LOG.debug(exc)
+            serial_port = serial.Serial(port=settings[0],
+                                        baudrate=int(settings[1]),
+                                        parity=settings[2],
+                                        bytesize=int(settings[3]))
+            if not serial_port.isOpen():
+                serial_port.open()
+            serial_port.write = _safe_write(serial_port.write)
         return serial_port
 
     def emit(self, record):
@@ -95,12 +92,15 @@ def setup(product_name):
     log.setup(CONF, product_name)
 
     if CONF.logging_serial_port_settings:
-        log_root = log.getLogger(product_name).logger
+        try:
+            serialportlog = SerialPortHandler()
+            log_root = log.getLogger(product_name).logger
+            log_root.addHandler(serialportlog)
 
-        serialportlog = SerialPortHandler()
-        log_root.addHandler(serialportlog)
-
-        datefmt = CONF.log_date_format
-        serialportlog.setFormatter(
-            formatters.ContextFormatter(project=product_name,
-                                        datefmt=datefmt))
+            datefmt = CONF.log_date_format
+            serialportlog.setFormatter(
+                formatters.ContextFormatter(project=product_name,
+                                            datefmt=datefmt))
+        except serial.SerialException:
+            LOG.warn("Serial port: {0} could not be opened".format(
+                     CONF.logging_serial_port_settings))
