@@ -60,7 +60,8 @@ IFACE_TEMPLATE = dict.fromkeys(FIELDS.keys())
 V6_PROXY = {
     ADDRESS: ADDRESS6,
     NETMASK: NETMASK6,
-    GATEWAY: GATEWAY6
+    GATEWAY: GATEWAY6,
+    MAC:     MAC
 }
 DETAIL_PREPROCESS = {
     MAC: lambda value: value.upper(),
