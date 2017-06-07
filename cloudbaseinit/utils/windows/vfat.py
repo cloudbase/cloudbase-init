@@ -22,7 +22,7 @@ from cloudbaseinit import exception
 
 
 CONF = cloudbaseinit_conf.CONF
-CONFIG_DRIVE_LABEL = 'config-2'
+CONFIG_DRIVE_LABEL = 'cidata'
 LOG = oslo_logging.getLogger(__name__)
 VOLUME_LABEL_REGEX = re.compile("Volume label is (.*?)$")
 
