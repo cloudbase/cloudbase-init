@@ -134,7 +134,7 @@ class UserDataPlugin(base.BasePlugin):
                 LOG.debug("Calling user part handler for content type: %s" %
                           content_type)
                 handler_func(None, content_type, part.get_filename(),
-                             part.get_payload())
+                             part.get_payload(decode=True))
             else:
                 user_data_plugin = user_data_plugins.get(content_type)
                 if not user_data_plugin:

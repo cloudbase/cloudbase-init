@@ -40,10 +40,10 @@ class HeatPlugin(base.BaseUserDataPlugin):
         file_name = os.path.join(CONF.heat_config_dir, part.get_filename())
         self._check_dir(file_name)
 
-        encoding.write_file(file_name, part.get_payload())
+        payload = part.get_payload(decode=True)
+        encoding.write_file(file_name, payload)
 
         if part.get_filename() == self._heat_user_data_filename:
-            payload = part.get_payload()
             # Normalize the payload to bytes, since `execute_user_data_script`
             # operates on bytes and `get_payload` returns a string on
             # Python 3.

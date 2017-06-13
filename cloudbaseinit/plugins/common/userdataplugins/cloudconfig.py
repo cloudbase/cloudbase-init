@@ -105,5 +105,5 @@ class CloudConfigPlugin(base.BaseUserDataPlugin):
             return executor.execute()
 
     def process(self, part):
-        payload = part.get_payload()
+        payload = part.get_payload(decode=True)
         return self.process_non_multipart(payload)

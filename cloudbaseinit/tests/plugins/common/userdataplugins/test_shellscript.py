@@ -63,7 +63,7 @@ class ShellScriptPluginTests(unittest.TestCase):
         mock_write_file.assert_called_once_with(
             fake_target, mock_part.get_payload.return_value)
         mock_exec_file.assert_called_once_with(fake_target)
-        mock_part.get_payload.assert_called_once_with()
+        mock_part.get_payload.assert_called_once_with(decode=True)
         mock_gettempdir.assert_called_once_with()
         if not exception:
             self.assertEqual('fake response', response)
