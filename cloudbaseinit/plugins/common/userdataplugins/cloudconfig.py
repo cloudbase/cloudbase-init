@@ -61,10 +61,9 @@ class CloudConfigPluginExecutor(object):
         try:
             content = yaml.load(stream, Loader=loader)
         except (TypeError, ValueError, AttributeError):
-            msg = "Invalid yaml stream provided."
-            LOG.error(msg)
-            raise CloudConfigError(msg)
-
+            raise CloudConfigError("Invalid yaml stream provided.")
+        if not content:
+            raise CloudConfigError("Empty yaml stream provided.")
         return cls(**content)
 
     def execute(self):
@@ -99,8 +98,9 @@ class CloudConfigPlugin(base.BaseUserDataPlugin):
         """
         try:
             executor = CloudConfigPluginExecutor.from_yaml(part)
-        except CloudConfigError:
-            LOG.error("Could not process the type %r", type(part))
+        except CloudConfigError as ex:
+            LOG.error('Could not process part type %(type)r: %(err)r',
+                      {'type': type(part), 'err': str(ex)})
         else:
             return executor.execute()
 

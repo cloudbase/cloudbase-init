@@ -52,25 +52,26 @@ class CloudConfigPluginTests(unittest.TestCase):
             CONF.cloud_config_plugins = orig
 
     def test_executor_from_yaml(self):
-        expected_logging = ["Invalid yaml stream provided."]
-        for invalid in (mock.sentinel.yaml, None, 1, int):
-            with testutils.LogSnatcher('cloudbaseinit.plugins.'
-                                       'common.userdataplugins.'
-                                       'cloudconfig') as snatcher:
-                with self.assertRaises(cloudconfig.CloudConfigError) as cm:
-                    cloudconfig.CloudConfigPluginExecutor.from_yaml(invalid)
-                self.assertEqual(expected_logging, snatcher.output)
-                self.assertEqual("Invalid yaml stream provided.",
-                                 str(cm.exception))
+        for invalid in (mock.sentinel.yaml, None, 1, int, '{}'):
+            with self.assertRaises(cloudconfig.CloudConfigError):
+                cloudconfig.CloudConfigPluginExecutor.from_yaml(invalid)
 
-        executor = cloudconfig.CloudConfigPluginExecutor.from_yaml('{}')
+        executor = cloudconfig.CloudConfigPluginExecutor.from_yaml('{f: 1}')
         self.assertIsInstance(executor, cloudconfig.CloudConfigPluginExecutor)
 
-    def test_invalid_type(self):
+    def _test_invalid_type(self, part, err_msg):
         with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'userdataplugins.cloudconfig') as snatcher:
-            self.plugin.process_non_multipart({'unsupported'})
+            self.plugin.process_non_multipart(part)
 
-        expected = ["Invalid yaml stream provided.",
-                    "Could not process the type %r" % set]
-        self.assertEqual(expected, snatcher.output)
+        expected = ("Could not process part type %(type)r: %(err)r"
+                    % {'type': type(part), 'err': err_msg})
+        self.assertEqual([expected], snatcher.output)
+
+    def test_invalid_type(self):
+        self._test_invalid_type({'unsupported'},
+                                "Invalid yaml stream provided.")
+
+    def test_invalid_type_empty(self):
+        self._test_invalid_type('#comment',
+                                'Empty yaml stream provided.')
