@@ -97,14 +97,15 @@ class MaaSHttpService(base.BaseHTTPMetadataService):
         headers = client.sign(url, realm=realm)[1]
         return headers
 
-    def _http_request(self, url, data=None, headers=None):
+    def _http_request(self, url, data=None, headers=None, method=None):
         """Get content for received url."""
         if not url.startswith("http"):
             url = requests.compat.urljoin(self._base_url, url)
         headers = {} if headers is None else headers
         headers.update(self._get_oauth_headers(url))
 
-        return super(MaaSHttpService, self)._http_request(url, data, headers)
+        return super(MaaSHttpService, self)._http_request(url, data, headers,
+                                                          method)
 
     def get_host_name(self):
         return self._get_cache_data('%s/meta-data/local-hostname' %

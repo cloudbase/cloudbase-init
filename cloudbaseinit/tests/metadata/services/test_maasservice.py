@@ -100,7 +100,7 @@ class MaaSHttpServiceTest(unittest.TestCase):
     def test_http_request(self, mock_ouath_headers, mock_http_request):
         mock_url = "fake.url"
         self._maasservice._http_request(mock_url)
-        mock_http_request.assert_called_once_with(mock_url, None, {})
+        mock_http_request.assert_called_once_with(mock_url, None, {}, None)
 
     @mock.patch("cloudbaseinit.metadata.services.maasservice.MaaSHttpService"
                 "._get_cache_data")

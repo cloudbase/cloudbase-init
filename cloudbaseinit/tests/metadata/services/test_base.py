@@ -80,12 +80,12 @@ class TestBaseHTTPMetadataService(unittest.TestCase):
     def test_verify_https_request_with_ca_bundle(self):
         self._test_verify_https_request(https_ca_bundle="/path/to/resource")
 
-    @mock.patch('requests.post')
-    @mock.patch('requests.get')
+    @mock.patch('requests.request')
     @mock.patch("cloudbaseinit.metadata.services.base.BaseHTTPMetadataService."
                 "_verify_https_request")
-    def _test_http_request(self, mock_verify, mock_get, mock_post,
-                           mock_url, mock_data=None, mock_headers=None):
+    def _test_http_request(self, mock_verify, mock_request, mock_url,
+                           mock_data=None, mock_headers=None, mock_method=None,
+                           expected_method='GET'):
         if not mock_url.startswith('http'):
             mock_url = requests.compat.urljoin(self._mock_base_url, mock_url)
 
@@ -93,24 +93,17 @@ class TestBaseHTTPMetadataService(unittest.TestCase):
         mock_response_status = mock.Mock()
         mock_response.raise_for_status = mock_response_status
         mock_response.content = mock.sentinel.content
+        mock_request.return_value = mock_response
 
-        mock_get.return_value = mock_response
-        mock_post.return_value = mock_response
         mock_verify.return_value = mock.sentinel.verify
 
         response = self._service._http_request(url=mock_url, data=mock_data,
-                                               headers=mock_headers)
+                                               headers=mock_headers,
+                                               method=mock_method)
 
-        if mock_data:
-            mock_post.assert_called_once_with(
-                url=mock_url, data=mock_data, headers=mock_headers,
-                verify=mock.sentinel.verify
-            )
-        else:
-            mock_get.assert_called_once_with(
-                url=mock_url, data=mock_data, headers=mock_headers,
-                verify=mock.sentinel.verify
-            )
+        mock_request.assert_called_once_with(
+            method=expected_method, url=mock_url, data=mock_data,
+            headers=mock_headers, verify=mock.sentinel.verify)
 
         mock_response_status.assert_called_once_with()
         self.assertEqual(response, mock.sentinel.content)
@@ -118,12 +111,28 @@ class TestBaseHTTPMetadataService(unittest.TestCase):
     def test_http_get_request(self):
         self._test_http_request(mock_url="/path/to/resource",
                                 mock_data=None,
-                                mock_headers={})
+                                mock_headers={}, expected_method="GET")
 
     def test_http_post_request(self):
         self._test_http_request(mock_url="/path/to/resource",
                                 mock_data={"X-Cloudbase-Init", True},
-                                mock_headers={})
+                                mock_headers={}, expected_method="POST")
+
+    def test_http_force_post_request(self):
+        self._test_http_request(mock_url="/path/to/resource",
+                                mock_data=None, mock_headers={},
+                                mock_method="post", expected_method="POST")
+
+    def test_http_force_get_request(self):
+        self._test_http_request(mock_url="/path/to/resource",
+                                mock_data={"X-Cloudbase-Init", True},
+                                mock_headers={}, mock_method="get",
+                                expected_method="GET")
+
+    def test_http_force_head_request(self):
+        self._test_http_request(mock_url="/path/to/resource",
+                                mock_headers={}, mock_method="head",
+                                expected_method="HEAD")
 
     @mock.patch('requests.compat.urljoin')
     @mock.patch("cloudbaseinit.metadata.services.base."
