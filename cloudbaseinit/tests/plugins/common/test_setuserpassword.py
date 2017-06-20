@@ -57,22 +57,6 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_b64encode.assert_called_with('public encrypted')
         self.assertEqual('encrypted password', response)
 
-    def _test_get_ssh_public_key(self, data_exists):
-        mock_service = mock.MagicMock()
-        public_keys = self.fake_data['public_keys']
-        mock_service.get_public_keys.return_value = public_keys.values()
-
-        response = self._setpassword_plugin._get_ssh_public_key(mock_service)
-
-        mock_service.get_public_keys.assert_called_with()
-        self.assertEqual(list(public_keys.values())[0], response)
-
-    def test_get_ssh_plublic_key(self):
-        self._test_get_ssh_public_key(data_exists=True)
-
-    def test_get_ssh_plublic_key_no_pub_keys(self):
-        self._test_get_ssh_public_key(data_exists=False)
-
     def _test_get_password(self, inject_password):
         shared_data = {}
         expected_password = 'Passw0rd'
@@ -113,17 +97,15 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self._test_get_password(inject_password=False)
 
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
-                'SetUserPasswordPlugin._get_ssh_public_key')
-    @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
                 'SetUserPasswordPlugin._encrypt_password')
     def _test_set_metadata_password(self, mock_encrypt_password,
-                                    mock_get_key, ssh_pub_key):
+                                    ssh_pub_key):
         fake_passw0rd = 'fake Passw0rd'
         mock_service = mock.MagicMock()
-        mock_get_key.return_value = ssh_pub_key
         mock_encrypt_password.return_value = 'encrypted password'
         mock_service.post_password.return_value = 'value'
         mock_service.can_post_password = True
+        mock_service.get_user_pwd_encryption_key.return_value = ssh_pub_key
         mock_service.is_password_set = False
         with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
                                    'setuserpassword') as snatcher:
@@ -137,7 +119,6 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             ]
             self.assertTrue(response)
         else:
-            mock_get_key.assert_called_once_with(mock_service)
             mock_encrypt_password.assert_called_once_with(ssh_pub_key,
                                                           fake_passw0rd)
             mock_service.post_password.assert_called_with(
