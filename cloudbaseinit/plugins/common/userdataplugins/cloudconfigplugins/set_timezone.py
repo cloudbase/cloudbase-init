@@ -31,9 +31,9 @@ class SetTimezonePlugin(base.BaseCloudConfigPlugin):
     https://technet.microsoft.com/en-us/library/cc749073%28v=ws.10%29.aspx).
 
     For instance, to change the timezone to 'America/Montevideo', use
-    this syntax::
+    this syntax:
 
-        set_timezone: America/Montevideo
+        timezone: America/Montevideo
 
     """
 
