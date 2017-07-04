@@ -27,7 +27,11 @@ LOG = oslo_logging.getLogger(__name__)
 class SetHostnamePlugin(base.BaseCloudConfigPlugin):
     """Change the hostname for the underlying platform.
 
-    If the timezone is changed a restart will be required.
+    If the hostname is changed a restart will be required.
+
+    To change the hostname to 'myhostname', use this syntax:
+
+        hostname: myhostname
 
     """
 

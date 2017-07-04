@@ -22,8 +22,12 @@ PLUGINS = {
                    'cloudconfigplugins.write_files.WriteFilesPlugin',
     'set_timezone': 'cloudbaseinit.plugins.common.userdataplugins.'
                     'cloudconfigplugins.set_timezone.SetTimezonePlugin',
+    'timezone': 'cloudbaseinit.plugins.common.userdataplugins.'
+                'cloudconfigplugins.set_timezone.SetTimezonePlugin',
     'set_hostname': 'cloudbaseinit.plugins.common.userdataplugins.'
                     'cloudconfigplugins.set_hostname.SetHostnamePlugin',
+    'hostname': 'cloudbaseinit.plugins.common.userdataplugins.'
+                'cloudconfigplugins.set_hostname.SetHostnamePlugin',
 }
 
 
