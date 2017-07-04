@@ -34,6 +34,15 @@ class TestVersion(unittest.TestCase):
         release_string = mock_version_info.return_value.release_string
         self.assertEqual(release_string.return_value, package_version)
 
+    @mock.patch('pbr.version.VersionInfo')
+    def test_get_canonical_version(self, mock_version_info):
+        package_version = self.version.get_canonical_version()
+
+        mock_version_info.assert_called_once_with('cloudbase-init')
+        canon_string = (
+            mock_version_info.return_value.canonical_version_string)
+        self.assertEqual(canon_string.return_value, package_version)
+
     @mock.patch('requests.get')
     @mock.patch('json.loads')
     def test__read_url(self, mock_loads, mock_get):
