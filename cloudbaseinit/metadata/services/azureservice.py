@@ -75,7 +75,7 @@ class AzureService(base.BaseHTTPMetadataService):
                 options = dhcp.get_dhcp_options()
                 endpoint = (options or {}).get(WIRESERVER_DHCP_OPTION)
                 if not endpoint:
-                    raise exception.MetadaNotFoundException(
+                    raise exception.MetadataNotFoundException(
                         "Cannot find Azure WireServer endpoint address")
                 return socket.inet_ntoa(endpoint)
             except Exception:
@@ -88,7 +88,7 @@ class AzureService(base.BaseHTTPMetadataService):
         if "x-ms-version" not in self._headers:
             versions = self._get_versions()
             if WIRE_SERVER_VERSION not in versions.Versions.Supported.Version:
-                raise exception.MetadaNotFoundException(
+                raise exception.MetadataNotFoundException(
                     "Unsupported Azure WireServer version: %s" %
                     WIRE_SERVER_VERSION)
             self._headers["x-ms-version"] = WIRE_SERVER_VERSION

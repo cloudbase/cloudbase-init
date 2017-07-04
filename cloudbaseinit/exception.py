@@ -34,7 +34,7 @@ class ServiceException(Exception):
     pass
 
 
-class MetadaNotFoundException(CloudbaseInitException):
+class MetadataNotFoundException(CloudbaseInitException):
 
     """Exception thrown in case no metadata service is found."""
 

@@ -188,7 +188,7 @@ class InitManager(object):
         if not (reboot_required and CONF.allow_reboot):
             try:
                 service = metadata_factory.get_metadata_service()
-            except exception.MetadaNotFoundException:
+            except exception.MetadataNotFoundException:
                 LOG.error("No metadata service found")
         if service:
             LOG.info('Metadata service loaded: \'%s\'' %

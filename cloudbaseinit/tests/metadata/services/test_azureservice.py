@@ -66,7 +66,7 @@ class AzureServiceTest(unittest.TestCase):
                                                dhcp_option=None):
         mock_dhcp.return_value = dhcp_option
         if not dhcp_option:
-            self.assertRaises(exception.MetadaNotFoundException,
+            self.assertRaises(exception.MetadataNotFoundException,
                               (self._azureservice.
                                _get_wire_server_endpoint_address))
         else:
@@ -409,7 +409,7 @@ class AzureServiceTest(unittest.TestCase):
         mock_get_versions.return_value = mock_version
         mock_version.Versions.Supported.Version = [version]
         if self._azureservice_module.WIRE_SERVER_VERSION is not version:
-            self.assertRaises(exception.MetadaNotFoundException,
+            self.assertRaises(exception.MetadataNotFoundException,
                               self._azureservice._check_version_header)
         else:
             self._azureservice._check_version_header()
