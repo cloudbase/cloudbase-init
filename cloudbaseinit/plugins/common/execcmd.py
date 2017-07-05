@@ -133,7 +133,7 @@ class BaseCommand(object):
         The parameter *target_path* represents the file which will be
         executed. The optional parameter *cleanup* can be a callable,
         which will be called after executing a command, no matter if the
-        execution was succesful or not.
+        execution was successful or not.
         """
 
         self._target_path = target_path

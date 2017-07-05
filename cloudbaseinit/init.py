@@ -145,7 +145,7 @@ class InitManager(object):
         # handlers being shared between the current process and the new one,
         # any logging handlers for the current logger object will be closed.
         # By doing so, the next time the logger is called, it will be created
-        # under the newly updated proccess, thus avoiding any issues or
+        # under the newly updated process, thus avoiding any issues or
         # conflicts where the logging can't be done.
         logging.release_logging_handlers("cloudbaseinit")
 

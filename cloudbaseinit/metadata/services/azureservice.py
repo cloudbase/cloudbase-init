@@ -435,7 +435,7 @@ class AzureService(base.BaseHTTPMetadataService):
             raise
 
     def get_decoded_user_data(self):
-        # Don't decode to retain compability
+        # Don't decode to retain compatibility
         return self.get_user_data()
 
     def get_content(self, name):

@@ -45,7 +45,7 @@ class CertificateVerifyFailed(ServiceException):
 
     """The received certificate is not valid.
 
-    In order to avoid the current exception the validation of the SSL
+    In order to avoid the current exception, the validation of the SSL
     certificate should be disabled for the metadata provider. In order
     to do that the `https_allow_insecure` config option should be set.
     """

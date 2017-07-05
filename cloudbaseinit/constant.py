@@ -18,8 +18,8 @@ CD_TYPES = {
     "iso",     # "Raw" format containing ISO bytes.
 }
 CD_LOCATIONS = {
-    # Look into optical units devices. Only an ISO format could
-    # be used here (vfat ignored).
+    # Look into optical devices. Only an ISO format could be
+    # used here (vfat ignored).
     "cdrom",
     # Search through physical disks for raw ISO content or vfat filesystems
     # containing configuration drive's content.
