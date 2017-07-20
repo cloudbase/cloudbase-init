@@ -90,9 +90,8 @@ class SetUserPasswordPlugin(base.BasePlugin):
         password, injected = self._get_password(service, shared_data)
         if not password:
             LOG.debug('Generating a random user password')
-            maximum_length = osutils.get_maximum_password_length()
             password = osutils.generate_random_password(
-                maximum_length)
+                CONF.user_password_length)
 
         osutils.set_user_password(user_name, password)
         self._change_logon_behaviour(user_name, password_injected=injected)

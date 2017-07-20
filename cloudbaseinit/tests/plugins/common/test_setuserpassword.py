@@ -173,7 +173,8 @@ class SetUserPasswordPluginTests(unittest.TestCase):
     def _test_set_password(self, mock_get_password,
                            mock_change_logon_behaviour,
                            password, can_update_password,
-                           is_password_changed, injected=False):
+                           is_password_changed, max_password_length=20,
+                           injected=False):
         expected_password = password
         expected_logging = []
         user = 'fake_user'
@@ -182,16 +183,20 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
-        mock_osutils.get_maximum_password_length.return_value = None
+        if not password:
+            expected_password = "*" * CONF.user_password_length
+
         mock_osutils.generate_random_password.return_value = expected_password
         mock_service.can_update_password = can_update_password
         mock_service.is_password_changed.return_value = is_password_changed
 
-        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
-                                   'setuserpassword') as snatcher:
-            response = self._setpassword_plugin._set_password(
-                mock_service, mock_osutils, user,
-                mock.sentinel.shared_data)
+        with testutils.ConfPatcher('user_password_length',
+                                   max_password_length):
+            with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                       'setuserpassword') as snatcher:
+                response = self._setpassword_plugin._set_password(
+                    mock_service, mock_osutils, user,
+                    mock.sentinel.shared_data)
 
         if can_update_password and not is_password_changed:
             expected_logging.append('Updating password is not required.')
@@ -199,7 +204,6 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         if not password:
             expected_logging.append('Generating a random user password')
-            expected_password = password
 
         if not can_update_password or is_password_changed:
             mock_get_password.assert_called_once_with(
@@ -217,7 +221,12 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                                 is_password_changed=False)
         self._test_set_password(password=None,
                                 can_update_password=False,
-                                is_password_changed=False)
+                                is_password_changed=False,
+                                max_password_length=25)
+        self._test_set_password(password=None,
+                                can_update_password=False,
+                                is_password_changed=False,
+                                max_password_length=10)
         self._test_set_password(password='Password',
                                 can_update_password=True,
                                 is_password_changed=True)
