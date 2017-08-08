@@ -62,6 +62,12 @@ def check_latest_version(done_callback):
 
 
 def get_version():
-    """Obtain the project version."""
+    """Obtain the full project version, including alpha / beta / rc tags"""
     version = pbr.version.VersionInfo('cloudbase-init')
     return version.release_string()
+
+
+def get_canonical_version():
+    """Obtain the short, released project version."""
+    version = pbr.version.VersionInfo('cloudbase-init')
+    return version.canonical_version_string()

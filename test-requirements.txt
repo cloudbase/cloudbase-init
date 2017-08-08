@@ -6,3 +6,6 @@ sphinx
 oslosphinx
 testtools>=0.9.32
 testrepository>=0.0.18
+openstackdocstheme>=1.11.0  # Apache-2.0
+# releasenotes
+reno>=1.8.0 # Apache-2.0
