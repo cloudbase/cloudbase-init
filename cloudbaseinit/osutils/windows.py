@@ -609,7 +609,7 @@ class WindowsUtils(base.BaseOSUtils):
 
         :param token: Represents the user logon session token, resulted from
                       running the 'create_user_logon_session' method.
-        :param args: The arguments with which the process will be runned with.
+        :param args: The arguments with which the process will be run with.
         :param wait: Specifies if it's needed to wait for the process
                      handler to finish up running all the operations
                      on the process object.

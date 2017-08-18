@@ -26,7 +26,7 @@ class CreateUserPlugin(createuser.BaseCreateUserPlugin):
     def _create_user_logon(user_name, password, osutils):
         try:
             # Create a user profile in order for other plugins
-            # to access the user home, etc
+            # to access the user home, etc.
             token = osutils.create_user_logon_session(user_name,
                                                       password,
                                                       True)

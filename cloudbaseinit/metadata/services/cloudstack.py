@@ -81,7 +81,7 @@ class CloudStack(base.BaseHTTPMetadataService):
         return True
 
     def load(self):
-        """Obtain all the required informations."""
+        """Obtain all the required information."""
         super(CloudStack, self).load()
         if self._test_api(CONF.cloudstack.metadata_base_url):
             return True
@@ -219,7 +219,7 @@ class CloudStack(base.BaseHTTPMetadataService):
                         "Password Server.")
 
     def get_admin_password(self):
-        """Get the admin pasword from the Password Server.
+        """Get the admin password from the Password Server.
 
         .. note:
             The password is deleted from the Password Server after the first

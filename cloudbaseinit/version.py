@@ -28,7 +28,7 @@ LOG = oslo_logging.getLogger(__name__)
 
 def _read_url(url):
     # Disable certificate verification on Python 2 as
-    # requests's CA list is incomplete. Works fine on Python3.
+    # requests' CA list is incomplete. Works fine on Python3.
     req = requests.get(url, verify=six.PY3,
                        headers={'User-Agent': _PRODUCT_NAME})
     req.raise_for_status()

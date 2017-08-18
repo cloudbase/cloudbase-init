@@ -227,7 +227,7 @@ class BaseMetadataService(object):
 
 class BaseHTTPMetadataService(BaseMetadataService):
 
-    """Contract class for metadata services that are ussing HTTP(S)."""
+    """Contract class for metadata services that are using HTTP(S)."""
 
     def __init__(self, base_url, https_allow_insecure=False,
                  https_ca_bundle=None):
@@ -280,7 +280,7 @@ class BaseHTTPMetadataService(BaseMetadataService):
         return response.content
 
     def _get_data(self, path):
-        """Getting the required information ussing metadata service."""
+        """Getting the required information using metadata service."""
         try:
             response = self._http_request(path)
         except requests.HTTPError as exc:

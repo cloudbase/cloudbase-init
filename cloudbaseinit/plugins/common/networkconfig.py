@@ -27,7 +27,7 @@ from cloudbaseinit.utils import network
 LOG = oslo_logging.getLogger(__name__)
 
 # Mandatory network details are marked with True. And
-# if the key is a tuple, then at least one field must exists.
+# if the key is a tuple, then at least one field must exist.
 NET_REQUIRE = {
     ("name", "mac"): True,
     ("address", "address6"): True,

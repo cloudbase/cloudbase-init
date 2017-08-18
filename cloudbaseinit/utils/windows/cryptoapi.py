@@ -189,7 +189,7 @@ kernel32.FileTimeToSystemTime.argtypes = [ctypes.POINTER(FILETIME),
                                           ctypes.POINTER(SYSTEMTIME)]
 FileTimeToSystemTime = kernel32.FileTimeToSystemTime
 
-# TODO(alexpilotti): this is not a CryptoAPI funtion, putting it in a separate
+# TODO(alexpilotti): this is not a CryptoAPI function, putting it in a separate
 # module would be more correct
 kernel32.GetLastError.restype = wintypes.DWORD
 kernel32.GetLastError.argtypes = []

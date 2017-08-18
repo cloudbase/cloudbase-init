@@ -93,7 +93,7 @@ def _write_file(path, content, permissions=DEFAULT_PERMISSIONS,
         path: The absolute path to the location on the filesystem where
         the file should be written.
         content: The content that should be placed in the file.
-        permissions:The octal permissions set that should be given for
+        permissions: The octal permissions set that should be given for
         this file.
         open_mode: The open mode used when opening the file.
     """
