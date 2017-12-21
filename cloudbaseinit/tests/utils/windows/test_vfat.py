@@ -92,6 +92,19 @@ class TestVfat(unittest.TestCase):
                                  expected_logging=expected_logging,
                                  expected_response=expected_response)
 
+    def test_is_vfat_drive_works_uppercase(self):
+        mock_out = b"Volume label is CONFIG-2   \r\n"
+        expected_logging = [
+            "Obtained label information for drive %r: %r"
+            % (mock.sentinel.drive, mock_out)
+        ]
+        execute_process_value = (mock_out, None, 0)
+        expected_response = True
+
+        self._test_is_vfat_drive(execute_process_value=execute_process_value,
+                                 expected_logging=expected_logging,
+                                 expected_response=expected_response)
+
     @testutils.ConfPatcher('mtools_path', 'mtools_path')
     @mock.patch('os.chdir')
     def test_copy(self, mock_os_chdir):
