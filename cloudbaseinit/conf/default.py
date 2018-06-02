@@ -192,6 +192,8 @@ class GlobalOptions(conf_base.Options):
                     '.SetUserSSHPublicKeysPlugin',
                     'cloudbaseinit.plugins.windows.extendvolumes'
                     '.ExtendVolumesPlugin',
+                    'cloudbaseinit.plugins.windows.createvolumes'
+                    '.CreateVolumesPlugin',
                     'cloudbaseinit.plugins.common.userdata.UserDataPlugin',
                     'cloudbaseinit.plugins.common.setuserpassword.'
                     'SetUserPasswordPlugin',
