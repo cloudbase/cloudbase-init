@@ -36,7 +36,7 @@ class GlobalOptions(conf_base.Options):
                 help='In case of execution as a service, specifies if the '
                      'service must be gracefully stopped before exiting'),
             cfg.BoolOpt(
-                'check_latest_version', default=True,
+                'check_latest_version', default=False,
                 help='Check if there is a newer version of cloudbase-init '
                      'available.  If this option is activated, a log '
                      'message  will be  emitted if there is a newer version '
