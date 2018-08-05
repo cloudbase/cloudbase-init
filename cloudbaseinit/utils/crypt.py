@@ -18,13 +18,17 @@ import ctypes.util
 import struct
 import sys
 
+clib_path = ctypes.util.find_library("c")
+
 if sys.platform == "win32":
     openssl_lib_path = "libeay32.dll"
+    if clib_path is None:
+        clib_path = ctypes.util.find_library("ucrtbase")
 else:
     openssl_lib_path = ctypes.util.find_library("ssl")
 
 openssl = ctypes.CDLL(openssl_lib_path)
-clib = ctypes.CDLL(ctypes.util.find_library("c"))
+clib = ctypes.CDLL(clib_path)
 
 
 class RSA(ctypes.Structure):
