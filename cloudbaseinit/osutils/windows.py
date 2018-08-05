@@ -259,6 +259,17 @@ kernel32.GetVolumePathNamesForVolumeNameW.argtypes = [wintypes.LPCWSTR,
                                                           wintypes.DWORD)]
 kernel32.GetVolumePathNamesForVolumeNameW.restype = wintypes.BOOL
 
+kernel32.FindFirstVolumeW.argtypes = [wintypes.LPWSTR, wintypes.DWORD]
+kernel32.FindFirstVolumeW.restype = wintypes.HANDLE
+
+kernel32.FindNextVolumeW.argtypes = [wintypes.HANDLE,
+                                     wintypes.LPWSTR,
+                                     wintypes.DWORD]
+kernel32.FindNextVolumeW.restype = wintypes.BOOL
+
+kernel32.FindVolumeClose.argtypes = [wintypes.HANDLE]
+kernel32.FindVolumeClose.restype = wintypes.BOOL
+
 iphlpapi.GetIpForwardTable.argtypes = [
     ctypes.POINTER(Win32_MIB_IPFORWARDTABLE),
     ctypes.POINTER(wintypes.ULONG),
@@ -1365,7 +1376,6 @@ class WindowsUtils(base.BaseOSUtils):
         if handle_volumes == self.INVALID_HANDLE_VALUE:
             raise exception.WindowsCloudbaseInitException(
                 "FindFirstVolumeW failed: %r")
-
         try:
             while True:
                 volumes.append(volume.value)
