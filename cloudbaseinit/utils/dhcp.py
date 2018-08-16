@@ -99,7 +99,7 @@ def _parse_dhcp_reply(data, id_req):
 def _get_mac_address_by_local_ip(ip_addr):
     for iface in netifaces.interfaces():
         addrs = netifaces.ifaddresses(iface)
-        for addr in addrs[netifaces.AF_INET]:
+        for addr in addrs.get(netifaces.AF_INET, []):
             if addr['addr'] == ip_addr:
                 return addrs[netifaces.AF_LINK][0]['addr']
 
