@@ -18,8 +18,9 @@ import sys
 if struct.calcsize("P") == 8 and sys.platform == 'win32':
     # This is needed by Nano Server.
     # Set COINIT_MULTITHREADED only on x64 interpreters due to issues on x86.
+    # sys.coinit_flags needs to be set before importing pythoncom
+    sys.coinit_flags = 0
     import pythoncom
-    sys.coinit_flags = pythoncom.COINIT_MULTITHREADED
     pythoncom.CoInitializeEx(pythoncom.COINIT_MULTITHREADED)
 
 from oslo_log import log as oslo_logging
