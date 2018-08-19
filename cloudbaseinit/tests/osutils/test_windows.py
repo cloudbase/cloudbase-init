@@ -61,6 +61,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._win32service_mock = mock.MagicMock()
         self._winerror_mock = mock.MagicMock()
         self._winerror_mock.ERROR_SERVICE_DOES_NOT_EXIST = 0x424
+        self._mi_mock = mock.MagicMock()
         self._wmi_mock = mock.MagicMock()
         self._wmi_mock.x_wmi = WMIError
         self._moves_mock = mock.MagicMock()
@@ -81,6 +82,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
              'win32netcon': self._win32netcon_mock,
              'win32service': self._win32service_mock,
              'winerror': self._winerror_mock,
+             'mi': self._mi_mock,
              'wmi': self._wmi_mock,
              'six.moves': self._moves_mock,
              'six.moves.xmlrpc_client': self._xmlrpc_client_mock,
@@ -1327,6 +1329,14 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_check_os_version_fail(self):
         self._test_check_os_version(ret_val=mock.Mock(), fail=True)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.get_os_version')
+    def test_is_client_os(self, mock_get_os_version):
+        mock_get_os_version.return_value = {
+            "product_type": self._winutils.VER_NT_WORKSTATION}
+
+        self.assertEqual(True, self._winutils.is_client_os())
 
     def _test_get_volume_label(self, ret_val):
         label = mock.MagicMock()
@@ -2630,3 +2640,48 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._win32api_mock.GetFileVersionInfo.assert_called_once_with(
             mock_path, '\\')
         self.assertIsNotNone(res)
+
+    @mock.patch('cloudbaseinit.utils.windows.netlbfo.NetLBFOTeamManager')
+    def test_get_network_team_manager(self, mock_netlbfo_team_manager):
+        mock_netlbfo_team_manager.is_available.return_value = True
+        self.assertEqual(
+            mock_netlbfo_team_manager.return_value,
+            self._winutils._get_network_team_manager())
+
+    @mock.patch('cloudbaseinit.utils.windows.netlbfo.NetLBFOTeamManager')
+    def test_get_network_team_manager_not_found(self,
+                                                mock_netlbfo_team_manager):
+        mock_netlbfo_team_manager.is_available.return_value = False
+        self.assertRaises(
+            exception.ItemNotFoundException,
+            self._winutils._get_network_team_manager)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                '_get_network_team_manager')
+    def test_create_network_team(self, mock_get_network_team_manager):
+        mock_team_manager = mock_get_network_team_manager.return_value
+
+        self._winutils.create_network_team(
+            mock.sentinel.team_name, mock.sentinel.mode,
+            mock.sentinel.lb_algo, mock.sentinel.members,
+            mock.sentinel.mac, mock.sentinel.primary_name,
+            mock.sentinel.vlan_id, mock.sentinel.lacp_timer)
+
+        mock_team_manager.create_team.assert_called_once_with(
+            mock.sentinel.team_name, mock.sentinel.mode,
+            mock.sentinel.lb_algo, mock.sentinel.members,
+            mock.sentinel.mac, mock.sentinel.primary_name,
+            mock.sentinel.vlan_id, mock.sentinel.lacp_timer)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils.'
+                '_get_network_team_manager')
+    def test_add_network_team_nic(self, mock_get_network_team_manager):
+        mock_team_manager = mock_get_network_team_manager.return_value
+
+        self._winutils.add_network_team_nic(
+            mock.sentinel.team_name, mock.sentinel.nic_name,
+            mock.sentinel.vlan_id)
+
+        mock_team_manager.add_team_nic.assert_called_once_with(
+            mock.sentinel.team_name, mock.sentinel.nic_name,
+            mock.sentinel.vlan_id)

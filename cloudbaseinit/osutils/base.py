@@ -88,6 +88,14 @@ class BaseOSUtils(object):
                                   broadcast, gateway, dnsnameservers):
         raise NotImplementedError()
 
+    def create_network_team(self, team_name, mode, load_balancing_algorithm,
+                            members, mac_address, primary_nic_name=None,
+                            primary_nic_vlan_id=None, lacp_timer=None):
+        raise NotImplementedError()
+
+    def add_network_team_nic(self, team_name, nic_name, vlan_id):
+        raise NotImplementedError()
+
     def set_config_value(self, name, value, section=None):
         raise NotImplementedError()
 

@@ -37,6 +37,7 @@ import winerror
 
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import base
+from cloudbaseinit.utils import classloader
 from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import network
 from cloudbaseinit.utils.windows import privilege
@@ -414,6 +415,11 @@ class WindowsUtils(base.BaseOSUtils):
     _FW_IP_PROTOCOL_UDP = 17
     _FW_SCOPE_ALL = 0
     _FW_SCOPE_LOCAL_SUBNET = 1
+
+    VER_NT_WORKSTATION = 1
+
+    def __init__(self):
+        self._network_team_manager = None
 
     def reboot(self):
         with privilege.acquire_privilege(win32security.SE_SHUTDOWN_NAME):
@@ -867,6 +873,37 @@ class WindowsUtils(base.BaseOSUtils):
         except wmi.x_wmi as exc:
             raise exception.CloudbaseInitException(exc.com_error)
 
+    def _get_network_team_manager(self):
+        if self._network_team_manager:
+            return self._network_team_manager
+
+        team_managers = [
+            "cloudbaseinit.utils.windows.netlbfo.NetLBFOTeamManager",
+        ]
+
+        cl = classloader.ClassLoader()
+        for class_name in team_managers:
+            try:
+                cls = cl.load_class(class_name)
+                if cls.is_available():
+                    self._network_team_manager = cls()
+                    return self._network_team_manager
+            except Exception as ex:
+                LOG.exception(ex)
+        raise exception.ItemNotFoundException(
+            "No network team manager available")
+
+    def create_network_team(self, team_name, mode, load_balancing_algorithm,
+                            members, mac_address, primary_nic_name=None,
+                            primary_nic_vlan_id=None, lacp_timer=None):
+        self._get_network_team_manager().create_team(
+            team_name, mode, load_balancing_algorithm, members, mac_address,
+            primary_nic_name, primary_nic_vlan_id, lacp_timer)
+
+    def add_network_team_nic(self, team_name, nic_name, vlan_id):
+        self._get_network_team_manager().add_team_nic(
+            team_name, nic_name, vlan_id)
+
     def _get_config_key_name(self, section):
         key_name = self._config_key
         if section:
@@ -1186,6 +1223,9 @@ class WindowsUtils(base.BaseOSUtils):
                 "service_pack_minor": vi.wServicePackMinor,
                 "suite_mask": vi.wSuiteMask,
                 "product_type": vi.wProductType}
+
+    def is_client_os(self):
+        return self.get_os_version()["product_type"] == self.VER_NT_WORKSTATION
 
     def check_os_version(self, major, minor, build=0):
         vi = Win32_OSVERSIONINFOEX_W()
