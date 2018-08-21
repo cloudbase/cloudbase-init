@@ -18,7 +18,7 @@ import re
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import exception
-from cloudbaseinit.metadata.services import base as service_base
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.plugins.common import base as plugin_base
 from cloudbaseinit.utils import network
@@ -64,7 +64,7 @@ def _preprocess_nics(network_details, network_adapters):
     # Check and update every NetworkDetails object.
     total = len(network_adapters)
     for nic in network_details:
-        if not isinstance(nic, service_base.NetworkDetails):
+        if not isinstance(nic, network_model.NetworkDetails):
             raise exception.CloudbaseInitException(
                 "invalid NetworkDetails object {!r}"
                 .format(type(nic))
@@ -103,7 +103,7 @@ def _preprocess_nics(network_details, network_adapters):
             idx = _name2idx(nic.name)
             if not mac and idx < total:
                 mac = network_adapters[idx][1]
-            nic = service_base.NetworkDetails(
+            nic = network_model.NetworkDetails(
                 nic.name,
                 mac,
                 address,

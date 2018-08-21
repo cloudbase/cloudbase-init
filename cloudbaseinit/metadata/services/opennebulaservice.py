@@ -24,6 +24,7 @@ from oslo_log import log as oslo_logging
 import six
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 
@@ -232,7 +233,7 @@ class OpenNebulaService(base.BaseMetadataService):
                     netmask = self._calculate_netmask(address, gateway)
                 broadcast = self._compute_broadcast(address, netmask)
                 # gather them as namedtuple objects
-                details = base.NetworkDetails(
+                details = network_model.NetworkDetails(
                     name=IF_FORMAT.format(iid=iid),
                     mac=mac,
                     address=address,

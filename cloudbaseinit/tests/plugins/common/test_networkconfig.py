@@ -22,7 +22,7 @@ except ImportError:
     import mock
 
 from cloudbaseinit import exception
-from cloudbaseinit.metadata.services import base as service_base
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.plugins.common import base as plugin_base
 from cloudbaseinit.plugins.common import networkconfig
 from cloudbaseinit.tests import testutils
@@ -163,7 +163,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         self._network_details = []
         for ind in range(self._count):
             adapter = (adapters_names[ind], macs[ind])
-            nic = service_base.NetworkDetails(
+            nic = network_model.NetworkDetails(
                 details_names[ind],
                 None if no_macs else macs[ind],
                 addresses[ind],
@@ -219,7 +219,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
 
     def test_execute_missing_all(self):
         nic = self._network_details[0]
-        nic = service_base.NetworkDetails(
+        nic = network_model.NetworkDetails(
             nic.name,
             "00" + nic.mac[2:],
             nic.address,
@@ -240,7 +240,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                                    gateway=False, fail=False):
         ind = self._count - 1
         nic = self._network_details[ind]
-        nic2 = service_base.NetworkDetails(
+        nic2 = network_model.NetworkDetails(
             None if name else nic.name,
             None if mac else nic.mac,
             None if address else nic.address,

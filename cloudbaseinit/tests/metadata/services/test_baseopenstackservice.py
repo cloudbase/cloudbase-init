@@ -25,6 +25,7 @@ except ImportError:
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.tests.metadata import fake_json_response
 from cloudbaseinit.utils import x509constants
 
@@ -217,7 +218,7 @@ class TestBaseOpenStackService(unittest.TestCase):
             self.assertIsNone(ret)
             return
         # check returned NICs details
-        nic0 = base.NetworkDetails(
+        nic0 = network_model.NetworkDetails(
             fake_json_response.NAME0,
             fake_json_response.MAC0.upper(),
             fake_json_response.ADDRESS0,
@@ -229,7 +230,7 @@ class TestBaseOpenStackService(unittest.TestCase):
             fake_json_response.GATEWAY60,
             fake_json_response.DNSNS0.split()
         )
-        nic1 = base.NetworkDetails(
+        nic1 = network_model.NetworkDetails(
             fake_json_response.NAME1,
             None,
             fake_json_response.ADDRESS1,

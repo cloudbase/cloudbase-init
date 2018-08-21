@@ -18,7 +18,7 @@ import re
 from oslo_log import log as oslo_logging
 import six
 
-from cloudbaseinit.metadata.services import base as service_base
+from cloudbaseinit.models import network as network_model
 
 
 LOG = oslo_logging.getLogger(__name__)
@@ -102,7 +102,7 @@ def _add_nic(iface, nics):
         return    # no information gathered
     LOG.debug("Found new interface: %s", iface)
     # Each missing detail is marked as None.
-    nic = service_base.NetworkDetails(**iface)
+    nic = network_model.NetworkDetails(**iface)
     nics.append(nic)
 
 

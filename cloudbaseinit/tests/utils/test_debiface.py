@@ -15,7 +15,7 @@
 
 import unittest
 
-from cloudbaseinit.metadata.services import base as service_base
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.tests.metadata import fake_json_response
 from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import debiface
@@ -39,7 +39,7 @@ class TestInterfacesParser(unittest.TestCase):
             self.assertFalse(nics)
             return
         # check what we've got
-        nic0 = service_base.NetworkDetails(
+        nic0 = network_model.NetworkDetails(
             fake_json_response.NAME0,
             fake_json_response.MAC0.upper(),
             fake_json_response.ADDRESS0,
@@ -51,7 +51,7 @@ class TestInterfacesParser(unittest.TestCase):
             fake_json_response.GATEWAY60,
             fake_json_response.DNSNS0.split()
         )
-        nic1 = service_base.NetworkDetails(
+        nic1 = network_model.NetworkDetails(
             fake_json_response.NAME1,
             None,
             fake_json_response.ADDRESS1,

@@ -14,7 +14,6 @@
 
 
 import abc
-import collections
 import gzip
 import io
 import time
@@ -29,24 +28,6 @@ from cloudbaseinit.utils import encoding
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
-
-# Both the custom service(s) and the networking plugin
-# should know about the entries of these kind of objects.
-NetworkDetails = collections.namedtuple(
-    "NetworkDetails",
-    [
-        "name",
-        "mac",
-        "address",
-        "address6",
-        "netmask",
-        "netmask6",
-        "broadcast",
-        "gateway",
-        "gateway6",
-        "dnsnameservers",
-    ]
-)
 
 
 class NotExistingMetadataException(Exception):

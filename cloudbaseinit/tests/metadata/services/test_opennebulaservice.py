@@ -24,6 +24,7 @@ except ImportError:
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import opennebulaservice
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.tests import testutils
 
 
@@ -104,7 +105,7 @@ OPEN = mock.mock_open(read_data=CONTEXT.encode())
 
 
 def _get_nic_details(iid=0):
-        details = base.NetworkDetails(
+        details = network_model.NetworkDetails(
             opennebulaservice.IF_FORMAT.format(iid=iid),
             MAC,
             ADDRESS,
