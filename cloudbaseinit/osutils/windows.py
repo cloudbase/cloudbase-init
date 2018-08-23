@@ -762,6 +762,18 @@ class WindowsUtils(base.BaseOSUtils):
                     'value "%(mtu)s" failed' % {'mac_address': mac_address,
                                                 'mtu': mtu})
 
+    def rename_network_adapter(self, old_name, new_name):
+        base_dir = self._get_system_dir()
+        netsh_path = os.path.join(base_dir, 'netsh.exe')
+
+        args = [netsh_path, "interface", "set", "interface",
+                'name=%s' % old_name, 'newname=%s' % new_name]
+        (out, err, ret_val) = self.execute_process(args, shell=False)
+        if ret_val:
+            raise exception.CloudbaseInitException(
+                'Renaming interface "%(old_name)s" to "%(new_name)s" '
+                'failed' % {'old_name': old_name, 'new_name': new_name})
+
     def set_static_network_config(self, mac_address, address, netmask,
                                   broadcast, gateway, dnsnameservers):
         conn = wmi.WMI(moniker='//./root/cimv2')

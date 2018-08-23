@@ -764,6 +764,30 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_set_static_network_config_v6_error(self):
         self._test_set_static_network_config_v6(v6error=True)
 
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '.execute_process')
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_system_dir')
+    def _test_rename_network_adapter(self, should_fail, mock_get_system_dir,
+                                     mock_execute_process):
+        base_dir = "fake path"
+        old_name = "fake_old"
+        new_name = "fake_new"
+        mock_get_system_dir.return_value = base_dir
+        ret_val = 1 if should_fail else 0
+        mock_execute_process.return_value = (None, None, ret_val)
+
+        if should_fail:
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.rename_network_adapter(old_name, new_name)
+        else:
+            self._winutils.rename_network_adapter(old_name, new_name)
+
+        mock_get_system_dir.assert_called_once_with()
+        args = [os.path.join(base_dir, "netsh.exe"), "interface", "set",
+                "interface", 'name=%s' % old_name, 'newname=%s' % new_name]
+        mock_execute_process.assert_called_once_with(args, shell=False)
+
     def _test_get_config_key_name(self, section):
         response = self._winutils._get_config_key_name(section)
         if section:
@@ -777,6 +801,12 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     def test_get_config_key_name_no_section(self):
         self._test_get_config_key_name(None)
+
+    def test_rename_network_adapter(self):
+        self._test_rename_network_adapter(False)
+
+    def test_rename_network_adapter_fail(self):
+        self._test_rename_network_adapter(True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_config_key_name')

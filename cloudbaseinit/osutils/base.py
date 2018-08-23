@@ -78,6 +78,9 @@ class BaseOSUtils(object):
     def get_network_adapters(self):
         raise NotImplementedError()
 
+    def rename_network_adapter(self, old_name, new_name):
+        raise NotImplementedError()
+
     def set_static_network_config(self, mac_address, address, netmask,
                                   broadcast, gateway, dnsnameservers):
         raise NotImplementedError()
