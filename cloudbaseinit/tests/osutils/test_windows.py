@@ -1987,34 +1987,37 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                       mock_get_system_dir,
                                       mock_execute_process,
                                       fail=False, os_version_ret=True,
-                                      mac_address_match=True,
+                                      name_match=True,
                                       execute_process_val=0):
-        mac_address = "fake mac"
+        name = "fake name"
+        index = 1
         mtu = "fake mtu"
         base_dir = "fake path"
         mock_check_os_version.return_value = os_version_ret
         mock_get_adapter_addresses.return_value = [mock.MagicMock()
                                                    for _ in range(3)]
-        if mac_address_match:
-            # Same as `iface_index` under the "interface_index" key.
-            mock_get_adapter_addresses.return_value[1].\
-                __getitem__.return_value = mac_address
+        if name_match:
+            mock_get_adapter_addresses.return_value = [
+                {"friendly_name": name, "interface_index": index}]
+        else:
+            mock_get_adapter_addresses.return_value = []
+
         mock_get_system_dir.return_value = base_dir
         mock_execute_process.return_value = [None, None, execute_process_val]
 
         if fail:
             with self.assertRaises(exception.CloudbaseInitException):
-                self._winutils.set_network_adapter_mtu(mac_address, mtu)
+                self._winutils.set_network_adapter_mtu(name, mtu)
             return
 
         with self.snatcher:
-            self._winutils.set_network_adapter_mtu(mac_address, mtu)
-        expected_log = ['Setting MTU for interface "%(mac_address)s" with '
+            self._winutils.set_network_adapter_mtu(name, mtu)
+        expected_log = ['Setting MTU for interface "%(name)s" with '
                         'value "%(mtu)s"' %
-                        {'mac_address': mac_address, 'mtu': mtu}]
+                        {'name': name, 'mtu': mtu}]
         args = [os.path.join(base_dir, "netsh.exe"),
                 "interface", "ipv4", "set", "subinterface",
-                mac_address, "mtu=%s" % mtu, "store=persistent"]
+                str(index), "mtu=%s" % mtu, "store=persistent"]
         self.assertEqual(expected_log, self.snatcher.output)
         mock_check_os_version.assert_called_once_with(6, 0)
         mock_get_adapter_addresses.assert_called_once_with()
@@ -2024,9 +2027,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_set_network_adapter_mtu_not_supported(self):
         self._test_set_network_adapter_mtu(fail=True, os_version_ret=False)
 
-    def test_set_network_adapter_mtu_no_mac_match(self):
+    def test_set_network_adapter_mtu_no_name_match(self):
         self._test_set_network_adapter_mtu(fail=True,
-                                           mac_address_match=False)
+                                           name_match=False)
 
     def test_set_network_adapter_mtu_execute_fail(self):
         self._test_set_network_adapter_mtu(fail=True,

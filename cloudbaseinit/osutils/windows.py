@@ -728,7 +728,7 @@ class WindowsUtils(base.BaseOSUtils):
                 'w32tm failed to configure NTP.\nOutput: %(out)s\nError:'
                 ' %(err)s' % {'out': out, 'err': err})
 
-    def set_network_adapter_mtu(self, mac_address, mtu):
+    def set_network_adapter_mtu(self, name, mtu):
         if not self.check_os_version(6, 0):
             raise exception.CloudbaseInitException(
                 'Setting the MTU is currently not supported on Windows XP '
@@ -737,18 +737,18 @@ class WindowsUtils(base.BaseOSUtils):
         iface_index_list = [
             net_addr["interface_index"] for net_addr
             in network.get_adapter_addresses()
-            if net_addr["mac_address"] == mac_address]
+            if net_addr["friendly_name"] == name]
 
         if not iface_index_list:
-            raise exception.CloudbaseInitException(
-                'Network interface with MAC address "%s" not found' %
-                mac_address)
+            raise exception.ItemNotFoundException(
+                'Network interface with name "%s" not found' %
+                name)
         else:
             iface_index = iface_index_list[0]
 
-            LOG.debug('Setting MTU for interface "%(mac_address)s" with '
+            LOG.debug('Setting MTU for interface "%(name)s" with '
                       'value "%(mtu)s"',
-                      {'mac_address': mac_address, 'mtu': mtu})
+                      {'name': name, 'mtu': mtu})
 
             base_dir = self._get_system_dir()
             netsh_path = os.path.join(base_dir, 'netsh.exe')
@@ -759,9 +759,8 @@ class WindowsUtils(base.BaseOSUtils):
             (out, err, ret_val) = self.execute_process(args, shell=False)
             if ret_val:
                 raise exception.CloudbaseInitException(
-                    'Setting MTU for interface "%(mac_address)s" with '
-                    'value "%(mtu)s" failed' % {'mac_address': mac_address,
-                                                'mtu': mtu})
+                    'Setting MTU for interface "%(name)s" with '
+                    'value "%(mtu)s" failed' % {'name': name, 'mtu': mtu})
 
     def rename_network_adapter(self, old_name, new_name):
         base_dir = self._get_system_dir()

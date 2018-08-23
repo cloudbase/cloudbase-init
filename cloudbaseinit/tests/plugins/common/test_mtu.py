@@ -86,8 +86,8 @@ class MTUPluginTests(unittest.TestCase):
 
         mock_osutils = mock_get_os_utils()
         mocked_calls = [
-            mock.call(mock.sentinel.mac_address1, 4),
-            mock.call(mock.sentinel.mac_address2, 4),
+            mock.call(mock.sentinel.adapter_name1, 4),
+            mock.call(mock.sentinel.adapter_name2, 4),
         ]
         self.assertEqual(
             mocked_calls,
