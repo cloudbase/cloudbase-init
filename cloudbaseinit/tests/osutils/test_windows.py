@@ -576,8 +576,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
         response = self._winutils.get_network_adapters()
         conn.return_value.query.assert_called_with(wql)
-        self.assertEqual([(mock_response.Name, mock_response.MACAddress)],
-                         response)
+        self.assertEqual(
+            [(mock_response.NetConnectionID, mock_response.MACAddress)],
+            response)
 
     def test_get_network_adapters(self):
         self._test_get_network_adapters(False)

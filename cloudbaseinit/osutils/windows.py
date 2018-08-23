@@ -700,7 +700,7 @@ class WindowsUtils(base.BaseOSUtils):
             wql += ' AND PhysicalAdapter = True'
 
         q = conn.query(wql)
-        return [(r.Name, r.MACAddress) for r in q]
+        return [(r.NetConnectionID, r.MACAddress) for r in q]
 
     def get_dhcp_hosts_in_use(self):
         dhcp_hosts = []
