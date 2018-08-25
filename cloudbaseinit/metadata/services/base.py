@@ -118,6 +118,9 @@ class BaseMetadataService(object):
         in the namedtuple defined above.
         """
 
+    def get_network_details_v2(self):
+        """Return a `NetworkDetailsV2` object."""
+
     def get_admin_username(self):
         pass
 
