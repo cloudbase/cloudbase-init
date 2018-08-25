@@ -145,24 +145,27 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
             if not nic:
                 LOG.warn("Missing details for adapter %s", mac)
                 continue
-            LOG.info("Configuring network adapter %s", mac)
+
+            name = osutils.get_network_adapter_name_by_mac_address(mac)
+            LOG.info("Configuring network adapter: %s", name)
             reboot = osutils.set_static_network_config(
-                mac,
+                name,
                 nic.address,
                 nic.netmask,
-                nic.broadcast,
                 nic.gateway,
                 nic.dnsnameservers
             )
             reboot_required = reboot or reboot_required
             # Set v6 info too if available.
             if nic.address6 and nic.netmask6:
-                osutils.set_static_network_config_v6(
-                    mac,
+                reboot = osutils.set_static_network_config(
+                    name,
                     nic.address6,
                     nic.netmask6,
-                    nic.gateway6
+                    nic.gateway6,
+                    []
                 )
+            reboot_required = reboot or reboot_required
             configured = True
         for mac in macnics:
             LOG.warn("Details not used for adapter %s", mac)

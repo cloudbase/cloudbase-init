@@ -48,6 +48,10 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.get_network_adapters.return_value = network_adapters
         mock_osutils.set_static_network_config.return_value = True
+
+        mock_osutils.get_network_adapter_name_by_mac_address = (
+            lambda mac: [n[0] for n in network_adapters if n[1] == mac][0])
+
         network_execute = functools.partial(
             self._network_plugin.execute,
             mock_service, mock_shared_data
@@ -66,7 +70,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                                    'common.networkconfig'):
             ret = network_execute()
 
-        calls, calls6 = [], []
+        calls = []
         for adapter in set(network_adapters) - set(missed_adapters):
             nics = [nic for nic in (network_details +
                                     extra_network_details)
@@ -74,32 +78,27 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             self.assertTrue(nics)    # missed_adapters should do the job
             nic = nics[0]
             call = mock.call(
-                nic.mac,
+                adapter[0],
                 nic.address,
                 nic.netmask,
-                nic.broadcast,
                 nic.gateway,
                 nic.dnsnameservers
             )
             call6 = mock.call(
-                nic.mac,
+                adapter[0],
                 nic.address6,
                 nic.netmask6,
-                nic.gateway6
+                nic.gateway6,
+                []
             )
             calls.append(call)
             if nic.address6 and nic.netmask6:
-                calls6.append(call6)
+                calls.append(call6)
         self.assertEqual(
             len(calls),
             mock_osutils.set_static_network_config.call_count)
-        self.assertEqual(
-            len(calls6),
-            mock_osutils.set_static_network_config_v6.call_count)
         mock_osutils.set_static_network_config.assert_has_calls(
             calls, any_order=True)
-        mock_osutils.set_static_network_config_v6.assert_has_calls(
-            calls6, any_order=True)
         reboot = len(missed_adapters) != self._count
         self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, reboot), ret)
 
