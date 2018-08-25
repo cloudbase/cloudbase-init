@@ -31,20 +31,21 @@ from cloudbaseinit.tests import testutils
 class TestNetworkConfigPlugin(unittest.TestCase):
 
     def setUp(self):
-        self._setUp()
+        self._setup_network_details_v1()
 
     @mock.patch("cloudbaseinit.osutils.factory.get_os_utils")
-    def _test_execute(self, mock_get_os_utils,
-                      network_adapters=None,
-                      network_details=None,
-                      invalid_details=False,
-                      missed_adapters=[],
-                      extra_network_details=[]):
+    def _test_execute_network_details_v1(self, mock_get_os_utils,
+                                         network_adapters=None,
+                                         network_details=None,
+                                         invalid_details=False,
+                                         missed_adapters=[],
+                                         extra_network_details=[]):
         # Prepare mock environment.
         mock_service = mock.MagicMock()
         mock_shared_data = mock.Mock()
         mock_osutils = mock.MagicMock()
         mock_service.get_network_details.return_value = network_details
+        mock_service.get_network_details_v2.return_value = None
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.get_network_adapters.return_value = network_adapters
         mock_osutils.set_static_network_config.return_value = True
@@ -102,7 +103,8 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         reboot = len(missed_adapters) != self._count
         self.assertEqual((plugin_base.PLUGIN_EXECUTION_DONE, reboot), ret)
 
-    def _setUp(self, same_names=True, wrong_names=False, no_macs=False):
+    def _setup_network_details_v1(self, same_names=True, wrong_names=False,
+                                  no_macs=False):
         # Generate fake pairs of NetworkDetails objects and
         # local ethernet network adapters.
         iface_name = "Ethernet" if wrong_names else "eth"
@@ -179,42 +181,43 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         # Get the network config plugin.
         self._network_plugin = networkconfig.NetworkConfigPlugin()
         # Execution wrapper.
-        self._partial_test_execute = functools.partial(
-            self._test_execute,
+        self._partial_test_execute_network_details_v1 = functools.partial(
+            self._test_execute_network_details_v1,
             network_adapters=self._network_adapters,
             network_details=self._network_details
         )
 
     def test_execute_no_network_details(self):
         self._network_details[:] = []
-        self._partial_test_execute()
+        self._partial_test_execute_network_details_v1()
 
     def test_execute_no_network_adapters(self):
         self._network_adapters[:] = []
-        self._partial_test_execute()
+        self._partial_test_execute_network_details_v1()
 
     def test_execute_invalid_network_details(self):
         self._network_details.append([None] * 6)
-        self._partial_test_execute(invalid_details=True)
+        self._partial_test_execute_network_details_v1(invalid_details=True)
 
     def test_execute_invalid_network_details_name(self):
-        self._setUp(wrong_names=True, no_macs=True)
-        self._partial_test_execute(invalid_details=True)
+        self._setup_network_details_v1(wrong_names=True, no_macs=True)
+        self._partial_test_execute_network_details_v1(invalid_details=True)
 
     def test_execute_single(self):
         for _ in range(self._count - 1):
             self._network_adapters.pop()
             self._network_details.pop()
-        self._partial_test_execute()
+        self._partial_test_execute_network_details_v1()
 
     def test_execute_multiple(self):
-        self._partial_test_execute()
+        self._partial_test_execute_network_details_v1()
 
     def test_execute_missing_one(self):
         self.assertGreater(self._count, 1)
         self._network_details.pop(0)
         adapter = self._network_adapters[0]
-        self._partial_test_execute(missed_adapters=[adapter])
+        self._partial_test_execute_network_details_v1(
+            missed_adapters=[adapter])
 
     def test_execute_missing_all(self):
         nic = self._network_details[0]
@@ -231,7 +234,8 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             nic.dnsnameservers
         )
         self._network_details[:] = [nic]
-        self._partial_test_execute(missed_adapters=self._network_adapters)
+        self._partial_test_execute_network_details_v1(
+            missed_adapters=self._network_adapters)
 
     def _test_execute_missing_smth(self, name=False, mac=False,
                                    address=False, address6=False,
@@ -262,7 +266,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             # Or other vital details.
             missed_adapters = [self._network_adapters[ind]]
             extra_network_details = []
-        self._partial_test_execute(
+        self._partial_test_execute_network_details_v1(
             missed_adapters=missed_adapters,
             extra_network_details=extra_network_details
         )
@@ -271,7 +275,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         self._test_execute_missing_smth(mac=True)
 
     def test_execute_missing_mac2(self):
-        self._setUp(same_names=False)
+        self._setup_network_details_v1(same_names=False)
         self._test_execute_missing_smth(mac=True)
 
     def test_execute_missing_name_mac(self):
@@ -295,3 +299,174 @@ class TestNetworkConfigPlugin(unittest.TestCase):
 
     def test_execute_missing_gateway(self):
         self._test_execute_missing_smth(gateway=True)
+
+    def _get_network_details_v2(self):
+        links = []
+        link1 = network_model.Link(
+            id=mock.sentinel.link_id1,
+            name=mock.sentinel.link_name1,
+            type=network_model.LINK_TYPE_PHYSICAL,
+            enabled=mock.sentinel.link_enabled1,
+            mac_address=mock.sentinel.link_mac1,
+            mtu=mock.sentinel.link_mtu1,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None)
+        links.append(link1)
+
+        bond1 = network_model.Bond(
+            members=[mock.sentinel.link_id1],
+            type=mock.sentinel.bond_type1,
+            lb_algorithm=mock.sentinel.bond_lb_algo1,
+            lacp_rate=mock.sentinel.lacp_rate1)
+
+        bond_link1 = network_model.Link(
+            id=mock.sentinel.bond_link_id1,
+            name=mock.sentinel.bond_link_name1,
+            type=network_model.LINK_TYPE_BOND,
+            enabled=mock.sentinel.bond_link_enabled1,
+            mac_address=mock.sentinel.bond_link_mac1,
+            mtu=mock.sentinel.bond_link_mtu1,
+            bond=bond1,
+            vlan_link=None,
+            vlan_id=None)
+        links.append(bond_link1)
+
+        vlan_link1 = network_model.Link(
+            id=mock.sentinel.vlan_link_id1,
+            name=mock.sentinel.vlan_link_name1,
+            type=network_model.LINK_TYPE_VLAN,
+            enabled=mock.sentinel.vlan_link_enabled1,
+            mac_address=mock.sentinel.vlan_link_mac1,
+            mtu=mock.sentinel.vlan_link_mtu1,
+            bond=None,
+            vlan_link=mock.sentinel.bond_link_id1,
+            vlan_id=mock.sentinel.vlan_id1)
+        links.append(vlan_link1)
+
+        networks = []
+        route1 = network_model.Route(
+            network_cidr=mock.sentinel.network_cidr1,
+            gateway=mock.sentinel.gateway1)
+
+        route2 = network_model.Route(
+            network_cidr=mock.sentinel.network_cidr2,
+            gateway=mock.sentinel.gateway2)
+
+        network1 = network_model.Network(
+            link=mock.sentinel.link_id1,
+            address_cidr=mock.sentinel.address_cidr1,
+            dns_nameservers=mock.sentinel.network_dns_list1,
+            routes=[route1, route2])
+        networks.append(network1)
+
+        services = []
+        service1 = network_model.NameServerService(
+            addresses=[mock.sentinel.dns1, mock.sentinel.dns3],
+            search=mock.sentinel.dns_search1)
+        services.append(service1)
+
+        return network_model.NetworkDetailsV2(
+            links=links, networks=networks, services=services)
+
+    @mock.patch("cloudbaseinit.osutils.factory.get_os_utils")
+    def _test_execute_network_details_v2(self, mock_get_os_utils,
+                                         empty_network_dns_list=False,
+                                         both_ipv4_dns_list=False,
+                                         both_ipv6_dns_list=False):
+        mock.sentinel.link_mac1 = u"00:00:00:00:00:01"
+        mock.sentinel.network_cidr1 = u"0.0.0.0/0"
+        mock.sentinel.gateway1 = u"10.0.0.254"
+        mock.sentinel.network_cidr2 = u"172.16.0.0/16"
+        mock.sentinel.gateway2 = u"172.16.1.1"
+        mock.sentinel.address_cidr1 = u"10.0.0.1/24"
+        mock.sentinel.dns1 = "10.0.0.1"
+        mock.sentinel.dns2 = "10.0.0.2"
+        mock.sentinel.network_dns_list1 = []
+
+        if empty_network_dns_list:
+            mock.sentinel.dns3 = "10.0.0.3"
+            expected_dns_list = [mock.sentinel.dns1, mock.sentinel.dns3]
+        elif both_ipv4_dns_list:
+            mock.sentinel.dns3 = "2001:db8::3"
+            expected_dns_list = [mock.sentinel.dns1]
+        elif both_ipv6_dns_list:
+            mock.sentinel.address_cidr1 = u"2001:db8::3/24"
+            mock.sentinel.dns3 = "2001:db8::4"
+            expected_dns_list = [mock.sentinel.dns3]
+        else:
+            mock.sentinel.network_dns_list1 = [
+                mock.sentinel.dns1, mock.sentinel.dns2]
+            expected_dns_list = mock.sentinel.network_dns_list1
+
+        service = mock.Mock()
+        network_details = self._get_network_details_v2()
+        service.get_network_details_v2.return_value = network_details
+
+        mock_os_utils = mock.Mock()
+        mock_get_os_utils.return_value = mock_os_utils
+
+        m = mock_os_utils.get_network_adapter_name_by_mac_address
+        m.return_value = mock.sentinel.adapter_old_name1
+
+        plugin = networkconfig.NetworkConfigPlugin()
+        plugin.execute(service, {})
+
+        service.get_network_details_v2.assert_called_once_with()
+        service.get_network_details.assert_not_called()
+
+        m.assert_called_once_with(mock.sentinel.link_mac1)
+
+        mock_os_utils.rename_network_adapter.assert_called_once_with(
+            mock.sentinel.adapter_old_name1, mock.sentinel.link_name1)
+
+        bond_name = (networkconfig.BOND_FORMAT_STR %
+                     mock.sentinel.bond_link_id1)
+        mock_os_utils.create_network_team.assert_called_once_with(
+            bond_name, mock.sentinel.bond_type1,
+            mock.sentinel.bond_lb_algo1,
+            [mock.sentinel.link_id1],
+            mock.sentinel.bond_link_mac1,
+            mock.sentinel.bond_link_name1,
+            None,
+            mock.sentinel.lacp_rate1)
+
+        mock_os_utils.add_network_team_nic.assert_called_once_with(
+            bond_name,
+            mock.sentinel.vlan_link_name1,
+            mock.sentinel.vlan_id1)
+
+        mock_os_utils.set_network_adapter_mtu.assert_has_calls(
+            [mock.call(mock.sentinel.link_name1, mock.sentinel.link_mtu1),
+             mock.call(
+                mock.sentinel.bond_link_name1, mock.sentinel.bond_link_mtu1),
+             mock.call(
+                mock.sentinel.vlan_link_name1, mock.sentinel.vlan_link_mtu1)],
+            any_order=False)
+
+        mock_os_utils.enable_network_adapter.assert_has_calls(
+            [mock.call(mock.sentinel.link_name1, mock.sentinel.link_enabled1),
+             mock.call(
+                mock.sentinel.bond_link_name1,
+                mock.sentinel.bond_link_enabled1),
+             mock.call(
+                mock.sentinel.vlan_link_name1,
+                mock.sentinel.vlan_link_enabled1)],
+            any_order=False)
+
+        ip_address, prefix_len = mock.sentinel.address_cidr1.split("/")
+        mock_os_utils.set_static_network_config.assert_called_once_with(
+            mock.sentinel.link_id1, ip_address, prefix_len,
+            mock.sentinel.gateway1, expected_dns_list)
+
+    def test_execute_network_details_v2(self):
+        self._test_execute_network_details_v2()
+
+    def test_execute_network_details_v2_empty_network_dns_list(self):
+        self._test_execute_network_details_v2(empty_network_dns_list=True)
+
+    def test_execute_network_details_v2_ipv4_dns_list(self):
+        self._test_execute_network_details_v2(both_ipv4_dns_list=True)
+
+    def test_execute_network_details_v2_ipv6_dns_list(self):
+        self._test_execute_network_details_v2(both_ipv6_dns_list=True)
