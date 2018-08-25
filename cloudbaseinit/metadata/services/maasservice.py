@@ -12,18 +12,40 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 import re
+import sys
 
+import json
+import netaddr
 from oauthlib import oauth1
 from oslo_log import log as oslo_logging
 import requests
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.models import network as network_model
 from cloudbaseinit.utils import x509constants
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
+
+MAAS_CONFIG_TYPE_PHYSICAL = "physical"
+MAAS_CONFIG_TYPE_BOND = "bond"
+MAAS_CONFIG_TYPE_VLAN = "vlan"
+MAAS_CONGIG_TYPE_NAMESERVER = "nameserver"
+
+MAAS_BOND_LACP_RATE_SLOW = "slow"
+MAAS_BOND_LACP_RATE_FAST = "fast"
+
+MAAS_SUBNET_TYPE_STATIC = "static"
+MAAS_SUBNET_TYPE_MANUAL = "manual"
+
+BOND_LACP_RATE_MAP = {
+    MAAS_BOND_LACP_RATE_SLOW: network_model.BOND_LACP_RATE_SLOW,
+    MAAS_BOND_LACP_RATE_FAST: network_model.BOND_LACP_RATE_FAST,
+}
 
 
 class _Realm(str):
@@ -108,3 +130,188 @@ class MaaSHttpService(base.BaseHTTPMetadataService):
 
     def get_user_data(self):
         return self._get_cache_data('%s/user-data' % self._metadata_version)
+
+    @staticmethod
+    def _get_network_data():
+        if sys.platform != "win32":
+            return
+
+        path = os.path.join(
+            os.environ["systemdrive"], "\\curtin\\network.json")
+        if not os.path.isfile(path):
+            path = os.path.join(os.environ["systemdrive"], "\\network.json")
+            if not os.path.isfile(path):
+                path = None
+
+        if path:
+            json_data = open(path, "rb").read()
+            return json.loads(json_data.decode('utf-8'))
+
+    @staticmethod
+    def _is_link_enabled(subnets):
+        return MAAS_SUBNET_TYPE_MANUAL not in [s.get("type") for s in subnets]
+
+    @staticmethod
+    def _parse_config_link(config):
+        link_id = config.get("id")
+        name = config.get("name")
+        mac = config.get("mac_address")
+        mtu = config.get("mtu")
+        maas_link_type = config.get("type")
+        subnets = config.get("subnets", [])
+        params = config.get("params", {})
+        bond = None
+        vlan_id = None
+        vlan_link = None
+        link_enabled = False
+
+        if maas_link_type == MAAS_CONFIG_TYPE_PHYSICAL:
+            link_type = network_model.LINK_TYPE_PHYSICAL
+            link_enabled = MaaSHttpService._is_link_enabled(subnets)
+        elif maas_link_type == MAAS_CONFIG_TYPE_BOND:
+            link_type = network_model.LINK_TYPE_BOND
+            bond_interfaces = config.get("bond_interfaces")
+            bond_mode = params.get("bond-mode")
+            bond_xmit_hash_policy = params.get("bond-xmit-hash-policy")
+            maas_bond_lacp_rate = params.get("bond-lacp-rate")
+
+            if bond_mode not in network_model.AVAILABLE_BOND_TYPES:
+                raise exception.CloudbaseInitException(
+                    "Unsupported bond mode: %s" % bond_mode)
+
+            if (bond_xmit_hash_policy is not None and
+                    bond_xmit_hash_policy not in
+                    network_model.AVAILABLE_BOND_LB_ALGORITHMS):
+                raise exception.CloudbaseInitException(
+                    "Unsupported bond hash policy: %s" % bond_xmit_hash_policy)
+
+            bond = network_model.Bond(
+                members=bond_interfaces,
+                type=bond_mode,
+                lb_algorithm=bond_xmit_hash_policy,
+                lacp_rate=BOND_LACP_RATE_MAP.get(maas_bond_lacp_rate))
+            link_enabled = True
+        elif maas_link_type == MAAS_CONFIG_TYPE_VLAN:
+            link_type = network_model.LINK_TYPE_VLAN
+            vlan_link = config.get("vlan_link")
+            vlan_id = config.get("vlan_id")
+            link_enabled = True
+        else:
+            raise exception.CloudbaseInitException(
+                "Unsupported MAAS link type: %s" % maas_link_type)
+
+        link = network_model.Link(
+            id=link_id,
+            name=name,
+            type=link_type,
+            enabled=link_enabled,
+            mac_address=mac,
+            mtu=mtu,
+            bond=bond,
+            vlan_id=vlan_id,
+            vlan_link=vlan_link)
+
+        networks = []
+        subnets = config.get("subnets", [])
+        for subnet in subnets:
+            maas_subnet_type = subnet.get("type")
+            if maas_subnet_type == MAAS_SUBNET_TYPE_STATIC:
+                address_cidr = subnet.get("address")
+                gateway = subnet.get("gateway")
+                dns_nameservers = subnet.get("dns_nameservers")
+
+                # TODO(alexpilotti): Add support for extra routes
+                if gateway is not None:
+                    if netaddr.valid_ipv6(gateway):
+                        default_network_cidr = u"::/0"
+                    else:
+                        default_network_cidr = u"0.0.0.0/0"
+
+                    routes = [
+                        network_model.Route(
+                            network_cidr=default_network_cidr,
+                            gateway=gateway
+                        )
+                    ]
+                else:
+                    routes = []
+                net = network_model.Network(
+                    link=link_id,
+                    address_cidr=address_cidr,
+                    dns_nameservers=dns_nameservers,
+                    routes=routes,
+                )
+                networks.append(net)
+
+        return link, networks
+
+    @staticmethod
+    def _parse_config_nameserver(config):
+        return network_model.NameServerService(
+            addresses=config.get("address", []),
+            search=config.get("search", []))
+
+    @staticmethod
+    def _parse_config_item(config):
+        link = None
+        networks = None
+        service = None
+
+        config_type = config.get("type")
+        if config_type == MAAS_CONGIG_TYPE_NAMESERVER:
+            service = MaaSHttpService._parse_config_nameserver(config)
+        elif config_type in [
+                MAAS_CONFIG_TYPE_PHYSICAL,
+                MAAS_CONFIG_TYPE_BOND,
+                MAAS_CONFIG_TYPE_VLAN]:
+            link, networks = MaaSHttpService._parse_config_link(config)
+        else:
+            raise exception.CloudbaseInitException(
+                "Unsupported item type: %s" % config_type)
+
+        return link, networks, service
+
+    @staticmethod
+    def _enable_bond_physical_links(links):
+        # The MAAS metadata sets the NIC subnet type as "manual" for both
+        # disconnected NICs and bond members. We need to make sure that the
+        # latter are enabled.
+        for link1 in links:
+            if link1.type == network_model.LINK_TYPE_BOND:
+                for index, link2 in enumerate(links):
+                    if (link2.type == network_model.LINK_TYPE_PHYSICAL and
+                            not link2.enabled and
+                            link2.id in link1.bond.members):
+                        links[index] = link2._replace(enabled=True)
+
+    def get_network_details_v2(self):
+        network_data = self._get_network_data()
+        if not network_data:
+            return
+
+        version = network_data.get("version")
+        if version != 1:
+            raise exception.CloudbaseInitException(
+                'Unsupported MAAS network metadata version: %s' % version)
+
+        links = []
+        networks = []
+        services = []
+
+        config = network_data.get("config", [])
+        for config_item in config:
+            link, link_networks, service = self._parse_config_item(config_item)
+            if link:
+                links.append(link)
+            if link_networks:
+                networks.extend(link_networks),
+            if service:
+                services.append(service)
+
+        self._enable_bond_physical_links(links)
+
+        return network_model.NetworkDetailsV2(
+            links=links,
+            networks=networks,
+            services=services
+        )
