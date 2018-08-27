@@ -17,12 +17,15 @@ import functools
 import posixpath
 import unittest
 
+import netaddr
+
 try:
     import unittest.mock as mock
 except ImportError:
     import mock
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.models import network as network_model
@@ -265,3 +268,223 @@ class TestBaseOpenStackService(unittest.TestCase):
 
     def test_get_network_details(self):
         self._partial_test_get_network_details()
+
+    @staticmethod
+    def _get_network_data():
+        return {
+            "links": [{
+                "ethernet_mac_address": mock.sentinel.link_mac1,
+                "type": baseopenstackservice.NETWORK_LINK_TYPE_PHYSICAL,
+                "id": mock.sentinel.link_id1,
+                "mtu": mock.sentinel.link_mtu1,
+            }, {
+                "ethernet_mac_address": mock.sentinel.link_mac2,
+                "type": mock.sentinel.another_link_type,
+                "id": mock.sentinel.link_id2,
+                "mtu": mock.sentinel.link_mtu2,
+            }, {
+                "bond_miimon": mock.sentinel.bond_miimon1,
+                "bond_xmit_hash_policy": mock.sentinel.bond_lb_algo1,
+                "ethernet_mac_address": mock.sentinel.bond_mac1,
+                "mtu": mock.sentinel.bond_mtu1,
+                "bond_mode": mock.sentinel.bond_type1,
+                "bond_links": [
+                    mock.sentinel.link_id1,
+                    mock.sentinel.link_id2,
+                ],
+                "type": baseopenstackservice.NETWORK_LINK_TYPE_BOND,
+                "id": mock.sentinel.bond_id1,
+            }, {
+                "id": mock.sentinel.vlan_link_id1,
+                "type": baseopenstackservice.NETWORK_LINK_TYPE_VLAN,
+                "vlan_link": mock.sentinel.bond_id1,
+                "vlan_id": mock.sentinel.vlan_id1,
+                "mtu": mock.sentinel.vlan_mtu1,
+                "ethernet_mac_address": mock.sentinel.vlan_mac1,
+            }],
+            "networks": [{
+                "id": mock.sentinel.network_id1,
+                "network_id": mock.sentinel.network_openstack_id1,
+                "link": mock.sentinel.bond_id1,
+                "type": baseopenstackservice.NETWORK_TYPE_IPV4_DHCP,
+            }, {
+                "id": mock.sentinel.network_id2,
+                "type": baseopenstackservice.NETWORK_TYPE_IPV4,
+                "link": mock.sentinel.bond_id1,
+                "ip_address": mock.sentinel.ip_address1,
+                "netmask": mock.sentinel.netmask1,
+                "services": [{
+                    "type": baseopenstackservice.NETWORK_SERVICE_TYPE_DNS,
+                    "address": mock.sentinel.dns1,
+                }, {
+                    "type": baseopenstackservice.NETWORK_SERVICE_TYPE_DNS,
+                    "address": mock.sentinel.dns2
+                }],
+                "routes": [{
+                    "network": mock.sentinel.route_network1,
+                    "netmask": mock.sentinel.route_netmask1,
+                    "gateway": mock.sentinel.route_gateway1,
+                }, {
+                    "network": mock.sentinel.route_network2,
+                    "netmask": mock.sentinel.route_netmask2,
+                    "gateway": mock.sentinel.route_gateway2,
+                }],
+                "network_id": mock.sentinel.network_openstack_id2
+            }, {
+                "id": mock.sentinel.network_id3,
+                "type": baseopenstackservice.NETWORK_TYPE_IPV6,
+                "link": mock.sentinel.bond_id1,
+                "ip_address": mock.sentinel.ip_address_ipv61,
+                "routes": [{
+                    "network": mock.sentinel.route_network_ipv61,
+                    "gateway": mock.sentinel.route_gateway_ipv61,
+                }],
+                "network_id": mock.sentinel.network_openstack_id3
+            }],
+            "services": [{
+                "type": baseopenstackservice.NETWORK_SERVICE_TYPE_DNS,
+                "address": mock.sentinel.dns3,
+            }, {
+                "type": baseopenstackservice.NETWORK_SERVICE_TYPE_DNS,
+                "address": mock.sentinel.dns4
+            }],
+        }
+
+    @mock.patch(MODPATH + ".BaseOpenStackService._get_network_data")
+    def _test_get_network_details_v2(self, mock_get_network_data,
+                                     invalid_bond_type=False,
+                                     invalid_bond_lb_algo=False):
+        mock.sentinel.ip_address1 = "10.0.0.1"
+        mock.sentinel.netmask1 = "255.255.255.0"
+        mock.sentinel.route_network1 = "172.16.0.0"
+        mock.sentinel.route_netmask1 = "255.255.0.0"
+        mock.sentinel.route_gateway1 = "172.16.1.1"
+        mock.sentinel.route_network2 = "0.0.0.0"
+        mock.sentinel.route_netmask2 = "0.0.0.0"
+        mock.sentinel.route_gateway2 = "10.0.0.254"
+        mock.sentinel.ip_address_ipv61 = "2001:cdba::3257:9652/24"
+        mock.sentinel.route_network_ipv61 = "::/0"
+        mock.sentinel.route_gateway_ipv61 = "fd00::1"
+
+        if invalid_bond_type:
+            mock.sentinel.bond_type1 = "invalid bond type"
+        else:
+            mock.sentinel.bond_type1 = network_model.BOND_TYPE_ACTIVE_BACKUP
+
+        if invalid_bond_lb_algo:
+            mock.sentinel.bond_lb_algo1 = "invalid lb algorithm"
+        else:
+            mock.sentinel.bond_lb_algo1 = network_model.BOND_LB_ALGO_L2
+
+        network_data = self._get_network_data()
+
+        mock_get_network_data.return_value = network_data
+
+        if invalid_bond_type or invalid_bond_lb_algo:
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._service.get_network_details_v2()
+            return
+
+        network_details = self._service.get_network_details_v2()
+
+        self.assertEqual(
+            len(network_data["links"]), len(network_details.links))
+
+        self.assertEqual(1, len([
+            l for l in network_details.links if
+            l.type == network_model.LINK_TYPE_PHYSICAL and
+            l.id == mock.sentinel.link_id1 and
+            l.name == mock.sentinel.link_id1 and
+            l.mac_address == mock.sentinel.link_mac1 and
+            l.mtu == mock.sentinel.link_mtu1]))
+
+        self.assertEqual(1, len([
+            l for l in network_details.links if
+            l.type == network_model.LINK_TYPE_PHYSICAL and
+            l.id == mock.sentinel.link_id2 and
+            l.name == mock.sentinel.link_id2 and
+            l.mac_address == mock.sentinel.link_mac2 and
+            l.mtu == mock.sentinel.link_mtu2]))
+
+        self.assertEqual(1, len([
+            l for l in network_details.links if
+            l.type == network_model.LINK_TYPE_BOND and
+            l.id == mock.sentinel.bond_id1 and
+            l.name == mock.sentinel.bond_id1 and
+            l.mtu == mock.sentinel.bond_mtu1 and
+            l.mac_address == mock.sentinel.bond_mac1 and
+            l.vlan_link is None and
+            l.vlan_id is None and
+            l.bond.type == network_model.BOND_TYPE_ACTIVE_BACKUP and
+            l.bond.members == [
+                mock.sentinel.link_id1, mock.sentinel.link_id2] and
+            l.bond.lb_algorithm == network_model.BOND_LB_ALGO_L2 and
+            l.bond.lacp_rate is None]))
+
+        self.assertEqual(1, len([
+            l for l in network_details.links if
+            l.type == network_model.LINK_TYPE_VLAN and
+            l.id == mock.sentinel.vlan_link_id1 and
+            l.name == mock.sentinel.vlan_link_id1 and
+            l.mac_address == mock.sentinel.vlan_mac1 and
+            l.mtu == mock.sentinel.vlan_mtu1 and
+            l.vlan_link == mock.sentinel.bond_id1 and
+            l.vlan_id == mock.sentinel.vlan_id1]))
+
+        self.assertEqual(
+            len([n for n in network_data["networks"]
+                 if n["type"] in [
+                     baseopenstackservice.NETWORK_TYPE_IPV4,
+                     baseopenstackservice.NETWORK_TYPE_IPV6]]),
+            len(network_details.networks))
+
+        def _get_cidr_address(ip_address, netmask):
+            prefix_len = netaddr.IPNetwork(
+                u"%s/%s" % (ip_address, netmask)).prefixlen
+            return u"%s/%s" % (ip_address, prefix_len)
+
+        address_cidr = _get_cidr_address(
+            mock.sentinel.ip_address1, mock.sentinel.netmask1)
+
+        network = [
+            n for n in network_details.networks
+            if n.address_cidr == address_cidr and
+            n.dns_nameservers == [mock.sentinel.dns1, mock.sentinel.dns2] and
+            n.link == mock.sentinel.bond_id1]
+        self.assertEqual(1, len(network))
+
+        network_cidr1 = _get_cidr_address(
+            mock.sentinel.route_network1, mock.sentinel.route_netmask1)
+
+        network_cidr2 = _get_cidr_address(
+            mock.sentinel.route_network2, mock.sentinel.route_netmask2)
+
+        self.assertEqual([
+            network_model.Route(
+                network_cidr=network_cidr1,
+                gateway=mock.sentinel.route_gateway1),
+            network_model.Route(
+                network_cidr=network_cidr2,
+                gateway=mock.sentinel.route_gateway2)],
+            network[0].routes)
+
+        network_ipv6 = [
+            n for n in network_details.networks
+            if n.address_cidr == mock.sentinel.ip_address_ipv61 and
+            n.link == mock.sentinel.bond_id1]
+        self.assertEqual(1, len(network_ipv6))
+
+        self.assertEqual(
+            [network_model.NameServerService(
+                addresses=[mock.sentinel.dns3, mock.sentinel.dns4],
+                search=None)],
+            network_details.services)
+
+    def test_get_network_details_v2(self):
+        self._test_get_network_details_v2()
+
+    def test_get_network_details_v2_invalid_bond_type(self):
+        self._test_get_network_details_v2(invalid_bond_type=True)
+
+    def test_get_network_details_v2_invalid_bond_lb_algo(self):
+        self._test_get_network_details_v2(invalid_bond_lb_algo=True)
