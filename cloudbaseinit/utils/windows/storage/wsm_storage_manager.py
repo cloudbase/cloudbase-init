@@ -13,7 +13,6 @@
 #    under the License.
 
 import ctypes
-import wmi
 
 from oslo_log import log as oslo_logging
 from six.moves import winreg
@@ -21,6 +20,9 @@ from six.moves import winreg
 from cloudbaseinit import exception
 from cloudbaseinit.utils.windows import kernel32
 from cloudbaseinit.utils.windows.storage import base
+from cloudbaseinit.utils.windows import wmi_loader
+
+wmi = wmi_loader.wmi()
 
 LOG = oslo_logging.getLogger(__name__)
 

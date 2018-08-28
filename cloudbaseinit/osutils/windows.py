@@ -34,7 +34,6 @@ import win32process
 import win32security
 import win32service
 import winerror
-import wmi
 
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import base
@@ -42,7 +41,9 @@ from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import network
 from cloudbaseinit.utils.windows import privilege
 from cloudbaseinit.utils.windows import timezone
+from cloudbaseinit.utils.windows import wmi_loader
 
+wmi = wmi_loader.wmi()
 
 LOG = oslo_logging.getLogger(__name__)
 AF_INET6 = 23

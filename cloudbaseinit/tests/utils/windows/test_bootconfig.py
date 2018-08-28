@@ -33,7 +33,7 @@ class BootConfigTest(unittest.TestCase):
         self._wmi_mock = mock.MagicMock()
         self._module_patcher = mock.patch.dict(
             'sys.modules', {
-                'wmi': self._wmi_mock})
+                "wmi": self._wmi_mock})
         self.snatcher = testutils.LogSnatcher(MODPATH)
         self._module_patcher.start()
         self.bootconfig = importlib.import_module(MODPATH)

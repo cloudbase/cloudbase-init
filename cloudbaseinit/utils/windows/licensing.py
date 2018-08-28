@@ -14,14 +14,15 @@
 
 import os
 
-import wmi
-
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import constant
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils.windows import productkeys
+from cloudbaseinit.utils.windows import wmi_loader
+
+wmi = wmi_loader.wmi()
 
 LOG = oslo_logging.getLogger(__name__)
 
