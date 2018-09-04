@@ -1991,6 +1991,58 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_set_ntp_client_config(sysnative=False,
                                          ret_val='fake return value')
 
+    @mock.patch("cloudbaseinit.utils.windows.network."
+                "get_adapter_addresses")
+    def _test_get_network_adapter_name_by_mac_address(
+            self, mock_get_adapter_addresses,
+            no_adapters_found=False,
+            multiple_adapters_found=False):
+
+        mock.sentinel.mac_address = "aa:bb:cc:dd:ee:ff"
+
+        if no_adapters_found:
+            mock_get_adapter_addresses.return_value = []
+        elif multiple_adapters_found:
+            mock_get_adapter_addresses.return_value = [{
+                "mac_address": mock.sentinel.mac_address,
+                "friendly_name": mock.sentinel.friendly_name,
+            }, {
+                "mac_address": mock.sentinel.mac_address,
+                "friendly_name": mock.sentinel.friendly_name2,
+            }]
+        else:
+            mock_get_adapter_addresses.return_value = [{
+                "mac_address": mock.sentinel.mac_address.upper(),
+                "friendly_name": mock.sentinel.friendly_name,
+            }]
+
+        if no_adapters_found:
+            with self.assertRaises(exception.ItemNotFoundException):
+                self._winutils.get_network_adapter_name_by_mac_address(
+                    mock.sentinel.mac_address)
+        elif multiple_adapters_found:
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.get_network_adapter_name_by_mac_address(
+                    mock.sentinel.mac_address)
+        else:
+            self.assertEqual(
+                mock.sentinel.friendly_name,
+                self._winutils.get_network_adapter_name_by_mac_address(
+                    mock.sentinel.mac_address))
+
+        mock_get_adapter_addresses.assert_called_once_with()
+
+    def test_get_network_adapter_name_by_mac_address(self):
+        self._test_get_network_adapter_name_by_mac_address()
+
+    def test_get_network_adapter_name_by_mac_address_no_adapters(self):
+        self._test_get_network_adapter_name_by_mac_address(
+            no_adapters_found=True)
+
+    def test_get_network_adapter_name_by_mac_address_multiple_adapters(self):
+        self._test_get_network_adapter_name_by_mac_address(
+            multiple_adapters_found=True)
+
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.execute_process')
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'

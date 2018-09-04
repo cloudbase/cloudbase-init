@@ -738,6 +738,25 @@ class WindowsUtils(base.BaseOSUtils):
                 'w32tm failed to configure NTP.\nOutput: %(out)s\nError:'
                 ' %(err)s' % {'out': out, 'err': err})
 
+    def get_network_adapter_name_by_mac_address(self, mac_address):
+        iface_index_list = [
+            net_addr for net_addr
+            in network.get_adapter_addresses()
+            if net_addr["mac_address"] is not None and
+            net_addr["mac_address"].lower() == mac_address.lower()]
+
+        if not iface_index_list:
+            raise exception.ItemNotFoundException(
+                'Network interface with MAC address "%s" not found' %
+                mac_address)
+
+        if len(iface_index_list) > 1:
+            raise exception.CloudbaseInitException(
+                'Multiple network interfaces with MAC address "%s" exist' %
+                mac_address)
+
+        return iface_index_list[0]["friendly_name"]
+
     def set_network_adapter_mtu(self, name, mtu):
         if not self.check_os_version(6, 0):
             raise exception.CloudbaseInitException(

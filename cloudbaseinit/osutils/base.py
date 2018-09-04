@@ -78,6 +78,9 @@ class BaseOSUtils(object):
     def get_network_adapters(self):
         raise NotImplementedError()
 
+    def get_network_adapter_name_by_mac_address(self, mac_address):
+        raise NotImplementedError()
+
     def set_network_adapter_mtu(self, name, mtu):
         raise NotImplementedError()
 
