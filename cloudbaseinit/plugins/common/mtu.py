@@ -33,7 +33,7 @@ class MTUPlugin(base.BasePlugin):
             osutils = osutils_factory.get_os_utils()
             dhcp_hosts = osutils.get_dhcp_hosts_in_use()
 
-            for (mac_address, dhcp_host) in dhcp_hosts:
+            for (_, mac_address, dhcp_host) in dhcp_hosts:
                 options_data = dhcp.get_dhcp_options(dhcp_host,
                                                      [dhcp.OPTION_MTU])
                 if options_data:

@@ -37,9 +37,12 @@ class MTUPluginTests(unittest.TestCase):
                       dhcp_options=None):
         mock_osutils = mock_get_os_utils()
         mock_osutils.get_dhcp_hosts_in_use.return_value = [
-            (mock.sentinel.mac_address1, mock.sentinel.dhcp_host1),
-            (mock.sentinel.mac_address2, mock.sentinel.dhcp_host2),
+            (mock.sentinel.adapter_name1, mock.sentinel.mac_address1,
+             mock.sentinel.dhcp_host1),
+            (mock.sentinel.adapter_name2, mock.sentinel.mac_address2,
+             mock.sentinel.dhcp_host2),
         ]
+
         mock_get_dhcp_options.return_value = dhcp_options
 
         return_value = self._mtu.execute(mock.sentinel.service,

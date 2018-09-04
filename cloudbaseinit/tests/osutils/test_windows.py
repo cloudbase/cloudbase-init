@@ -1909,15 +1909,18 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     @mock.patch('cloudbaseinit.utils.windows.network.get_adapter_addresses')
     def test_get_dhcp_hosts_in_use(self, mock_get_adapter_addresses):
         net_addr = {}
-        net_addr["mac_address"] = 'fake mac address'
-        net_addr["dhcp_server"] = 'fake dhcp server'
+        net_addr["friendly_name"] = mock.sentinel.friendly_name
+        net_addr["mac_address"] = mock.sentinel.mac_address
+        net_addr["dhcp_server"] = mock.sentinel.dhcp_server
         net_addr["dhcp_enabled"] = True
         mock_get_adapter_addresses.return_value = [net_addr]
 
         response = self._winutils.get_dhcp_hosts_in_use()
 
         mock_get_adapter_addresses.assert_called_once_with()
-        self.assertEqual([('fake mac address', 'fake dhcp server')], response)
+        self.assertEqual([(mock.sentinel.friendly_name,
+                           mock.sentinel.mac_address,
+                           mock.sentinel.dhcp_server)], response)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')

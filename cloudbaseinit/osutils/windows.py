@@ -706,7 +706,8 @@ class WindowsUtils(base.BaseOSUtils):
         dhcp_hosts = []
         for net_addr in network.get_adapter_addresses():
             if net_addr["dhcp_enabled"] and net_addr["dhcp_server"]:
-                dhcp_hosts.append((net_addr["mac_address"],
+                dhcp_hosts.append((net_addr["friendly_name"],
+                                   net_addr["mac_address"],
                                    net_addr["dhcp_server"]))
         return dhcp_hosts
 

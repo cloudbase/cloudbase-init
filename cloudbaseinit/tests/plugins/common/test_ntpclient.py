@@ -53,8 +53,8 @@ class NTPClientPluginTests(unittest.TestCase):
         mock_options_data = mock.MagicMock()
 
         mock_get_os_utils.return_value = mock_osutils
-        mock_osutils.get_dhcp_hosts_in_use.return_value = [('fake mac address',
-                                                            'fake dhcp host')]
+        mock_osutils.get_dhcp_hosts_in_use.return_value = [(
+            'fake friendly name', 'fake mac address', 'fake dhcp host')]
         mock_get_dhcp_options.return_value = mock_options_data
         mock_options_data.get.return_value = ntp_data
 

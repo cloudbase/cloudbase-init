@@ -59,7 +59,7 @@ class NTPClientPlugin(base.BasePlugin):
 
             ntp_option_data = None
 
-            for (_, dhcp_host) in dhcp_hosts:
+            for (_, _, dhcp_host) in dhcp_hosts:
                 options_data = dhcp.get_dhcp_options(dhcp_host,
                                                      [dhcp.OPTION_NTP_SERVERS])
                 if options_data:

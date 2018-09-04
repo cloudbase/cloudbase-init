@@ -90,7 +90,7 @@ class CloudStack(base.BaseHTTPMetadataService):
         if not dhcp_servers:
             LOG.debug('No DHCP server was found.')
             return False
-        for _, ip_address in dhcp_servers:
+        for _, _, ip_address in dhcp_servers:
             LOG.debug('Testing: %s', ip_address)
             if self._test_api('http://%s/' % ip_address):
                 return True

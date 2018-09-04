@@ -66,9 +66,9 @@ class CloudStackTest(unittest.TestCase):
     def test_load(self, mock_test_api, mock_os_util):
         self._service._osutils.get_dhcp_hosts_in_use = mock.Mock()
         self._service._osutils.get_dhcp_hosts_in_use.side_effect = [
-            [(mock.sentinel.mac_address, '10.10.0.1'),
-             (mock.sentinel.mac_address, '10.10.0.2'),
-             (mock.sentinel.mac_address, '10.10.0.3')]
+            [('eth0', mock.sentinel.mac_address, '10.10.0.1'),
+             ('eth1', mock.sentinel.mac_address, '10.10.0.2'),
+             ('eth2', mock.sentinel.mac_address, '10.10.0.3')]
         ]
         mock_test_api.side_effect = [False, False, False, True]
 
@@ -102,7 +102,8 @@ class CloudStackTest(unittest.TestCase):
     def test_load_no_service(self, mock_test_api, mock_os_util):
         self._service._osutils.get_dhcp_hosts_in_use = mock.Mock()
         self._service._osutils.get_dhcp_hosts_in_use.side_effect = [
-            [(mock.sentinel.mac_address, CONF.cloudstack.metadata_base_url)]
+            [('eth0', mock.sentinel.mac_address,
+              CONF.cloudstack.metadata_base_url)]
         ]
         mock_test_api.side_effect = [False, False]
 
