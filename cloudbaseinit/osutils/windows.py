@@ -888,6 +888,13 @@ class WindowsUtils(base.BaseOSUtils):
         operation_options = {u'custom_options': custom_options}
         dns_client.put(operation_options=operation_options)
 
+    def enable_network_adapter(self, name, enabled):
+        adapter = self._get_network_adapter(name)
+        if enabled:
+            adapter.Enable()
+        else:
+            adapter.Disable()
+
     @staticmethod
     def _set_static_network_config(name, address, prefix_len, gateway):
         if netaddr.valid_ipv6(address):

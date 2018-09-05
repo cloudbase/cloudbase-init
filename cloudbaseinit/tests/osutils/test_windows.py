@@ -591,6 +591,27 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_get_network_adapters(True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_network_adapter')
+    def _test_enable_network_adapter(self, mock_get_network_adapter, enabled):
+        self._winutils.enable_network_adapter(
+            mock.sentinel.adapter_name, enabled)
+
+        mock_get_network_adapter.assert_called_once_with(
+            mock.sentinel.adapter_name)
+
+        adapter = mock_get_network_adapter.return_value
+        if enabled:
+            adapter.Enable.assert_called_once_with()
+        else:
+            adapter.Disable.assert_called_once_with()
+
+    def test_enable_network_adapter(self):
+        self._test_enable_network_adapter(enabled=True)
+
+    def test_disable_network_adapter(self):
+        self._test_enable_network_adapter(enabled=False)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_os_version')
     def _test_set_static_network_config(self, mock_check_os_version,
                                         adapter=True, static_val=(0,),
