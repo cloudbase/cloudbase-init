@@ -276,5 +276,8 @@ class BaseHTTPMetadataService(BaseMetadataService):
             LOG.exception(exc)
             raise exception.CertificateVerifyFailed(
                 "HTTPS certificate validation failed.")
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            LOG.exception(exc)
+            raise
 
         return response
