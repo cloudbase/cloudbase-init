@@ -488,3 +488,14 @@ class TestBaseOpenStackService(unittest.TestCase):
 
     def test_get_network_details_v2_invalid_bond_lb_algo(self):
         self._test_get_network_details_v2(invalid_bond_lb_algo=True)
+
+    @mock.patch(MODPATH + ".BaseOpenStackService._get_network_data")
+    @mock.patch(MODPATH + ".LOG.info")
+    def test_get_network_details_v2_no_metadata(self, mock_log_exception,
+                                                mock_get_network_data):
+        mock_get_network_data.side_effect = (
+            base.NotExistingMetadataException('failed to get metadata'))
+        network_details = self._service.get_network_details_v2()
+
+        self.assertIsNone(network_details)
+        self.assertTrue(mock_log_exception.called)
