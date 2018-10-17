@@ -238,7 +238,11 @@ class BaseOpenStackService(base.BaseMetadataService):
         return services
 
     def get_network_details_v2(self):
-        network_data = self._get_network_data()
+        try:
+            network_data = self._get_network_data()
+        except base.NotExistingMetadataException:
+            LOG.info("V2 network metadata not found")
+            return
 
         links = self._parse_network_data_links(
             network_data.get("links", []))
