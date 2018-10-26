@@ -174,16 +174,16 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
 
     @staticmethod
     def _process_link_common(osutils, link):
-        LOG.debug(
-            "Enable network adapter \"%(name)s\": %(enabled)s",
-            {"name": link.name, "enabled": link.enabled})
-        osutils.enable_network_adapter(link.name, link.enabled)
-
         if link.mtu:
             LOG.debug(
                 "Setting MTU on network adapter \"%(name)s\": %(mtu)s",
                 {"name": link.name, "mtu": link.mtu})
             osutils.set_network_adapter_mtu(link.name, link.mtu)
+
+        LOG.debug(
+            "Enable network adapter \"%(name)s\": %(enabled)s",
+            {"name": link.name, "enabled": link.enabled})
+        osutils.enable_network_adapter(link.name, link.enabled)
 
     @staticmethod
     def _process_physical_links(osutils, network_details):
