@@ -92,7 +92,8 @@ class TestNetworkConfigPlugin(unittest.TestCase):
                 nic.gateway6,
                 []
             )
-            calls.append(call)
+            if nic.address and nic.netmask:
+                calls.append(call)
             if nic.address6 and nic.netmask6:
                 calls.append(call6)
         self.assertEqual(

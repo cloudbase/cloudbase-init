@@ -26,12 +26,22 @@ DNSNS0 = "208.67.220.220 208.67.222.222"
 
 NAME1 = "eth1"
 ADDRESS1 = "10.1.0.2"
-ADDRESS61 = "::ffff:a00:1"
+ADDRESS61 = None
 NETMASK1 = "255.255.255.0"
 NETMASK61 = None
 BROADCAST1 = "10.1.0.255"
 GATEWAY1 = "10.1.0.1"
-GATEWAY61 = "2001::ffff:a00:1b"
+GATEWAY61 = None
+
+NAME2 = "eth2"
+MAC2 = None
+ADDRESS2 = "::ffff:a00:1"
+ADDRESS62 = None
+NETMASK2 = None
+NETMASK62 = None
+BROADCAST2 = None
+GATEWAY2 = "2001::ffff:a00:1b"
+GATEWAY62 = None
 
 
 def get_fake_metadata_json(version):
@@ -158,9 +168,9 @@ iface {name1} inet static
     broadcast {broadcast1}
     gateway {gateway1}
 iface eth2 inet6 static
-    address {address61}
-    netmask {netmask61}
-    gateway {gateway61}
+    address {address2}
+    netmask {netmask2}
+    gateway {gateway2}
          """).format(name0=NAME0,    # eth0 (IPv4/6)
                      mac0=MAC0,
                      address0=ADDRESS0,
@@ -179,7 +189,17 @@ iface eth2 inet6 static
                      gateway1=GATEWAY1,
                      address61=ADDRESS61,
                      netmask61=NETMASK61,
-                     gateway61=GATEWAY61
+                     gateway61=GATEWAY61,
+                     # eth2 (IPv6)
+                     name2=NAME1,
+                     mac2=MAC2,
+                     address2=ADDRESS2,
+                     broadcast2=BROADCAST2,
+                     netmask2=NETMASK2,
+                     gateway2=GATEWAY2,
+                     address62=ADDRESS62,
+                     netmask62=NETMASK62,
+                     gateway62=GATEWAY62
                      )
         }
     }

@@ -60,7 +60,9 @@ IFACE_TEMPLATE = dict.fromkeys(FIELDS.keys())
 V6_PROXY = {
     ADDRESS: ADDRESS6,
     NETMASK: NETMASK6,
-    GATEWAY: GATEWAY6
+    GATEWAY: GATEWAY6,
+    NAME: NAME,
+    MAC: MAC,
 }
 DETAIL_PREPROCESS = {
     MAC: lambda value: value.upper(),
@@ -79,7 +81,6 @@ def _get_iface_blocks(data):
         if "iface" in line:
             if "inet6" in line:
                 crt_lines = lines6
-                continue
             if lines:
                 yield lines, lines6
             lines[:] = []
