@@ -52,12 +52,16 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
 
     def _check_for_config_drive(self, drive):
         label = self._osutils.get_volume_label(drive)
-        if label and label.lower() == CONFIG_DRIVE_LABEL and \
-            os.path.exists(os.path.join(drive,
+        if label and label.lower() == CONFIG_DRIVE_LABEL:
+            if os.path.exists(os.path.join(drive,
                                         'openstack\\latest\\'
                                         'meta_data.json')):
-            LOG.info('Config Drive found on %s', drive)
-            return True
+                LOG.info('Config Drive found on %s', drive)
+                return True
+            else:
+                LOG.debug('%s\openstack\latest\meta_data.json not found ', drive)
+        else:
+            LOG.debug('The lable of Drive %s is %s ,The lable of Config Drive should be %s', drive, label, CONFIG_DRIVE_LABEL)
         return False
 
     def _get_iso_file_size(self, device):
