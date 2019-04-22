@@ -180,6 +180,26 @@ Capabilities:
     * authentication certificates (x509)
     * user data
 
+OVF
+---
+
+.. class:: cloudbaseinit.metadata.services.ovfservice.OvfService
+
+The *OVF* provider searches data from OVF environment ISO transport.
+
+Capabilities:
+    * instance ID
+    * host name
+    * public keys
+    * admin password
+    * user data
+
+Config options:
+
+    * config_file_name (string: "ovf-env.xml")
+    * drive_label (string: "OVF ENV")
+    * ns (string: "oe")
+
 ----
 
 Configuring available services
