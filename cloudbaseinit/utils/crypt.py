@@ -92,8 +92,13 @@ openssl.ERR_error_string_n.argtypes = [ctypes.c_long,
                                        ctypes.c_char_p,
                                        ctypes.c_int]
 
-openssl.ERR_load_crypto_strings.restype = ctypes.c_int
-openssl.ERR_load_crypto_strings.argtypes = []
+try:
+    openssl.ERR_load_crypto_strings.restype = ctypes.c_int
+    openssl.ERR_load_crypto_strings.argtypes = []
+except AttributeError:
+    # NOTE(avladu): This function is deprecated and no longer needed
+    # since OpenSSL 1.1
+    pass
 
 clib.fopen.restype = ctypes.c_void_p
 clib.fopen.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -113,7 +118,11 @@ class OpenSSLException(CryptException):
         super(OpenSSLException, self).__init__(message)
 
     def _get_openssl_error_msg(self):
-        openssl.ERR_load_crypto_strings()
+        try:
+            openssl.ERR_load_crypto_strings()
+        except AttributeError:
+            pass
+
         errno = openssl.ERR_get_error()
         errbuf = ctypes.create_string_buffer(1024)
         openssl.ERR_error_string_n(errno, errbuf, 1024)
