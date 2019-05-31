@@ -16,6 +16,7 @@ Contents:
    services
    plugins
    userdata
+   config
 
 
 Indices and tables

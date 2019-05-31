@@ -1,4 +1,12 @@
 - project:
+    check:
+      jobs:
+        - build-openstack-releasenotes
+        - build-openstack-sphinx-docs
+    gate:
+      jobs:
+        - build-openstack-releasenotes
+        - build-openstack-sphinx-docs
     post:
       jobs:
         - cbsl-init-upload-git-mirror

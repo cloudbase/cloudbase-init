@@ -32,6 +32,8 @@ import shlex
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'oslo_config.sphinxext'
+
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -93,6 +93,7 @@ initialization cases.
 More of these explained options are available under the :ref:`services`,
 :ref:`plugins` and :ref:`userdata` documentation.
 
+A complete list of config options can be found at :ref:`config_list`.
 
 .. _execution:
 
