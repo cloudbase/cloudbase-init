@@ -56,7 +56,7 @@ Config options:
 Setting password *(main)*
 -------------------------
 
-.. class:: cloudbaseinit.plugins.windows.setuserpassword.SetUserPasswordPlugin
+.. class:: cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin
 
 Sets the cloud user's password. If a password has been provided in the metadata
 during boot it will be used, otherwise a random password will be generated,
