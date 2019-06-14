@@ -113,6 +113,8 @@ The following cloud-config directives are supported:
     .. code-block:: xml
 
         # One item
+
+        #cloud-config
         write_files:
            encoding: b64
            content: NDI=
@@ -122,6 +124,8 @@ The following cloud-config directives are supported:
     .. code-block:: xml
 
         # Multiple items
+
+        #cloud-config
         write_files:
            -   encoding: b64
                content: NDI=
