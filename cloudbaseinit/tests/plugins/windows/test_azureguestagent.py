@@ -80,6 +80,7 @@ class AzureGuestAgentPluginTest(unittest.TestCase):
                                mock_exists, mock_rmtree):
         mock_rmtree.side_effect = (None, Exception)
         mock_exists.return_value = True
+        mock_os_getenv.return_value = "fake_path"
         with self.snatcher:
             self._azureagentplugin._remove_azure_dirs()
         mock_os_getenv.assert_called_with("SystemDrive")
