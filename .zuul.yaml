@@ -1,12 +1,16 @@
 - project:
+    templates:
+      - build-openstack-docs-pti
     check:
       jobs:
-        - build-openstack-releasenotes
-        - build-openstack-sphinx-docs
+        - build-openstack-releasenotes:
+            vars:
+              sphinx_python: python3
     gate:
       jobs:
-        - build-openstack-releasenotes
-        - build-openstack-sphinx-docs
+        - build-openstack-releasenotes:
+            vars:
+              sphinx_python: python3
     post:
       jobs:
         - cbsl-init-upload-git-mirror
