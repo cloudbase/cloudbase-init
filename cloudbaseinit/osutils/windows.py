@@ -35,6 +35,7 @@ import win32process
 import win32security
 import win32service
 import winerror
+import win32com.client
 
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import base
@@ -1007,6 +1008,10 @@ class WindowsUtils(base.BaseOSUtils):
 
     def wait_for_boot_completion(self):
         try:
+            strComputer = "."
+            objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
+            mywmi = objWMIService.ConnectServer(strComputer,"root\cimv2")
+            wait_setup_flag = 0
             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                                 "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
                                 winreg.KEY_READ) as key:
@@ -1014,10 +1019,29 @@ class WindowsUtils(base.BaseOSUtils):
                     gen_state = winreg.QueryValueEx(key,
                                                     "GeneralizationState")[0]
                     if gen_state == 7:
-                        break
+                        LOG.info('Sysprep completion. '
+                                 'GeneralizationState: %d', gen_state)
+                        allProcess = mywmi.ExecQuery("select * from Win32_Process where caption='setup.exe'")
+                        if len(allProcess) > 0:
+                            for i in allProcess:
+                                cmd_line = i.Properties_("CommandLine")
+                                if re.search('oobe' , str(cmd_line).lower()) != None:
+                                    wait_setup_flag = 1
+                                    break
+                            if wait_setup_flag:
+                                LOG.info('%s is running , wait it completion' , str(cmd_line))
+                            else:
+                                LOG.info('Finally , windows initialize setup.exe completion , and wait 5 seconds to complete the other steps!')
+                                time.sleep(5)
+                                return
+                        else:
+                            LOG.info('Windows initialize setup.exe completion , and wait 5 seconds to complete the other steps!')
+                            time.sleep(5)
+                            return
+                    else:
+                        LOG.info('Waiting for sysprep completion. '
+                                 'GeneralizationState: %d', gen_state)
                     time.sleep(1)
-                    LOG.info('Waiting for sysprep completion. '
-                             'GeneralizationState: %d', gen_state)
         except WindowsError as ex:
             if ex.winerror == 2:
                 LOG.debug('Sysprep data not found in the registry, '
