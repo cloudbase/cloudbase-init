@@ -23,6 +23,7 @@ from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
+from cloudbaseinit.utils import network
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
@@ -83,6 +84,10 @@ class CloudStack(base.BaseHTTPMetadataService):
     def load(self):
         """Obtain all the required information."""
         super(CloudStack, self).load()
+
+        if CONF.cloudstack.add_metadata_private_ip_route:
+            network.check_metadata_ip_route(CONF.cloudstack.metadata_base_url)
+
         if self._test_api(CONF.cloudstack.metadata_base_url):
             return True
 

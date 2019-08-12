@@ -43,6 +43,9 @@ class CloudStackOptions(conf_base.Options):
                 "https_ca_bundle", default=None,
                 help="The path to a CA_BUNDLE file or directory with "
                      "certificates of trusted CAs."),
+            cfg.BoolOpt(
+                "add_metadata_private_ip_route", default=False,
+                help="Add a route for the metadata ip address to the gateway"),
         ]
 
     def register(self):
