@@ -13,7 +13,6 @@
 #    under the License.
 
 import sys
-import time
 
 import mi
 from oslo_log import log as oslo_logging
@@ -23,6 +22,7 @@ from cloudbaseinit import exception
 from cloudbaseinit.models import network as network_model
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import network_team
+from cloudbaseinit.utils import retry_decorator
 
 LBFO_TEAM_MODE_STATIC = 0
 LBFO_TEAM_MODE_SWITCH_INDEPENDENT = 1
@@ -78,6 +78,7 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
         return primary_adapter_name
 
     @staticmethod
+    @retry_decorator.retry_decorator(max_retry_count=3)
     def _add_team_member(conn, team_name, member):
         team_member = conn.MSFT_NetLbfoTeamMember.new()
         team_member.Team = team_name
@@ -90,6 +91,7 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
         team_member.put(operation_options=operation_options)
 
     @staticmethod
+    @retry_decorator.retry_decorator(max_retry_count=3)
     def _set_primary_nic_vlan_id(conn, team_name, vlan_id):
         team_nic = conn.MSFT_NetLbfoTeamNIC(Team=team_name, Primary=True)[0]
 
@@ -101,6 +103,34 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
 
         operation_options = {u'custom_options': custom_options}
         team_nic.put(operation_options=operation_options)
+
+    @staticmethod
+    @retry_decorator.retry_decorator(max_retry_count=3)
+    def _create_team(conn, team_name, nic_name, teaming_mode, lb_algo,
+                     primary_adapter_name, lacp_timer=None):
+
+        team = conn.MSFT_NetLbfoTeam.new()
+        team.Name = team_name
+        team.TeamingMode = teaming_mode
+        team.LoadBalancingAlgorithm = lb_algo
+        if lacp_timer:
+            team.LacpTimer = lacp_timer
+
+        custom_options = [
+            {
+                u'name': u'TeamMembers',
+                u'value_type': mi.MI_ARRAY | mi.MI_STRING,
+                u'value': [primary_adapter_name]
+            },
+            {
+                u'name': u'TeamNicName',
+                u'value_type': mi.MI_STRING,
+                u'value': nic_name
+            }
+        ]
+
+        operation_options = {u'custom_options': custom_options}
+        team.put(operation_options=operation_options)
 
     def create_team(self, team_name, mode, load_balancing_algorithm,
                     members, mac_address, primary_nic_name=None,
@@ -124,30 +154,13 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
                 raise exception.ItemNotFoundException(
                     "Unsupported LB algorithm: %s" % load_balancing_algorithm)
 
-        team = conn.MSFT_NetLbfoTeam.new()
-        team.Name = team_name
-        team.TeamingMode = teaming_mode
-        team.LoadBalancingAlgorithm = lb_algo
-
-        if lacp_timer is not None and team.TeamingMode == LBFO_TEAM_MODE_LACP:
-            team.LacpTimer = NETWORK_MODEL_LACP_RATE_MAP[lacp_timer]
+        if lacp_timer is not None and teaming_mode == LBFO_TEAM_MODE_LACP:
+            lacp_timer = NETWORK_MODEL_LACP_RATE_MAP[lacp_timer]
 
         nic_name = primary_nic_name or team_name
-        custom_options = [
-            {
-                u'name': u'TeamMembers',
-                u'value_type': mi.MI_ARRAY | mi.MI_STRING,
-                u'value': [primary_adapter_name]
-            },
-            {
-                u'name': u'TeamNicName',
-                u'value_type': mi.MI_STRING,
-                u'value': nic_name
-            }
-        ]
 
-        operation_options = {u'custom_options': custom_options}
-        team.put(operation_options=operation_options)
+        self._create_team(conn, team_name, nic_name, teaming_mode, lb_algo,
+                          primary_adapter_name, lacp_timer)
 
         try:
             for member in members:
@@ -158,31 +171,21 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
                 self._set_primary_nic_vlan_id(
                     conn, team_name, primary_nic_vlan_id)
 
-            if primary_nic_name != team_name or primary_nic_vlan_id is None:
-                # TODO(alexpilotti): query the new nic name
-                # When the nic name equals the bond name and a VLAN ID is set,
-                # the nick name is changed.
-                self._wait_for_nic(nic_name)
+            nic_name = conn.MSFT_NetLbfoTeamNic(team=team_name)[0].Name
+            self._wait_for_nic(nic_name)
         except Exception as ex:
             self.delete_team(team_name)
             raise ex
 
     @staticmethod
+    @retry_decorator.retry_decorator(max_retry_count=10)
     def _wait_for_nic(nic_name):
         conn = wmi.WMI(moniker='//./root/cimv2')
-        max_count = 100
-        i = 0
-        while True:
-            if len(conn.Win32_NetworkAdapter(NetConnectionID=nic_name)):
-                break
-            else:
-                i += 1
-                if i >= max_count:
-                    raise exception.ItemNotFoundException(
-                        "Cannot find team NIC: %s" % nic_name)
-                LOG.debug("Waiting for team NIC: %s", nic_name)
-                time.sleep(1)
+        if not conn.Win32_NetworkAdapter(NetConnectionID=nic_name):
+            raise exception.ItemNotFoundException(
+                "Cannot find NIC: %s" % nic_name)
 
+    @retry_decorator.retry_decorator(max_retry_count=3)
     def add_team_nic(self, team_name, nic_name, vlan_id):
         conn = wmi.WMI(moniker='root/standardcimv2')
         team_nic = conn.MSFT_NetLbfoTeamNIC.new()
@@ -193,6 +196,7 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
         # Ensure that the NIC is visible in the OS before returning
         self._wait_for_nic(nic_name)
 
+    @retry_decorator.retry_decorator(max_retry_count=3)
     def delete_team(self, team_name):
         conn = wmi.WMI(moniker='root/standardcimv2')
         teams = conn.MSFT_NetLbfoTeam(name=team_name)

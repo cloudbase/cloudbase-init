@@ -39,6 +39,7 @@ import winerror
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import base
 from cloudbaseinit.utils import classloader
+from cloudbaseinit.utils import retry_decorator
 from cloudbaseinit.utils.windows import disk
 from cloudbaseinit.utils.windows import network
 from cloudbaseinit.utils.windows import privilege
@@ -757,6 +758,8 @@ class WindowsUtils(base.BaseOSUtils):
 
         return iface_index_list[0]["friendly_name"]
 
+    @retry_decorator.retry_decorator(
+        max_retry_count=3, exceptions=exception.ItemNotFoundException)
     def set_network_adapter_mtu(self, name, mtu):
         if not self.check_os_version(6, 0):
             raise exception.CloudbaseInitException(
