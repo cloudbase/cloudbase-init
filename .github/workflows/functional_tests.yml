@@ -1,0 +1,40 @@
+name: Cloudbase-Init functional test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+    strategy:
+      max-parallel: 100
+      matrix:
+        python-version: [3.6]
+        cloud: [openstack-http,openstack,cloudstack,ovf,maas]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install local dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -c https://git.openstack.org/cgit/openstack/requirements/plain/upper-constraints.txt -U --force-reinstall -r requirements.txt
+        pip install .
+    - name: Download external dependencies
+      run: |
+        powershell.exe Start-BitsTransfer -Source "https://raw.githubusercontent.com/ader1990/cloudbase-init-test-resources/master/${{ matrix.cloud }}/cloudbase-init.conf" -Destination ./cloudbase-init.conf
+        powershell.exe Start-BitsTransfer -Source "https://raw.githubusercontent.com/ader1990/cloudbase-init-test-resources/master/${{ matrix.cloud }}/cloudbase-init-metadata.iso" -Destination ./cloudbase-init-config-drive.iso
+    - name: Run Cloudbase-Init
+      run: |
+        powershell.exe Mount-DiskImage -ImagePath (Resolve-Path ./cloudbase-init-config-drive.iso); Get-PSDrive
+        powershell.exe ipconfig.exe /all
+        powershell.exe winrm.cmd quickconfig -force -q
+        powershell.exe mkdir """./metadata"""; cp -recurse -force """E:\*""" """./metadata"""
+        powershell.exe (Get-Content """.\metadata\openstack\latest\network_data.json.template""").Replace("""REPLACE_MAC_ADDRESS""", ((Get-NetAdapter Ethernet).macaddress).Replace("""-""",""":"""))^|Set-Content """.\metadata\openstack\latest\network_data.json""" -Encoding Ascii
+        powershell Start-Process -FilePath python.exe -ArgumentList """-m http.server""" -NoNewWindow -WorkingDirectory (Resolve-Path("""./metadata""")) 2>&1 >> http_server.log;
+        cloudbase-init.exe --noreset_service_password --config-file ./cloudbase-init.conf 2>&1 >> cloudbase-init.log
+        powershell cat ./cloudbase-init.log
+        powershell $errors = $(cat ./cloudbase-init.log ^| Where-Object {$_ -like """*error*"""}); $pluginExecution = $(cat ./cloudbase-init.log ^| Where-Object {$_ -like """*Plugins execution done*"""}); if ($errors -or !$pluginExecution) { exit 1; }
