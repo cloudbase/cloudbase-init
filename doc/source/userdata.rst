@@ -161,7 +161,7 @@ The following cloud-config directives are supported:
 Multi-part content
 ------------------
 
-MIME multi-part user data is supported. The content will ne handled based on
+MIME multi-part user data is supported. The content will be handled based on
 the content type.
 
 * text/x-shellscript - Any script to be executed: PowerShell, Batch, Bash
