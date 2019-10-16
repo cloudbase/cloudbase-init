@@ -23,6 +23,7 @@ _OPT_PATHS = (
     'cloudbaseinit.conf.openstack.OpenStackOptions',
     'cloudbaseinit.conf.azure.AzureOptions',
     'cloudbaseinit.conf.ovf.OvfOptions',
+    'cloudbaseinit.conf.vmwareguestinfo.VMwareGuestInfoConfigOptions',
 )
 
 
