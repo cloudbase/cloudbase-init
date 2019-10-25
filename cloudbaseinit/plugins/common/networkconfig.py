@@ -146,13 +146,15 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
             name = osutils.get_network_adapter_name_by_mac_address(mac)
             LOG.info("Configuring network adapter: %s", name)
 
-            reboot = osutils.set_static_network_config(
-                name,
-                nic.address,
-                nic.netmask,
-                nic.gateway,
-                nic.dnsnameservers
-            )
+            # In v6 only case, nic.address and nic.netmask could be unset
+            if nic.address and nic.netmask:
+                reboot = osutils.set_static_network_config(
+                    name,
+                    nic.address,
+                    nic.netmask,
+                    nic.gateway,
+                    nic.dnsnameservers
+                )
             reboot_required = reboot or reboot_required
             # Set v6 info too if available.
             if nic.address6 and nic.netmask6:

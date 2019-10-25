@@ -63,7 +63,19 @@ class TestInterfacesParser(unittest.TestCase):
             fake_json_response.GATEWAY61,
             None
         )
-        self.assertEqual([nic0, nic1], nics)
+        nic2 = network_model.NetworkDetails(
+            fake_json_response.NAME2,
+            None,
+            fake_json_response.ADDRESS2,
+            fake_json_response.ADDRESS62,
+            fake_json_response.NETMASK2,
+            fake_json_response.NETMASK62,
+            fake_json_response.BROADCAST2,
+            fake_json_response.GATEWAY2,
+            fake_json_response.GATEWAY62,
+            None
+        )
+        self.assertEqual([nic0, nic1, nic2], nics)
 
     def test_nothing_to_parse(self):
         invalid = [None, "", 324242, ("dasd", "dsa")]

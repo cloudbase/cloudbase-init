@@ -245,7 +245,19 @@ class TestBaseOpenStackService(unittest.TestCase):
             fake_json_response.GATEWAY61,
             None
         )
-        self.assertEqual([nic0, nic1], ret)
+        nic2 = network_model.NetworkDetails(
+            fake_json_response.NAME2,
+            None,
+            fake_json_response.ADDRESS2,
+            fake_json_response.ADDRESS62,
+            fake_json_response.NETMASK2,
+            fake_json_response.NETMASK62,
+            fake_json_response.BROADCAST2,
+            fake_json_response.GATEWAY2,
+            fake_json_response.GATEWAY62,
+            None
+        )
+        self.assertEqual([nic0, nic1, nic2], ret)
 
     def test_get_network_details_no_config(self):
         self._partial_test_get_network_details(
