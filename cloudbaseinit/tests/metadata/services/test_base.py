@@ -54,6 +54,13 @@ class TestBase(unittest.TestCase):
     def test_is_password_changed(self):
         self.assertFalse(self._service.is_password_changed())
 
+    @mock.patch('cloudbaseinit.metadata.services.base.'
+                'BaseMetadataService.get_public_keys')
+    def test_get_user_pwd_encryption_key(self, mock_get_public_keys):
+        mock_get_public_keys.return_value = ['fake', 'keys']
+        result = self._service.get_user_pwd_encryption_key()
+        self.assertEqual(result, mock_get_public_keys.return_value[0])
+
 
 class TestBaseHTTPMetadataService(unittest.TestCase):
 

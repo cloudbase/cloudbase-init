@@ -110,6 +110,19 @@ class BaseMetadataService(object):
         """Get a list of space-stripped strings as public keys."""
         pass
 
+    def get_user_pwd_encryption_key(self):
+        """Get the user password encryption public key as a string.
+
+        The encryption public key, if existent, will be used to encrypt the
+        user password to be sent to the metadata service.
+        By default, the first public key set by the user
+        will be used to encrypt the user password.
+
+        """
+        public_keys = self.get_public_keys()
+        if public_keys:
+            return list(public_keys)[0]
+
     def get_network_details(self):
         """Return a list of `NetworkDetails` objects.
 
