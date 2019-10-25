@@ -394,6 +394,14 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         self._test__get_config_drive_files(
             "iso", "cdrom", func)
 
+    @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
+                'WindowsConfigDriveManager.'
+                '_get_config_drive_from_cdrom_drive')
+    def test__get_config_drive_files_cdrom_iso_failed(self, func):
+        func.side_effect = Exception
+        self._test__get_config_drive_files(
+            "iso", "cdrom", func, found=False)
+
     def test__get_config_drive_files_cdrom_vfat(self):
         self._test__get_config_drive_files(
             "vfat", "cdrom", None)
