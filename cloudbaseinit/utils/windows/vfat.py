@@ -50,7 +50,7 @@ def is_vfat_drive(osutils, drive_path):
     LOG.debug("Obtained label information for drive %r: %r", drive_path, out)
     out = out.decode().strip()
     match = VOLUME_LABEL_REGEX.search(out)
-    return match.group(1) in CONFIG_DRIVE_LABELS
+    return match.group(1) in CONFIG_DRIVE_LABELS if match else False
 
 
 def copy_from_vfat_drive(osutils, drive_path, target_path):

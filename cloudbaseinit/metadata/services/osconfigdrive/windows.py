@@ -176,14 +176,20 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         return False
 
     def _get_config_drive_files(self, cd_type, cd_location):
-        get_config_drive = self.config_drive_type_location.get(
-            "{}_{}".format(cd_location, cd_type))
-        if get_config_drive:
-            return get_config_drive()
-        else:
-            LOG.debug("Irrelevant type %(type)s in %(location)s location; "
-                      "skip",
-                      {"type": cd_type, "location": cd_location})
+        try:
+            get_config_drive = self.config_drive_type_location.get(
+                "{}_{}".format(cd_location, cd_type))
+            if get_config_drive:
+                return get_config_drive()
+            else:
+                LOG.debug("Irrelevant type %(type)s in %(location)s "
+                          "location; skip",
+                          {"type": cd_type, "location": cd_location})
+        except Exception as exc:
+            LOG.warning("Config type %(type)s not found in %(loc)s "
+                        "location; Error: '%(err)r'",
+                        {"type": cd_type, "loc": cd_location, "err": exc})
+
         return False
 
     def get_config_drive_files(self, searched_types=None,
