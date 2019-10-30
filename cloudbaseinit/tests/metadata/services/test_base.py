@@ -183,3 +183,27 @@ class TestBaseHTTPMetadataService(unittest.TestCase):
         ssl_error = requests.exceptions.SSLError()
         self._test_get_data(expected_response=ssl_error,
                             expected_value=exception.CertificateVerifyFailed)
+
+
+class TestEmptyMetadataService(unittest.TestCase):
+
+    def setUp(self):
+        self._service = base.EmptyMetadataService()
+
+    def test_get_name(self):
+        self.assertEqual(self._service.get_name(), 'EmptyMetadataService')
+
+    def test__get_data(self):
+        self.assertFalse(self._service._get_data('fake_path'))
+
+    def test_get_admin_username(self):
+        self.assertRaises(base.NotExistingMetadataException,
+                          self._service.get_admin_username)
+
+    def test_get_admin_password(self):
+        self.assertRaises(base.NotExistingMetadataException,
+                          self._service.get_admin_password)
+
+    def test_is_password_changed(self):
+        self.assertRaises(base.NotExistingMetadataException,
+                          self._service.is_password_changed)

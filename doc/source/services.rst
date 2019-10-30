@@ -338,3 +338,27 @@ Config options for `default` section:
 
     * retry_count (integer: 5)
     * retry_count_interval (integer: 4)
+
+EMPTY
+-----
+
+.. class:: cloudbaseinit.metadata.services.base.EmptyMetadataService
+
+The empty metadata service can be used to run plugins that do not
+rely on metadata service information, like setting NTP, MTU,
+extending volumes, local scripts execution, licensing, etc.
+
+It can be used also as a fallback metadata service, in case no other
+previous metadata service could be loaded.
+
+EmptyMetadataService does not support the following plugins:
+  * cloudbaseinit.plugins.windows.createuser.CreateUserPlugin
+  * cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin
+  * cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin
+  * cloudbaseinit.plugins.windows.winrmcertificateauth.ConfigWinRMCertificateAuthPlugin
+
+If any of the plugins defined above are executed,
+they will fail with exception NotExistingMetadataException. The reason
+for the hardcoded failure is that these plugins rely on metadata to execute
+correctly. If metadata like username or password is not provided,
+these plugins can lock or misconfigure the user, leading to unwanted problems.
