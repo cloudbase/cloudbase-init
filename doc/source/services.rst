@@ -1,5 +1,3 @@
-.. _services:
-
 Services
 ========
 
@@ -118,8 +116,8 @@ Config options:
 .. note:: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 
-CloudStack
-----------
+Apache CloudStack
+-----------------
 
 .. class:: cloudbaseinit.metadata.services.cloudstack.CloudStack
 
@@ -145,8 +143,8 @@ Config options:
           server.
 
 
-OpenNebula
-----------
+OpenNebula Service
+------------------
 
 .. class:: cloudbaseinit.metadata.services.opennebulaservice.OpenNebulaService
 
@@ -180,8 +178,9 @@ Capabilities:
     * authentication certificates (x509)
     * user data
 
-OVF
----
+
+Open Virtualization Format (OVF)
+--------------------------------
 
 .. class:: cloudbaseinit.metadata.services.ovfservice.OvfService
 

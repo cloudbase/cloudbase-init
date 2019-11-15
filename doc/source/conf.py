@@ -34,7 +34,8 @@ from cloudbaseinit import version as cbs_version
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'oslo_config.sphinxext'
+    'oslo_config.sphinxext',
+    'sphinx.ext.autosectionlabel',
 
 ]
 
@@ -116,7 +117,7 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'classic'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

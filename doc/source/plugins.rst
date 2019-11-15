@@ -1,5 +1,3 @@
-.. _plugins:
-
 Plugins
 =======
 
@@ -69,7 +67,8 @@ password isn't found in metadata, then an attempt of using an already set
 password is done (usually a random value by the `createuser` plugin).
 With `first_logon_behaviour` you can control what happens with the password at
 the next logon. If this option is set to "always", the user will be forced to
-change the password at the next logon. If it is set to "clear_text_injected_only",
+change the password at the next logon.
+If it is set to "clear_text_injected_only",
 the user will be forced to change the password only if the password is a
 clear text password, coming from the metadata. The last option is "no",
 when the user is never forced.
