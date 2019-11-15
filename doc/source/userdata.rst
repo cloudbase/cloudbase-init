@@ -35,8 +35,7 @@ environment variable).
 
 PowerShell
 ----------
-
-**#ps1_sysnative** (system native)
+**#ps1** or **#ps1_sysnative** (system native)
 
 **#ps1_x86** (Windows On Windows 32bit)
 
