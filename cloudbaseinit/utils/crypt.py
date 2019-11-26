@@ -26,7 +26,12 @@ if sys.platform == "win32":
     else:
         clib = ctypes.cdll.ucrtbase
 
-    openssl = ctypes.cdll.libeay32
+    # Note(mbivolan): The library name has changed in OpenSSL 1.1.0
+    # Keeping the old name for backward compatibility
+    try:
+        openssl = ctypes.cdll.libeay32
+    except Exception:
+        openssl = ctypes.cdll.libcrypto
 else:
     clib = ctypes.CDLL(clib_path)
     openssl_lib_path = ctypes.util.find_library("ssl")
