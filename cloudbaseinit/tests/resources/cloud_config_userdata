@@ -22,3 +22,8 @@ write_files:
   encoding: gzip
   content: !!binary |
       H4sIAGUfoFQC/zMxAgCIsCQyAgAAAA==
+- path: {invalid_encoding}
+  encoding: invalid_encoding
+  content: '42'
+- path: {missing_encoding}
+  content: '42'
