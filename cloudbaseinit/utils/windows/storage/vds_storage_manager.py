@@ -91,8 +91,8 @@ class VDSStorageManager(base.BaseStorageManager):
 
             input_disks_ar = (vds.VDS_INPUT_DISK *
                               len(input_disks))(*input_disks)
-            async = volume.Extend(input_disks_ar, len(input_disks))
-            async.Wait()
+            extend_job = volume.Extend(input_disks_ar, len(input_disks))
+            extend_job.Wait()
 
     def _get_volume_extents_to_resize(self, pack, volume_id):
         volume_extents = []
