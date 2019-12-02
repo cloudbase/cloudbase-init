@@ -28,6 +28,8 @@ PLUGINS = {
                     'cloudconfigplugins.set_hostname.SetHostnamePlugin',
     'hostname': 'cloudbaseinit.plugins.common.userdataplugins.'
                 'cloudconfigplugins.set_hostname.SetHostnamePlugin',
+    'ntp': 'cloudbaseinit.plugins.common.userdataplugins.'
+                'cloudconfigplugins.set_ntp.SetNtpPlugin',
 }
 
 
