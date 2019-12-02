@@ -36,6 +36,7 @@ import win32security
 import win32service
 import winerror
 
+from cloudbaseinit import constant
 from cloudbaseinit import exception
 from cloudbaseinit.osutils import base
 from cloudbaseinit.utils import classloader
@@ -1742,3 +1743,6 @@ class WindowsUtils(base.BaseOSUtils):
         ls = info['FileVersionLS']
         return (win32api.HIWORD(ms), win32api.LOWORD(ms),
                 win32api.HIWORD(ls), win32api.LOWORD(ls))
+
+    def get_default_script_exec_header(self):
+        return constant.SCRIPT_HEADER_CMD
