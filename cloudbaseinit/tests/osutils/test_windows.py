@@ -248,6 +248,45 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_user_does_not_exist(self):
         self._test_user_exists(exists=False)
 
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_group_info')
+    def _test_group_exists(self, mock_get_group_info, exists):
+        fake_group_name = 'fake_group'
+        if not exists:
+            mock_get_group_info.side_effect = [exception.ItemNotFoundException]
+            response = self._winutils.group_exists(fake_group_name)
+            self.assertEqual(False, response)
+            return
+        response = self._winutils.group_exists(fake_group_name)
+        mock_get_group_info.assert_called_once_with(fake_group_name, 1)
+        self.assertEqual(True, response)
+
+    def test_group_exists(self):
+        self._test_group_exists(exists=True)
+
+    def test_group_does_not_exist(self):
+        self._test_group_exists(exists=False)
+
+    def _test_create_group(self, fail=False):
+        fake_group = "fake_group"
+        group_info = {"name": fake_group}
+
+        if fail:
+            self._win32net_mock.NetLocalGroupAdd.side_effect = [
+                self._win32net_mock.error(*([mock.Mock()] * 3))]
+            with self.assertRaises(exception.CloudbaseInitException):
+                self._winutils.create_group(fake_group)
+            return
+        self._winutils.create_group(fake_group)
+        self._win32net_mock.NetLocalGroupAdd.assert_called_once_with(
+            None, 0, group_info)
+
+    def test_create_group(self):
+        self._test_create_group()
+
+    def test_create_group_fail(self):
+        self._test_create_group(True)
+
     def test_sanitize_shell_input(self):
         unsanitised = ' " '
         response = self._winutils.sanitize_shell_input(unsanitised)
@@ -2588,6 +2627,63 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         exc = self._win32net_mock.error(self._win32net_mock.error,
                                         *([mock.Mock()] * 2))
         self._test_enum_users(exc=exc)
+
+    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
+                '._get_user_info')
+    def _test_set_user_info(self, mock_user_info, full_name=None,
+                            disabled=False, expire_interval=None, exc=None):
+        user_info = {
+            "username": self._USERNAME,
+            "full_name": 'fake user',
+            "flags": 0,
+            "expire_interval": self._win32netcon_mock.TIMEQ_FOREVER
+        }
+        if full_name:
+            user_info["full_name"] = full_name
+        if expire_interval:
+            user_info["acct_expires"] = expire_interval
+
+        if disabled:
+            user_info["flags"] |= self._win32netcon_mock.UF_ACCOUNTDISABLE
+        else:
+            user_info["flags"] &= self._win32netcon_mock.UF_ACCOUNTDISABLE
+
+        mock_user_info.return_value = user_info
+        userset_mock = self._win32net_mock.NetUserSetInfo
+
+        if exc:
+            userset_mock.side_effect = [exc]
+            error_class = (
+                exception.ItemNotFoundException if
+                exc.args[0] == self._winutils.NERR_UserNotFound else
+                exception.CloudbaseInitException)
+            with self.assertRaises(error_class):
+                self._winutils.set_user_info(self._USERNAME, full_name, True,
+                                             expire_interval)
+            return
+
+        self._winutils.set_user_info(self._USERNAME, full_name, True,
+                                     expire_interval)
+        userset_mock.assert_called_once_with(
+            None, self._USERNAME, 2, user_info)
+
+    def test_set_user_info(self):
+        self._test_set_user_info()
+
+    def test_set_user_info_full_options(self):
+        self._test_set_user_info(full_name='fake_user1',
+                                 disabled=True, expire_interval=1)
+
+    def test_set_user_info_not_found(self):
+        exc = self._win32net_mock.error(self._winutils.NERR_UserNotFound,
+                                        *([mock.Mock()] * 2))
+        self._test_set_user_info(full_name='fake_user1',
+                                 disabled=True, expire_interval=1,
+                                 exc=exc)
+
+    def test_set_user_info_failed(self):
+        exc = self._win32net_mock.error(*([mock.Mock()] * 3))
+        self._test_set_user_info(exc=exc)
 
     def test_enum_users(self):
         self._test_enum_users(resume_handle=False)

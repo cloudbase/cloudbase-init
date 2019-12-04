@@ -474,6 +474,35 @@ class WindowsUtils(base.BaseOSUtils):
                 raise exception.CloudbaseInitException(
                     "Renaming user failed: %s" % ex.args[2])
 
+    def set_user_info(self, username, full_name=None,
+                      disabled=False, expire_interval=None):
+
+        user_info = self._get_user_info(username, 2)
+
+        if full_name:
+            user_info["full_name"] = full_name
+
+        if disabled:
+            user_info["flags"] |= win32netcon.UF_ACCOUNTDISABLE
+        else:
+            user_info["flags"] &= ~win32netcon.UF_ACCOUNTDISABLE
+
+        if expire_interval is not None:
+            user_info["acct_expires"] = int(expire_interval)
+        else:
+            user_info["acct_expires"] = win32netcon.TIMEQ_FOREVER
+
+        try:
+            win32net.NetUserSetInfo(None, username, 2, user_info)
+        except win32net.error as ex:
+            if ex.args[0] == self.NERR_UserNotFound:
+                raise exception.ItemNotFoundException(
+                    "User not found: %s" % username)
+            else:
+                LOG.debug(ex)
+                raise exception.CloudbaseInitException(
+                    "Setting user info failed: %s" % ex.args[2])
+
     def enum_users(self):
         usernames = []
         resume_handle = 0
@@ -531,6 +560,34 @@ class WindowsUtils(base.BaseOSUtils):
             raise exception.CloudbaseInitException(
                 "Setting password expiration failed: %s" % ex.args[2])
 
+    def group_exists(self, group):
+        try:
+            self._get_group_info(group, 1)
+            return True
+        except exception.ItemNotFoundException:
+            # Group not found
+            return False
+
+    def _get_group_info(self, group, level):
+        try:
+            return win32net.NetLocalGroupGetInfo(None, group, level)
+        except win32net.error as ex:
+            if ex.args[0] == self.NERR_GroupNotFound:
+                raise exception.ItemNotFoundException(
+                    "Group not found: %s" % group)
+            else:
+                raise exception.CloudbaseInitException(
+                    "Failed to get group info: %s" % ex.args[2])
+
+    def create_group(self, group, description=None):
+        group_info = {"name": group}
+
+        try:
+            win32net.NetLocalGroupAdd(None, 0, group_info)
+        except win32net.error as ex:
+            raise exception.CloudbaseInitException(
+                "Create group failed: %s" % ex.args[2])
+
     @staticmethod
     def _get_cch_referenced_domain_name(domain_name):
         return wintypes.DWORD(
@@ -562,11 +619,13 @@ class WindowsUtils(base.BaseOSUtils):
                                                    3, ctypes.pointer(lmi), 1)
 
         if ret_val == self.NERR_GroupNotFound:
-            raise exception.CloudbaseInitException('Group not found')
+            raise exception.CloudbaseInitException("Group '%s' not found"
+                                                   % groupname)
         elif ret_val == self.ERROR_ACCESS_DENIED:
             raise exception.CloudbaseInitException('Access denied')
         elif ret_val == self.ERROR_NO_SUCH_MEMBER:
-            raise exception.CloudbaseInitException('Username not found')
+            raise exception.CloudbaseInitException("Username '%s' not found"
+                                                   % username)
         elif ret_val == self.ERROR_MEMBER_IN_ALIAS:
             # The user is already a member of the group
             pass
