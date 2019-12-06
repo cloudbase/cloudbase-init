@@ -433,3 +433,37 @@ Capabilities:
 Config options for `vmwareguestinfo` section:
 
     * vmware_rpctool_path (string: "%ProgramFiles%/VMware/VMware Tools/rpctool.exe")
+
+
+Google Compute Engine Service
+-----------------------------
+
+.. class:: cloudbaseinit.metadata.services.gceservice.GCEService
+
+`GCE <https://cloud.google.com/compute/>`_ metadata service provides
+the metadata for instances running on Google Compute Engine.
+
+GCE metadata is offered via an internal HTTP metadata endpoint, reachable at the magic URL
+`http://metadata.google.internal/computeMetadata/v1/`. More information can be found in the GCE
+metadata `documents <https://cloud.google.com/compute/docs/storing-retrieving-metadata#querying>`_.
+
+To provide userdata to be executed by the instance (in cloud-config format, for example), use the
+user-data and user-data-encoding instance metadata keys.
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * user data
+
+Config options for `gce` section:
+
+    * metadata_base_url (string: http://metadata.google.internal/computeMetadata/v1/")
+    * https_allow_insecure (bool: False)
+    * https_ca_bundle (string: None)
+
+Config options for `default` section:
+
+    * retry_count (integer: 5)
+    * retry_count_interval (integer: 4)
