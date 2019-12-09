@@ -27,6 +27,7 @@ from cloudbaseinit.plugins.common.userdataplugins import factory
 from cloudbaseinit.plugins.common import userdatautils
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import x509constants
+from jinja2 import Template
 
 
 CONF = cloudbaseinit_conf.CONF
@@ -53,7 +54,14 @@ class UserDataPlugin(base.BasePlugin):
             self._write_userdata(user_data, user_data_path)
 
         if CONF.process_userdata:
-            return self._process_user_data(user_data)
+            instance_data = {
+                "ds": {
+                    "meta_data": {
+                        "hostname": service.get_host_name()
+                    }
+                }
+            }
+            return self._process_user_data(user_data, instance_data)
         return base.PLUGIN_EXECUTION_DONE, False
 
     @staticmethod
@@ -100,7 +108,7 @@ class UserDataPlugin(base.BasePlugin):
                                                    "The user data content is "
                                                    "either invalid or empty.")
 
-    def _process_user_data(self, user_data):
+    def _process_user_data(self, user_data, instance_data={}):
         plugin_status = base.PLUGIN_EXECUTION_DONE
         reboot = False
         headers = self._get_headers(user_data)
@@ -122,7 +130,7 @@ class UserDataPlugin(base.BasePlugin):
 
             return plugin_status, reboot
         else:
-            return self._process_non_multi_part(user_data)
+            return self._process_non_multi_part(user_data, instance_data)
 
     def _process_part(self, part, user_data_plugins, user_handlers):
         ret_val = None
@@ -186,8 +194,12 @@ class UserDataPlugin(base.BasePlugin):
         LOG.debug("Calling part handler \"__end__\" event")
         handler_func(None, "__end__", None, None)
 
-    def _process_non_multi_part(self, user_data):
+    def _process_non_multi_part(self, user_data, instance_data={}):
         ret_val = None
+        if user_data.startswith(b'## template: jinja'):
+            jinja_ident, cloud_config = user_data.split(b"\n", 1)
+            template = Template(cloud_config.decode())
+            user_data = template.render(**instance_data).encode()
         if user_data.startswith(b'#cloud-config'):
             user_data_plugins = factory.load_plugins()
             cloud_config_plugin = user_data_plugins.get('text/cloud-config')

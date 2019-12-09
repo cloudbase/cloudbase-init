@@ -1,3 +1,4 @@
+jinja2
 pbr>=2.0.0
 iso8601
 eventlet
