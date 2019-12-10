@@ -266,3 +266,52 @@ class WriteFilesPluginTests(unittest.TestCase):
 
         expected = "Can't process the type of data %r" % type(1)
         self.assertEqual(expected, str(cm.exception))
+
+    def test_process_item_fail(self):
+        fake_data = {}
+
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            write_files.WriteFilesPlugin()._process_item(fake_data)
+
+        self.assertEqual(['Missing required keys from file information {}'],
+                         snatcher.output)
+
+    @mock.patch('cloudbaseinit.plugins.common.userdataplugins.'
+                'cloudconfigplugins.write_files._process_content')
+    @mock.patch('cloudbaseinit.plugins.common.userdataplugins.'
+                'cloudconfigplugins.write_files._write_file')
+    @mock.patch('os.path.abspath')
+    def _test_process_item(self, fake_data,
+                           mock_os_path,
+                           mock_write_file,
+                           mock_process_content):
+        fake_path = mock.MagicMock()
+        mock_os_path.return_value = fake_path
+
+        fake_content = mock.MagicMock()
+        mock_process_content.return_value = fake_content
+
+        with testutils.LogSnatcher('cloudbaseinit.plugins.common.'
+                                   'userdataplugins.cloudconfigplugins.'
+                                   'write_files') as snatcher:
+            write_files.WriteFilesPlugin()._process_item(fake_data)
+
+        self.assertEqual(['Fail to process permissions None, assuming 420'],
+                         snatcher.output)
+
+        open_mode = 'wb'
+        if fake_data.get('append', False) is True:
+            open_mode = 'ab'
+
+        mock_write_file.assert_called_with(fake_path, fake_content, 420,
+                                           open_mode)
+
+    def test_process_item_write(self):
+        self._test_process_item(
+            {'path': 'fake_path', 'content': 'fake_content', 'append': False})
+
+    def test_process_item_append(self):
+        self._test_process_item(
+            {'path': 'fake_path', 'content': 'fake_content', 'append': True})

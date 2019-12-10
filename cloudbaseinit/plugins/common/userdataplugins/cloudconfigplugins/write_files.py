@@ -132,6 +132,7 @@ class WriteFilesPlugin(base.BaseCloudConfigPlugin):
         permissions: The octal permissions set that should be given for
         this file.
         encoding: An optional encoding specification for the file.
+        append: An optional flag to append the content
 
     The only required keys in this dictionary are `path` and `content`.
     """
@@ -146,7 +147,12 @@ class WriteFilesPlugin(base.BaseCloudConfigPlugin):
         content = _process_content(item['content'],
                                    item.get('encoding'))
         permissions = _convert_permissions(item.get('permissions'))
-        _write_file(path, content, permissions)
+
+        open_mode = "wb"
+        if item.get('append', False):
+            open_mode = "ab"
+
+        _write_file(path, content, permissions, open_mode)
 
     def process(self, data):
         """Process the given data received from the cloud-config userdata.
