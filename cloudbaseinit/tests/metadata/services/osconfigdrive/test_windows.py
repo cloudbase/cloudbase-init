@@ -76,6 +76,11 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         if exists and not fail:
             self.assertEqual(["Config Drive found on C:\\"],
                              self.snatcher.output)
+        if not label:
+            self.assertEqual(["Looking for a Config Drive with label "
+                              "'config-2' on 'C:\\'. Found mismatching "
+                              "label 'None'."],
+                             self.snatcher.output)
         self.assertEqual(not fail, response)
 
     def test_check_for_config_drive_exists(self):
@@ -89,6 +94,10 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
     def test_check_for_config_drive_wrong_label(self):
         self._test_check_for_config_drive(label="config-3", fail=True)
+
+    def test_check_for_config_drive_empty_label(self):
+        self._test_check_for_config_drive(label=None, exists=False,
+                                          fail=True)
 
     def _test_get_iso_file_size(self, fixed=True, small=False,
                                 found_iso=True):
