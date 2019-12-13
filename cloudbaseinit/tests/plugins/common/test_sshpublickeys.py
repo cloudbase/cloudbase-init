@@ -39,11 +39,18 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
     @mock.patch('os.path')
     @mock.patch('os.makedirs')
     def _test_execute(self, mock_os_makedirs, mock_os_path,
-                      mock_get_os_utils, user_home):
+                      mock_get_os_utils, user_home,
+                      metadata_provided_username=False):
         mock_service = mock.MagicMock()
         mock_osutils = mock.MagicMock()
         fake_shared_data = 'fake data'
         mock_service.get_public_keys.return_value = self.fake_data
+        fake_username = 'fake_username'
+        if metadata_provided_username:
+            fake_username = mock.MagicMock()
+            mock_service.get_admin_username.return_value = fake_username
+        else:
+            mock_service.get_admin_username.return_value = None
         mock_get_os_utils.return_value = mock_osutils
         mock_osutils.get_user_home.return_value = user_home
         mock_os_path.exists.return_value = False
@@ -60,7 +67,7 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
                                                              fake_shared_data)
                 mock_service.get_public_keys.assert_called_with()
                 mock_osutils.get_user_home.assert_called_with(
-                    'fake_username')
+                    fake_username)
                 self.assertEqual(2, mock_os_path.join.call_count)
                 mock_os_makedirs.assert_called_once_with(mock_os_path.join())
 
@@ -83,3 +90,8 @@ class SetUserSSHPublicKeysPluginTests(unittest.TestCase):
 
         expected_logging = ['Public keys not found in metadata']
         self.assertEqual(expected_logging, snatcher.output)
+
+    def test_execute_with_user_provided_by_metadata(self):
+        fake_user_home = os.path.join('fake', 'home')
+        self._test_execute(user_home=fake_user_home,
+                           metadata_provided_username=True)
