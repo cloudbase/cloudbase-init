@@ -2072,7 +2072,8 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                 "get_adapter_addresses")
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_os_version')
-    def _test_set_network_adapter_mtu(self,
+    @mock.patch('time.sleep')
+    def _test_set_network_adapter_mtu(self, mock_sleep,
                                       mock_check_os_version,
                                       mock_get_adapter_addresses,
                                       mock_get_system_dir,
