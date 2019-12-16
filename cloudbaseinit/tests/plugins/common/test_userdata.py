@@ -162,8 +162,10 @@ class UserDataPluginTest(unittest.TestCase):
         mock_part = mock.MagicMock()
         mock_parse_mime.return_value = [mock_part]
         mock_process_part.return_value = (base.PLUGIN_EXECUTION_DONE, reboot)
+        mock_service = mock.MagicMock()
 
-        response = self._userdata._process_user_data(user_data=user_data)
+        response = self._userdata._process_user_data(user_data=user_data,
+                                                     service=mock_service)
 
         if user_data.startswith(b'Content-Type: multipart'):
             mock_load_plugins.assert_called_once_with()
@@ -172,7 +174,8 @@ class UserDataPluginTest(unittest.TestCase):
                                                       mock_load_plugins(), {})
             self.assertEqual((base.PLUGIN_EXECUTION_DONE, reboot), response)
         else:
-            mock_process_non_multi_part.assert_called_once_with(user_data)
+            mock_process_non_multi_part.assert_called_once_with(user_data,
+                                                                mock_service)
             self.assertEqual(mock_process_non_multi_part.return_value,
                              response)
 
@@ -313,8 +316,9 @@ class UserDataPluginTest(unittest.TestCase):
                 '.execute_user_data_script')
     def test_process_non_multi_part(self, mock_execute_user_data_script):
         user_data = b'fake'
+        service = mock.MagicMock()
         status, reboot = self._userdata._process_non_multi_part(
-            user_data=user_data)
+            user_data=user_data, service=service)
         mock_execute_user_data_script.assert_called_once_with(user_data)
         self.assertEqual(status, 1)
         self.assertFalse(reboot)
@@ -329,10 +333,11 @@ class UserDataPluginTest(unittest.TestCase):
         b2NhbGhvc3QwHhcNMTUwNjE1MTAyODUxWhcNMjUwNjEyMTAyODUxWjAbMRkwFwYD
         -----END CERTIFICATE-----
         ''').encode()
+        service = mock.MagicMock()
         with testutils.LogSnatcher('cloudbaseinit.plugins.'
                                    'common.userdata') as snatcher:
             status, reboot = self._userdata._process_non_multi_part(
-                user_data=user_data)
+                user_data=user_data, service=service)
 
         expected_logging = ['Found X509 certificate in userdata']
         self.assertFalse(mock_execute_user_data_script.called)
@@ -340,24 +345,53 @@ class UserDataPluginTest(unittest.TestCase):
         self.assertEqual(1, status)
         self.assertFalse(reboot)
 
+    @mock.patch('cloudbaseinit.utils.template_engine.factory.'
+                'get_template_engine')
     @mock.patch('cloudbaseinit.plugins.common.userdataplugins.factory.'
                 'load_plugins')
-    def test_process_non_multi_part_cloud_config(self, mock_load_plugins):
-        user_data = b'#cloud-config'
+    def _test_process_non_multi_part_cloud_config(self, mock_load_plugins,
+                                                  mock_load_templates,
+                                                  user_data,
+                                                  expected_userdata,
+                                                  template_renderer=None):
+        mock_service = mock.MagicMock()
         mock_return_value = mock.sentinel.return_value
         mock_cloud_config_plugin = mock.Mock()
         mock_cloud_config_plugin.process.return_value = mock_return_value
         mock_load_plugins.return_value = {
             'text/cloud-config': mock_cloud_config_plugin}
+        mock_load_templates.return_value = template_renderer
         status, reboot = self._userdata._process_non_multi_part(
-            user_data=user_data)
+            user_data=user_data, service=mock_service)
 
-        mock_load_plugins.assert_called_once_with()
-        (mock_cloud_config_plugin
-         .process_non_multipart
-         .assert_called_once_with(user_data))
+        if template_renderer:
+            mock_load_plugins.assert_called_once_with()
+
+            (mock_cloud_config_plugin
+             .process_non_multipart
+             .assert_called_once_with(expected_userdata))
+
         self.assertEqual(status, 1)
         self.assertFalse(reboot)
+
+    def test_process_non_multi_part_cloud_config(self):
+        user_data = b'#cloud-config'
+        self._test_process_non_multi_part_cloud_config(
+            user_data=user_data, expected_userdata=user_data)
+
+    def test_process_non_multi_part_cloud_config_jinja(self):
+        user_data = b'## template:jinja\n#cloud-config'
+        expected_userdata = b'#cloud-config'
+        mock_template_renderer = mock.MagicMock()
+        mock_template_renderer.render.return_value = expected_userdata
+        self._test_process_non_multi_part_cloud_config(
+            user_data=user_data, expected_userdata=expected_userdata,
+            template_renderer=mock_template_renderer)
+
+    def test_process_non_multi_part_no_valid_template(self):
+        user_data = b'## template:none'
+        self._test_process_non_multi_part_cloud_config(
+            user_data=user_data, expected_userdata=user_data)
 
 
 class TestCloudConfig(unittest.TestCase):
