@@ -55,7 +55,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'cloudbase-init'
-copyright = u'2015, Cloudbase Solutions Srl'
+copyright = u'2012-2019, Cloudbase Solutions Srl'
 author = u'Cloudbase Solutions Srl'
 
 # The version info for the project you're documenting, acts as replacement for
