@@ -34,7 +34,7 @@ class SetUserSSHPublicKeysPlugin(base.BasePlugin):
             LOG.debug('Public keys not found in metadata')
             return base.PLUGIN_EXECUTION_DONE, False
 
-        username = CONF.username
+        username = service.get_admin_username() or CONF.username
 
         osutils = osutils_factory.get_os_utils()
         user_home = osutils.get_user_home(username)
