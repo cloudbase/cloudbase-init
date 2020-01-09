@@ -369,3 +369,67 @@ these plugins can lock or misconfigure the user, leading to unwanted problems.
           Plugins that set NTP, MTU, extend volumes are idempotent and can be re-executed
           with no issues. Make sure that if you configure cloudbase-init to run local scripts,
           those local scripts are idempotent.
+
+
+VMware GuestInfo Service
+------------------------
+
+.. class:: cloudbaseinit.metadata.services.vmwareguestinfoservice.VMwareGuestInfoService
+
+VMwareGuestInfoService is a metadata service which uses VMware's rpctool to extract guest
+metadata and userdata configured for machines running on VMware hypervisors.
+
+The VMware RPC tool used to query the instance metadata and userdata needs to be present at
+the config option path.
+
+Both json and yaml are supported as metadata formats.
+The metadata / userdata can be encoded in base64, gzip or gzip+base64.
+
+Example metadata in yaml format:
+
+  .. code-block:: yaml
+
+    instance-id: cloud-vm
+    local-hostname: cloud-vm
+    admin-username: cloud-username
+    admin-password: Passw0rd
+    public-keys-data: |
+      ssh-key 1
+      ssh-key 2
+
+This metadata content needs to be set as string in the guestinfo
+dictionary, thus needs to be converted to base64 (it is recommended to
+gzip it too).
+To convert to gzip+base64 format:
+
+.. code-block:: bash
+
+    cat metadata.yml | gzip.exe -9 | base64.exe -w0
+
+The output of the gzip+base64 conversion needs to be set in the instance guestinfo, along with
+the encoding of the metadata / userdata.
+
+For more information on how to achieve this, please check https://github.com/vmware/cloud-init-vmware-guestinfo#configuration
+
+This is an example how to set the information from the instance:
+
+.. code-block:: bash
+
+    <rpctool_path> "info-set guestinfo.metadata <gzip+base64-encoded-metadata>"
+    <rpctool_path> "info-set guestinfo.metadata.encoding gzip+base64"
+    <rpctool_path> "info-set guestinfo.userdata <gzip+base64-encoded-userdata>"
+    <rpctool_path> "info-set guestinfo.userdata.encoding gzip+base64"
+
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * admin user name
+    * admin user password
+    * user data
+
+Config options for `vmwareguestinfo` section:
+
+    * vmware_rpctool_path (string: "%ProgramFiles%/VMware/VMware Tools/rpctool.exe")
