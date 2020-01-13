@@ -297,3 +297,32 @@ class BaseHTTPMetadataService(BaseMetadataService):
             raise
 
         return response
+
+
+class EmptyMetadataService(BaseMetadataService):
+
+    """Empty metadata service implementation.
+
+    The empty metadata service can be used to run plugins that do not
+    rely on metadata service information, like setting ntp, mtu, etc.
+    It can be used also as a fallback metadata service, in case no other
+    previous metadata service could be loaded.
+    """
+
+    def __init__(self):
+        super(EmptyMetadataService, self).__init__()
+
+    def _get_data(self, path):
+        pass
+
+    def load(self):
+        return True
+
+    def get_admin_username(self):
+        raise NotExistingMetadataException()
+
+    def get_admin_password(self):
+        raise NotExistingMetadataException()
+
+    def is_password_changed(self):
+        raise NotExistingMetadataException()
