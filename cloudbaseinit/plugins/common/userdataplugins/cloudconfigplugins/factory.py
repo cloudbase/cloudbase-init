@@ -12,27 +12,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 from cloudbaseinit.utils import classloader
 
 
 # TODO(cpopa): replace the static list of plugins with something
 # discovered at runtime.
-PLUGINS = {
-    'write_files': 'cloudbaseinit.plugins.common.userdataplugins.'
-                   'cloudconfigplugins.write_files.WriteFilesPlugin',
-    'set_timezone': 'cloudbaseinit.plugins.common.userdataplugins.'
-                    'cloudconfigplugins.set_timezone.SetTimezonePlugin',
-    'timezone': 'cloudbaseinit.plugins.common.userdataplugins.'
-                'cloudconfigplugins.set_timezone.SetTimezonePlugin',
-    'set_hostname': 'cloudbaseinit.plugins.common.userdataplugins.'
-                    'cloudconfigplugins.set_hostname.SetHostnamePlugin',
-    'hostname': 'cloudbaseinit.plugins.common.userdataplugins.'
-                'cloudconfigplugins.set_hostname.SetHostnamePlugin',
-    'ntp': 'cloudbaseinit.plugins.common.userdataplugins.'
-                'cloudconfigplugins.set_ntp.SetNtpPlugin',
-    'runcmd': 'cloudbaseinit.plugins.common.userdataplugins.'
-              'cloudconfigplugins.runcmd.RunCmdPlugin',
-}
+PLUGINS = collections.OrderedDict([
+    ('write_files', 'cloudbaseinit.plugins.common.userdataplugins.'
+                    'cloudconfigplugins.write_files.WriteFilesPlugin'),
+    ('set_timezone', 'cloudbaseinit.plugins.common.userdataplugins.'
+                     'cloudconfigplugins.set_timezone.SetTimezonePlugin'),
+    ('timezone', 'cloudbaseinit.plugins.common.userdataplugins.'
+                 'cloudconfigplugins.set_timezone.SetTimezonePlugin'),
+    ('set_hostname', 'cloudbaseinit.plugins.common.userdataplugins.'
+                     'cloudconfigplugins.set_hostname.SetHostnamePlugin'),
+    ('hostname', 'cloudbaseinit.plugins.common.userdataplugins.'
+                 'cloudconfigplugins.set_hostname.SetHostnamePlugin'),
+    ('ntp', 'cloudbaseinit.plugins.common.userdataplugins.'
+            'cloudconfigplugins.set_ntp.SetNtpPlugin'),
+    ('runcmd', 'cloudbaseinit.plugins.common.userdataplugins.'
+               'cloudconfigplugins.runcmd.RunCmdPlugin'),
+])
 
 
 def load_plugins():
