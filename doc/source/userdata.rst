@@ -107,9 +107,7 @@ The following cloud-config directives are supported:
 
     *Examples:*
 
-    .. code-block:: xml
-
-        # One item
+    .. code-block:: yaml
 
         #cloud-config
         write_files:
@@ -118,9 +116,7 @@ The following cloud-config directives are supported:
            path: C:\test
            permissions: '0o466'
 
-    .. code-block:: xml
-
-        # Multiple items
+    .. code-block:: yaml
 
         #cloud-config
         write_files:
@@ -142,17 +138,69 @@ The following cloud-config directives are supported:
 
     *Example:*
 
-    .. code-block:: text
+    .. code-block:: yaml
 
+        #cloud-config
         set_timezone: Asia/Tbilisi
 
-* set_hostname - Override the already default set host name value. (metadata)
+* set_hostname - Override the already default set hostname value (taken from metadata).
+
+    If the hostname is changed, a reboot will be required.
 
     *Example:*
 
-    .. code-block:: text
+    .. code-block:: yaml
 
+        #cloud-config
         set_hostname: newhostname
+
+
+* ntp - Set NTP servers. The definition is a dict with the following attributes:
+
+    1. enabled - Boolean value, defaults to True, to enable or disable the NTP config.
+    2. servers - A list of NTP servers.
+    3. pools - A list of NTP pools.
+
+    The servers and pools are aggregated, servers being the first ones in the list.
+    On Windows, there is no difference between an NTP pool or server.
+
+    *Example:*
+
+    .. code-block:: yaml
+
+        #cloud-config
+        ntp:
+          enabled: True
+          servers: ['my.ntp.server.local', '192.168.23.2']
+          pools: ['0.company.pool.ntp.org', '1.company.pool.ntp.org']
+
+
+* runcmd - Directive that can contain a list of commands that will be executed,
+  in the order of their definition.
+
+    A command can be defined as a string or as a list of strings,
+    the first one being the executable path.
+
+    On Windows, the commands are aggregated into a file and executed with *cmd.exe*.
+    The userdata exit codes can be used to request a reboot: :ref:`file execution`.
+
+    *Example:*
+
+    .. code-block:: yaml
+
+        #cloud-config
+        runcmd:
+          - 'dir C:\\'
+          - ['echo', '1']
+
+
+The cloud-config directives are executed in the following order: write_files, set_timezone,
+set_hostname, ntp, runcmd.
+
+The execution of set_hostname or runcmd can request a reboot if needed. The reboot
+is performed at the end of the cloud-config execution (after all the directives have been
+executed).
+
 
 
 Multi-part content
