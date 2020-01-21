@@ -14,6 +14,7 @@
 
 
 import abc
+import copy
 import gzip
 import io
 import time
@@ -220,6 +221,45 @@ class BaseMetadataService(object):
 
     def get_ephemeral_disk_data_loss_warning(self):
         raise NotExistingMetadataException()
+
+    def get_instance_data(self):
+        """Returns a dictionary with instance data from the metadata source
+
+        The instance data structure is based on the cloud-init specifications:
+        https://cloudinit.readthedocs.io/en/latest/topics/instancedata.html
+
+        The v1 namespace contains a subset of the cloud-init standard
+        for the instance data. In the future, it should reach parity with the
+        cloud-init standard.
+
+        The ds.meta_data namespace contains all the values the v1 namespace
+        contains, in order to be compatible with cloud-init, plus a subset of
+        other instance data.
+        The ds namespace can change without prior notice and should not be
+        used in production.
+        """
+
+        instance_id = self.get_instance_id()
+        hostname = self.get_host_name()
+
+        v1_data = {
+            "instance_id": instance_id,
+            "local_hostname": hostname,
+            "public_ssh_keys": self.get_public_keys()
+        }
+
+        # Copy the v1 data to the ds.meta_data and add more fields
+        ds_meta_data = copy.deepcopy(v1_data)
+        ds_meta_data.update({
+            "hostname": hostname
+        })
+
+        return {
+            "v1": v1_data,
+            "ds": {
+                "meta_data": ds_meta_data,
+            }
+        }
 
 
 class BaseHTTPMetadataService(BaseMetadataService):
