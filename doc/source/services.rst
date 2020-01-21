@@ -339,8 +339,8 @@ Config options for `default` section:
     * retry_count (integer: 5)
     * retry_count_interval (integer: 4)
 
-EMPTY
------
+Empty Metadata Service
+----------------------
 
 .. class:: cloudbaseinit.metadata.services.base.EmptyMetadataService
 
@@ -362,3 +362,10 @@ they will fail with exception NotExistingMetadataException. The reason
 for the hardcoded failure is that these plugins rely on metadata to execute
 correctly. If metadata like username or password is not provided,
 these plugins can lock or misconfigure the user, leading to unwanted problems.
+
+
+.. note:: If a service returns an empty instance-id (like EmptyMetadataService does),
+          all the plugins will be executed at every cloudbase-init run (reboot, service restart).
+          Plugins that set NTP, MTU, extend volumes are idempotent and can be re-executed
+          with no issues. Make sure that if you configure cloudbase-init to run local scripts,
+          those local scripts are idempotent.
