@@ -132,6 +132,7 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
         operation_options = {u'custom_options': custom_options}
         team.put(operation_options=operation_options)
 
+    @retry_decorator.retry_decorator(max_retry_count=5)
     def create_team(self, team_name, mode, load_balancing_algorithm,
                     members, mac_address, primary_nic_name=None,
                     primary_nic_vlan_id=None, lacp_timer=None):
@@ -178,7 +179,8 @@ class NetLBFOTeamManager(network_team.BaseNetworkTeamManager):
             raise ex
 
     @staticmethod
-    @retry_decorator.retry_decorator(max_retry_count=10)
+    @retry_decorator.retry_decorator(max_retry_count=10,
+                                     max_sleep_time=10)
     def _wait_for_nic(nic_name):
         conn = wmi.WMI(moniker='//./root/cimv2')
         if not conn.Win32_NetworkAdapter(NetConnectionID=nic_name):
