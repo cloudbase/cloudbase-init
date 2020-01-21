@@ -12,6 +12,7 @@ netifaces
 PyYAML
 requests
 untangle==1.1.1
+jinja2
 pywin32;sys_platform=="win32"
 comtypes;sys_platform=="win32"
 pymi;sys_platform=="win32"
