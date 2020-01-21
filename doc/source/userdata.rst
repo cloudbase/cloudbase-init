@@ -154,6 +154,59 @@ The following cloud-config directives are supported:
         #cloud-config
         set_hostname: newhostname
 
+* groups - Create local groups and add existing users to those local groups.
+
+    The definition of the groups consists of a list in the format:
+
+        <group_name>: [<user1>, <user2>]
+
+    The list of users can be empty, when creating a group without members.
+
+    *Example:*
+
+    .. code-block:: yaml
+
+        groups:
+          - windows-group: [user1, user2]
+          - cloud-users
+
+* users - Create and configure local users.
+
+    The users are defined as a list. Each element from the list represents a user.
+    Each user can have the the following attributes defined:
+
+        1. name - The username (required string).
+        2. gecos - the user description.
+        3. primary_group - the user's primary group.
+        4. groups - the user's groups. On Windows, primary_group and groups are concatenated.
+        5. passwd - the user's password. On Linux, the password is a hashed string,
+           whereas on Windows the password is a plaintext string.
+           If the password is not defined, a random password will be set.
+        6. inactive - boolean value, defaults to False. If set to True, the user will
+           be disabled.
+        7. expiredate - a string in the format <year>-<month>-<day>. Example: 2020-10-01.
+        8. ssh_authorized_keys - a list of SSH public keys, that will be set in
+           ~/.ssh/authorized_keys.
+
+    *Example:*
+
+    .. code-block:: yaml
+
+        users:
+          -
+            name: Admin
+          -
+            name: brian
+            gecos: 'Brian Cohen'
+            primary_group: Users
+            groups: cloud-users
+            passwd: StrongPassw0rd
+            inactive: False
+            expiredate: 2020-10-01
+            ssh_authorized_keys:
+              - ssh-rsa AAAB...byV
+              - ssh-rsa AAAB...ctV
+
 
 * ntp - Set NTP servers. The definition is a dict with the following attributes:
 

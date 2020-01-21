@@ -32,6 +32,10 @@ PLUGINS = collections.OrderedDict([
                  'cloudconfigplugins.set_hostname.SetHostnamePlugin'),
     ('ntp', 'cloudbaseinit.plugins.common.userdataplugins.'
             'cloudconfigplugins.set_ntp.SetNtpPlugin'),
+    ('groups', 'cloudbaseinit.plugins.common.userdataplugins.'
+               'cloudconfigplugins.groups.GroupsPlugin'),
+    ('users', 'cloudbaseinit.plugins.common.userdataplugins.'
+              'cloudconfigplugins.users.UsersPlugin'),
     ('runcmd', 'cloudbaseinit.plugins.common.userdataplugins.'
                'cloudconfigplugins.runcmd.RunCmdPlugin'),
 ])
