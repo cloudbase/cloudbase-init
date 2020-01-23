@@ -42,13 +42,23 @@ class BaseTemplateEngine(object):
 
     def load(self, data):
         """Returns True if the template header matches, False otherwise"""
+        if not data:
+            return
+
         template_type_matcher = self._template_matcher.match(data.decode())
+        if not template_type_matcher:
+            return
+
         template_type = template_type_matcher.group(1).lower().strip()
         if self.get_template_type() == template_type:
             return True
 
     @staticmethod
     def remove_template_definition(raw_template):
+        # return the raw template as is if it is None or empty array / dict
+        if not raw_template:
+            return raw_template
+
         # Remove the first line, as it contains the template definition
         template_split = raw_template.split(b"\n", 1)
 

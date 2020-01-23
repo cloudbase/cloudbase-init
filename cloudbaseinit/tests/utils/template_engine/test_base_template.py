@@ -22,6 +22,7 @@ from cloudbaseinit.utils.template_engine import base_template as bt
 class TestBaseTemplateEngine(unittest.TestCase):
 
     @ddt.data((b'', b''),
+              (None, None),
               (b'## template:jinja test', b''),
               (b'## template:jinja \ntest', b'test'))
     @ddt.unpack

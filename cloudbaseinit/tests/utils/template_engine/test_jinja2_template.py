@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import ddt
 import unittest
 try:
     import unittest.mock as mock
@@ -23,6 +24,7 @@ from cloudbaseinit.utils.template_engine.jinja2_template import (
     Jinja2TemplateEngine)
 
 
+@ddt.ddt
 class TestJinja2TemplateEngine(unittest.TestCase):
 
     @mock.patch('cloudbaseinit.utils.template_engine.base_template'
@@ -80,3 +82,13 @@ class TestJinja2TemplateEngine(unittest.TestCase):
             fake_instance_data=fake_instance_data,
             expected_result=expected_result,
             fake_template=fake_template)
+
+    @ddt.data((b'', None),
+              (None, None),
+              (b'## template:jinja \n#ps1 \nmkdir', True),
+              (b'## template:jinja test', None),
+              (b'## template:jinjanone \ntest', None))
+    @ddt.unpack
+    def test_load_template_definition(self, userdata, expected_output):
+        output = Jinja2TemplateEngine().load(userdata)
+        self.assertEqual(expected_output, output)
