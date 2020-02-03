@@ -37,25 +37,17 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self.fake_data = fake_json_response.get_fake_metadata_json(
             '2013-04-04')
 
-    @mock.patch('base64.b64encode')
     @mock.patch('cloudbaseinit.utils.crypt.CryptManager'
-                '.load_ssh_rsa_public_key')
-    def test_encrypt_password(self, mock_load_ssh_key, mock_b64encode):
-        mock_rsa = mock.MagicMock()
-        fake_ssh_pub_key = 'fake key'
+                '.public_encrypt')
+    def test_encrypt_password(self, mock_public_encrypt):
+        fake_ssh_pub_key = 'ssh-rsa key'
         fake_password = 'fake password'
-        mock_load_ssh_key.return_value = mock_rsa
-        mock_rsa.__enter__().public_encrypt.return_value = 'public encrypted'
-        mock_b64encode.return_value = 'encrypted password'
-
+        fake_encrypt_pwd = 'encrypted password'
+        mock_public_encrypt.return_value = fake_encrypt_pwd
         response = self._setpassword_plugin._encrypt_password(
             fake_ssh_pub_key, fake_password)
 
-        mock_load_ssh_key.assert_called_with(fake_ssh_pub_key)
-        mock_rsa.__enter__().public_encrypt.assert_called_with(
-            b'fake password')
-        mock_b64encode.assert_called_with('public encrypted')
-        self.assertEqual('encrypted password', response)
+        self.assertEqual(fake_encrypt_pwd, response)
 
     def _test_get_password(self, inject_password):
         shared_data = {}

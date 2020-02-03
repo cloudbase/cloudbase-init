@@ -16,17 +16,13 @@ import unittest
 
 from cloudbaseinit.utils import crypt
 
-
-class TestOpenSSLException(unittest.TestCase):
-
-    def setUp(self):
-        self._openssl = crypt.OpenSSLException()
-
-    def test_get_openssl_error_msg(self):
-        expected_err_msg = u'error:00000000:lib(0):func(0):reason(0)'
-        expected_err_msg_py10 = u'error:00000000:lib(0)::reason(0)'
-        err_msg = self._openssl._get_openssl_error_msg()
-        self.assertIn(err_msg, [expected_err_msg, expected_err_msg_py10])
+PUB_KEY = '''
+AAAAB3NzaC1yc2EAAAADAQABAAABAQDP1e9IAYXwwUKuFtoReGXidwnM1RuXWB53IO0Hg
+mbZArXvEIOfgm/l6IsOJwF7znOBn0hClW7ZONPweX1Al9Hy/LInX1x96Aamq4yyKQCmHDiuZc7Qwu
+xr82Ph8XfWic/wo4es/ODSYeFT5NoFDhsYII8O9EGoubpQdakxt9skX0X+zg8TYPuIOANGhlaN8nn
+U7gYbO7Gt9vZDmYeRACthNzCIg+w38oxmcgmQqQHxPEp4tUtuFfpjptyVvHz273QvisbdymD3RO0L
+9oGMdKzjGgcdE1VuhXuucnUWlZuKe7BirxF8glF5NHKzWto67lDRzVI/F1snkTAorm5EWkA9 test
+'''
 
 
 class TestCryptManager(unittest.TestCase):
@@ -36,6 +32,16 @@ class TestCryptManager(unittest.TestCase):
 
     def test_load_ssh_rsa_public_key_invalid(self):
         ssh_pub_key = "ssh"
-        exc = Exception
-        self.assertRaises(exc, self._crypt_manager.load_ssh_rsa_public_key,
-                          ssh_pub_key)
+        exc = crypt.CryptException
+        self.assertRaises(exc, self._crypt_manager.public_encrypt,
+                          ssh_pub_key, '')
+
+    def test_encrypt_password(self):
+        ssh_pub_key = "ssh-rsa " + PUB_KEY.replace('\n', "")
+        password = 'testpassword'
+
+        response = self._crypt_manager.public_encrypt(
+            ssh_pub_key, password)
+
+        self.assertTrue(len(response) > 0)
+        self.assertTrue(isinstance(response, bytes))
