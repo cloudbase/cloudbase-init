@@ -51,6 +51,23 @@ class CloudConfigPluginTests(unittest.TestCase):
         finally:
             CONF.cloud_config_plugins = orig
 
+    def test_default_priority(self):
+        expected = [
+            ('write_files', 0),
+            ('hostname', 3),
+            ('runcmd', 1),
+            ('invalid1', 1),
+            ('invalid2', 2),
+        ]
+
+        executor = cloudconfig.CloudConfigPluginExecutor(
+            runcmd=1,
+            invalid1=1,
+            hostname=3,
+            invalid2=2,
+            write_files=0)
+        self.assertEqual(expected, executor._expected_plugins)
+
     def test_executor_from_yaml(self):
         for invalid in (mock.sentinel.yaml, None, 1, int, '{}'):
             with self.assertRaises(cloudconfig.CloudConfigError):

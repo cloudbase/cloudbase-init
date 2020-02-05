@@ -42,11 +42,14 @@ class CloudConfigPluginExecutor(object):
 
     def __init__(self, **plugins):
         def _lookup_priority(plugin):
+            all_plugins = (CONF.cloud_config_plugins or
+                           list(factory.PLUGINS.keys()))
+            # return the order from the config or default list
             try:
-                return CONF.cloud_config_plugins.index(plugin)
+                return all_plugins.index(plugin)
             except ValueError:
-                # If the plugin was not specified in the order
-                # list, then default to a sane and unreachable value.
+                # If plugin is not supported or does not exist
+                # default to a sane and unreachable value.
                 return DEFAULT_ORDER_VALUE
 
         self._expected_plugins = sorted(
@@ -67,10 +70,17 @@ class CloudConfigPluginExecutor(object):
         return cls(**content)
 
     def execute(self):
-        """Call each plugin, in the order requested by the user."""
+        """Call each plugin, in the order defined by _lookup_priority"""
         reboot = execcmd.NO_REBOOT
         plugins = factory.load_plugins()
         for plugin_name, value in self._expected_plugins:
+            if CONF.cloud_config_plugins:
+                try:
+                    CONF.cloud_config_plugins.index(plugin_name)
+                except ValueError:
+                    LOG.info("Plugin %r is disabled", plugin_name)
+                    continue
+
             method = plugins.get(plugin_name)
             if not method:
                 LOG.error("Plugin %r is currently not supported", plugin_name)
