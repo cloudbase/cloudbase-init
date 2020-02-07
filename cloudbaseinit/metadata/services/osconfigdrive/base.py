@@ -25,5 +25,7 @@ class BaseConfigDriveManager(object):
         self.target_path = tempfile.mkdtemp()
 
     @abc.abstractmethod
-    def get_config_drive_files(self, check_types=None, check_locations=None):
+    def get_config_drive_files(self, drive_label, metadata_file,
+                               check_types=None, check_locations=None,
+                               ):
         pass
