@@ -113,6 +113,61 @@ Config options for `config_drive` section:
     * locations (list: ["cdrom", "hdd", "partition"])
 
 
+.. _nocloudconfigdrive:
+
+NoCloud configuration drive
+-------------------------------
+
+.. class:: cloudbaseinit.metadata.services.nocloudservice.NoCloudConfigDriveService
+
+NoCloudConfigDriveService is similar to OpenStack config drive metadata in terms of
+the medium on which the data is provided (as an attached ISO, partition or disk) and
+similar to the EC2 metadata in terms of how the metadata files are named and structured.
+
+The metadata is provided on a config-drive (vfat or iso9660) with the label cidata or CIDATA.
+
+The folder structure for NoCloud is:
+
+  * /user-data
+  * /meta-data
+
+The user-data and meta-data files respect the EC2 metadata service format.
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * static network configuration (Debian format)
+    * user data
+
+Config options for `config_drive` section:
+
+    * raw_hdd (bool: True)
+    * cdrom (bool: True)
+    * vfat (bool: True)
+    * types (list: ["vfat", "iso"])
+    * locations (list: ["cdrom", "hdd", "partition"])
+
+Example metadata:
+
+.. code-block:: yaml
+
+    instance-id: windows1
+    network-interfaces: |
+      iface Ethernet0 inet static
+      address 10.0.0.2
+      network 10.0.0.0
+      netmask 255.255.255.0
+      broadcast 10.0.0.255
+      gateway 10.0.0.1
+      hwaddress ether 00:11:22:33:44:55
+    hostname: windowshost1
+
+
+More information on the NoCloud metadata service specifications can be found
+`here <https://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html>`_.
+
 Amazon EC2
 ----------
 
