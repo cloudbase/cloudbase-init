@@ -25,6 +25,7 @@ _OPT_PATHS = (
     'cloudbaseinit.conf.ovf.OvfOptions',
     'cloudbaseinit.conf.packet.PacketOptions',
     'cloudbaseinit.conf.vmwareguestinfo.VMwareGuestInfoConfigOptions',
+    'cloudbaseinit.conf.gce.GCEOptions',
 )
 
 
