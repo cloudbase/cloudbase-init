@@ -16,7 +16,6 @@ import importlib
 import unittest
 
 import ddt
-import yaml
 
 try:
     import unittest.mock as mock
@@ -45,30 +44,6 @@ class VMwareGuestInfoServiceTest(unittest.TestCase):
         self._module = importlib.import_module(BASE_MODULE_PATH)
         self._service = (self._module.VMwareGuestInfoService())
         self.snatcher = testutils.LogSnatcher(BASE_MODULE_PATH)
-
-    @ddt.data((b'', (None, False)),
-              (b'{}', ({}, False)),
-              (b'---', (None, True)),
-              (b'test: test', ({"test": "test"}, True)))
-    @ddt.unpack
-    @mock.patch("json.loads")
-    @mock.patch("yaml.load")
-    def test_parse_data(self, stream, expected_parsed_output,
-                        mock_yaml_load, mock_json_loads):
-        if not expected_parsed_output[1]:
-            mock_json_loads.return_value = expected_parsed_output[0]
-        else:
-            mock_json_loads.side_effect = TypeError("Failed to parse json")
-            mock_yaml_load.return_value = expected_parsed_output[0]
-
-        parsed_output = self._service._parse_data(stream)
-
-        mock_json_loads.assert_called_once_with(stream)
-        if expected_parsed_output[1]:
-            loader = getattr(yaml, 'CLoader', yaml.Loader)
-            mock_yaml_load.assert_called_once_with(stream, Loader=loader)
-
-        self.assertEqual(parsed_output, expected_parsed_output[0])
 
     @ddt.data(((None, False, False), None),
               (('', False, False), None),
@@ -111,7 +86,7 @@ class VMwareGuestInfoServiceTest(unittest.TestCase):
         self._test_load_no_rpc_tool(expected_output, 'fake_path')
 
     @mock.patch('os.path.exists')
-    @mock.patch(MODULE_PATH + "._parse_data")
+    @mock.patch('cloudbaseinit.utils.serialization.parse_json_yaml')
     @mock.patch(MODULE_PATH + "._get_guest_data")
     def _test_load_meta_data(self, mock_get_guestinfo, mock_parse,
                              mock_os_path_exists, parse_return=None,

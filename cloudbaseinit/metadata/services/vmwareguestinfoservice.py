@@ -16,9 +16,7 @@
 import base64
 import gzip
 import io
-import json
 import os
-import yaml
 
 from oslo_log import log as oslo_logging
 
@@ -26,14 +24,10 @@ from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils import serialization
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
-
-
-class YamlParserConfigError(Exception):
-    """Exception for Yaml parsing failures"""
-    pass
 
 
 class VMwareGuestInfoService(base.BaseMetadataService):
@@ -43,19 +37,6 @@ class VMwareGuestInfoService(base.BaseMetadataService):
         self._osutils = osutils_factory.get_os_utils()
         self._meta_data = {}
         self._user_data = None
-
-    @staticmethod
-    def _parse_data(raw_data):
-        """Parse data as json. Fallback to yaml if json parsing fails"""
-
-        try:
-            return json.loads(raw_data)
-        except (TypeError, ValueError, AttributeError):
-            loader = getattr(yaml, 'CLoader', yaml.Loader)
-            try:
-                return yaml.load(raw_data, Loader=loader)
-            except (TypeError, ValueError, AttributeError):
-                raise YamlParserConfigError("Invalid yaml data provided.")
 
     @staticmethod
     def _decode_data(raw_data, is_base64, is_gzip):
@@ -133,7 +114,8 @@ class VMwareGuestInfoService(base.BaseMetadataService):
                      % self._rpc_tool_path)
             return False
 
-        self._meta_data = self._parse_data(self._get_guest_data('metadata'))
+        self._meta_data = serialization.parse_json_yaml(
+            self._get_guest_data('metadata'))
         if not isinstance(self._meta_data, dict):
             LOG.warning("Instance metadata is not a dictionary.")
             self._meta_data = {}
