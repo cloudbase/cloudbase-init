@@ -338,7 +338,9 @@ Capabilities:
     * instance id
     * hostname
     * public keys
+    * post admin user password (only once)
     * user data
+    * call home on successful provision
 
 Config options for `packet` section:
 
