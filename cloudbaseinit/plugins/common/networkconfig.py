@@ -153,7 +153,7 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
                     nic.address,
                     nic.netmask,
                     nic.gateway,
-                    nic.dnsnameservers
+                    nic.dnsnameservers or []
                 )
             reboot_required = reboot or reboot_required
             # Set v6 info too if available.
