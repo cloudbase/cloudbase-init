@@ -14,10 +14,13 @@
 """Metadata Service for Packet."""
 
 import json
+import requests
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from oslo_log import log as oslo_logging
+from six.moves.urllib import error
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
@@ -83,3 +86,49 @@ class PacketService(base.BaseHTTPMetadataService):
     def get_user_data(self):
         """Get the available user data for the current instance."""
         return self._get_cache_data("userdata")
+
+    def _get_phone_home_url(self):
+        return self._get_meta_data().get("phone_home_url")
+
+    def get_user_pwd_encryption_key(self):
+        phone_home_url = self._get_phone_home_url()
+        key_url = requests.compat.urljoin('%s/' % phone_home_url, "key")
+        return self._get_cache_data(key_url, decode=True)
+
+    @property
+    def can_post_password(self):
+        """The Packet metadata service supports posting the password."""
+        return True
+
+    def post_password(self, enc_password_b64):
+        phone_home_url = self._get_phone_home_url()
+        LOG.info("Posting password to: %s", phone_home_url)
+        try:
+            action = lambda: self._http_request(
+                url=phone_home_url,
+                data=json.dumps({'password': enc_password_b64.decode()}))
+            return self._exec_with_retry(action)
+        except error.HTTPError as exc:
+            LOG.exception(exc)
+            raise exception.MetadataEndpointException(
+                "Failed to post password to the metadata service")
+
+    def provisioning_completed(self):
+        """Signal to Packet that the instance is ready.
+
+        To complete the provisioning, on the first boot after installation
+        make a GET request to CONF.packet.metadata_url, which will return a
+        JSON object which contains phone_home_url entry.
+        Make a POST request to phone_home_url with no body (important!)
+        and this will complete the installation process.
+        """
+        phone_home_url = self._get_phone_home_url()
+        LOG.info("Calling home to: %s", phone_home_url)
+        try:
+            action = lambda: self._http_request(url=phone_home_url,
+                                                method="post")
+            return self._exec_with_retry(action)
+        except error.HTTPError as exc:
+            LOG.exception(exc)
+            raise exception.MetadataEndpointException(
+                "Failed to call home to the metadata service")

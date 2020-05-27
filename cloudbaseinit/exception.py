@@ -41,6 +41,13 @@ class MetadataNotFoundException(CloudbaseInitException):
     pass
 
 
+class MetadataEndpointException(CloudbaseInitException):
+
+    """Exception thrown in case the metadata is unresponsive or errors out."""
+
+    pass
+
+
 class CertificateVerifyFailed(ServiceException):
 
     """The received certificate is not valid.

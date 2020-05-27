@@ -20,7 +20,10 @@ try:
 except ImportError:
     import mock
 
+from six.moves.urllib import error
+
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit import exception
 from cloudbaseinit.tests import testutils
 
 
@@ -121,3 +124,106 @@ class PacketServiceTest(unittest.TestCase):
         response = self._packet_service.get_user_data()
         mock_get_cache_data.assert_called_once_with("userdata")
         self.assertEqual(mock_get_cache_data.return_value, response)
+
+    @mock.patch(MODULE_PATH +
+                ".PacketService._get_meta_data")
+    def test_get_phone_home_url(self, mock_get_meta_data):
+        fake_phone_url = 'fake_phone_url'
+        mock_get_meta_data.return_value = {
+            "phone_home_url": fake_phone_url
+        }
+        response = self._packet_service._get_phone_home_url()
+
+        self.assertEqual(response, fake_phone_url)
+
+    def test_can_post_password(self):
+        self.assertEqual(self._packet_service.can_post_password,
+                         True)
+
+    @mock.patch(MODULE_PATH +
+                ".PacketService._get_phone_home_url")
+    @mock.patch(MODULE_PATH +
+                ".PacketService._get_cache_data")
+    def test_get_user_pwd_encryption_key(self, mock_get_cache_data,
+                                         mock_get_phone_url):
+        fake_phone_url = 'fake_phone_url'
+        user_pwd_encryption_key = 'fake_key'
+
+        mock_get_cache_data.return_value = user_pwd_encryption_key
+        mock_get_phone_url.return_value = fake_phone_url
+
+        response = self._packet_service.get_user_pwd_encryption_key()
+        mock_get_phone_url.assert_called_once()
+        mock_get_cache_data.assert_called_once_with(
+            "%s/%s" % (fake_phone_url, 'key'), decode=True)
+
+        self.assertEqual(response, user_pwd_encryption_key)
+
+    @mock.patch('time.sleep')
+    @mock.patch(MODULE_PATH +
+                ".PacketService._get_phone_home_url")
+    @mock.patch(MODULE_PATH +
+                ".PacketService._http_request")
+    def _test_post_password(self, mock_http_request,
+                            mock_get_phone_url, mock_sleep, fail=False):
+        fake_phone_url = 'fake_phone_url'
+        fake_response = 'fake_response'
+        fake_encoded_password = b'fake_password'
+
+        if fail:
+            mock_http_request.side_effect = (
+                error.HTTPError(401, "invalid", {}, 0, 0))
+            with self.assertRaises(exception.MetadataEndpointException):
+                self._packet_service.post_password(fake_encoded_password)
+        else:
+            mock_http_request.return_value = fake_response
+            mock_get_phone_url.return_value = fake_phone_url
+
+            response = self._packet_service.post_password(
+                fake_encoded_password)
+            mock_get_phone_url.assert_called_once()
+            mock_http_request.assert_called_once_with(
+                data='{"password": "fake_password"}',
+                url=fake_phone_url)
+
+            self.assertEqual(response, fake_response)
+
+    def test_post_password(self):
+        self._test_post_password()
+
+    def test_post_password_with_failure(self):
+        self._test_post_password(fail=True)
+
+    @mock.patch('time.sleep')
+    @mock.patch(MODULE_PATH +
+                ".PacketService._get_phone_home_url")
+    @mock.patch(MODULE_PATH +
+                ".PacketService._http_request")
+    def _test_provisioning_completed(self, mock_http_request,
+                                     mock_get_phone_url, mock_sleep,
+                                     fail=False):
+        fake_phone_url = 'fake_phone_url'
+        fake_response = 'fake_response'
+
+        if fail:
+            mock_http_request.side_effect = (
+                error.HTTPError(401, "invalid", {}, 0, 0))
+            with self.assertRaises(exception.MetadataEndpointException):
+                self._packet_service.provisioning_completed()
+        else:
+            mock_http_request.return_value = fake_response
+            mock_get_phone_url.return_value = fake_phone_url
+
+            response = self._packet_service.provisioning_completed()
+            mock_get_phone_url.assert_called_once()
+            mock_http_request.assert_called_once_with(
+                url=fake_phone_url,
+                method="post")
+
+            self.assertEqual(response, fake_response)
+
+    def test_provisioning_completed(self):
+        self._test_provisioning_completed()
+
+    def test_provisioning_completed_with_failure(self):
+        self._test_provisioning_completed(fail=True)
