@@ -94,9 +94,8 @@ class WindowsLicensingPluginTests(unittest.TestCase):
         expected_logs = [
             "Activating Windows",
             "Activation result:\n%s" % activate_result]
-        with testutils.ConfPatcher('activate_windows', True):
-            with self.snatcher:
-                self._licensing._activate_windows(mock_service, mock_manager)
+        with self.snatcher:
+            self._licensing._activate_windows(mock_service, mock_manager)
         self.assertEqual(self.snatcher.output, expected_logs)
         mock_manager.activate_windows.assert_called_once_with()
 
@@ -110,37 +109,33 @@ class WindowsLicensingPluginTests(unittest.TestCase):
                       mock_set_product_key,
                       mock_set_kms_host,
                       mock_activate_windows,
-                      nano=False, is_eval=True):
+                      nano=False):
         mock_service = mock.Mock()
         mock_manager = mock.Mock()
         mock_get_licensing_manager.return_value = mock_manager
         mock_osutils = mock.MagicMock()
         mock_osutils.is_nano_server.return_value = nano
         mock_get_os_utils.return_value = mock_osutils
-        mock_manager.is_eval.return_value = is_eval
         mock_manager.get_licensing_info.return_value = "fake"
         expected_logs = []
-        with self.snatcher:
-            response = self._licensing.execute(service=mock_service,
-                                               shared_data=None)
+        with testutils.ConfPatcher('activate_windows', True):
+            with self.snatcher:
+                response = self._licensing.execute(service=mock_service,
+                                                   shared_data=None)
 
         mock_get_os_utils.assert_called_once_with()
         if nano:
             expected_logs = ["Licensing info and activation are "
                              "not available on Nano Server"]
             self.assertEqual(self.snatcher.output, expected_logs)
-            return    # no activation available
+            return
         else:
-            if not is_eval:
-                mock_set_product_key.assert_called_once_with(mock_service,
-                                                             mock_manager)
-                mock_set_kms_host.assert_called_once_with(mock_service,
+            mock_set_product_key.assert_called_once_with(mock_service,
+                                                         mock_manager)
+            mock_set_kms_host.assert_called_once_with(mock_service,
+                                                      mock_manager)
+            mock_activate_windows.assert_called_once_with(mock_service,
                                                           mock_manager)
-                mock_activate_windows.assert_called_once_with(mock_service,
-                                                              mock_manager)
-            else:
-                expected_logs.append("Evaluation license, skipping activation"
-                                     ". Evaluation end date: %s" % is_eval)
             expected_logs.append('Microsoft Windows license info:\nfake')
             mock_manager.get_licensing_info.assert_called_once_with()
 
@@ -150,8 +145,5 @@ class WindowsLicensingPluginTests(unittest.TestCase):
     def test_execute_nano(self):
         self._test_execute(nano=True)
 
-    def test_execute_is_evaluated(self):
-        self._test_execute()
-
     def test_execute(self):
-        self._test_execute(is_eval=False)
+        self._test_execute()
