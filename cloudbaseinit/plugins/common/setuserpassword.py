@@ -83,13 +83,16 @@ class SetUserPasswordPlugin(base.BasePlugin):
             return None
 
         password, injected = self._get_password(service, shared_data)
-        if not password:
+        if not password and CONF.random_user_password:
             LOG.debug('Generating a random user password')
             password = osutils.generate_random_password(
                 CONF.user_password_length)
-
-        osutils.set_user_password(user_name, password)
-        self._change_logon_behaviour(user_name, password_injected=injected)
+        if password:
+            osutils.set_user_password(user_name, password)
+            LOG.debug("Update user password for user: %s", user_name)
+            self._change_logon_behaviour(user_name, password_injected=injected)
+        else:
+            LOG.debug('no password set, skipping updating password...')
         return password
 
     def _change_logon_behaviour(self, username, password_injected=False):

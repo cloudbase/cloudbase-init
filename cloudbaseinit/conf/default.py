@@ -144,6 +144,10 @@ class GlobalOptions(conf_base.Options):
                 help='Set the password provided in the configuration. '
                      'If False or no password is provided, a random one '
                      'will be set'),
+            cfg.BoolOpt(
+                'random_user_password', default=True,
+                help='Set a random password if not provided in the configuration. '
+                     'If True, a random one will be set'),
             cfg.StrOpt(
                 'first_logon_behaviour',
                 default=constant.CLEAR_TEXT_INJECTED_ONLY,
