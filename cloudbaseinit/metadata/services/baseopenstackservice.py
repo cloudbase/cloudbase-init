@@ -26,6 +26,7 @@ from cloudbaseinit.models import network as network_model
 from cloudbaseinit.utils import debiface
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import x509constants
+from cloudbaseinit.osutils import factory as osutils_factory
 
 NETWORK_LINK_TYPE_PHYSICAL = "phy"
 NETWORK_LINK_TYPE_BOND = "bond"
@@ -124,6 +125,7 @@ class BaseOpenStackService(base.BaseMetadataService):
             if openstack_link_type == NETWORK_LINK_TYPE_BOND:
                 link_type = network_model.LINK_TYPE_BOND
                 bond_links = link_data.get("bond_links")
+                bond_links = BaseOpenStackService._convert_from_mac_to_netid(bond_links)
                 bond_mode = link_data.get("bond_mode")
                 bond_xmit_hash_policy = link_data.get("bond_xmit_hash_policy")
 
@@ -236,6 +238,22 @@ class BaseOpenStackService(base.BaseMetadataService):
             )
             services.append(service)
         return services
+
+    @staticmethod
+    def _convert_from_mac_to_netid(bond_links):
+        utils = osutils_factory.get_os_utils()
+        networks = utils.get_network_adapters()
+        mac_dict = {}
+        for netid, mac in networks:
+            mac_dict[mac] = netid
+        netid_links = []
+        for mac in bond_links:
+            if mac in mac_dict:
+                netid_links.append(mac_dict[mac])
+            else:
+                LOG.warn("MAC Address not found in network adapters list: %s", mac)
+                netid_links.append(mac)
+        return netid_links
 
     def get_network_details_v2(self):
         try:
