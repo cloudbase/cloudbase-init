@@ -15,39 +15,32 @@
 import unittest
 
 import ddt
-import yaml
 
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
 
 from cloudbaseinit.utils import serialization
+
+YAML_PARSER_ERROR_STRING = b"""
+a: b
+- c: d
+"""
 
 
 @ddt.ddt
 class SerializationUtilsTests(unittest.TestCase):
 
-    @ddt.data((b'', (None, False)),
-              (b'{}', ({}, False)),
+    @ddt.data((b'', (None, True)),
+              (b'{}', ({}, True)),
+              (YAML_PARSER_ERROR_STRING, (None, False)),
+              (b'{}}', (None, False)),
               (b'---', (None, True)),
               (b'test: test', ({"test": "test"}, True)))
     @ddt.unpack
-    @mock.patch("json.loads")
-    @mock.patch("yaml.load")
     def test_parse_data(self, stream, expected_parsed_output,
-                        mock_yaml_load, mock_json_loads):
-        if not expected_parsed_output[1]:
-            mock_json_loads.return_value = expected_parsed_output[0]
-        else:
-            mock_json_loads.side_effect = TypeError("Failed to parse json")
-            mock_yaml_load.return_value = expected_parsed_output[0]
-
-        parsed_output = serialization.parse_json_yaml(stream)
-
-        mock_json_loads.assert_called_once_with(stream)
+                        ):
+        print(expected_parsed_output)
         if expected_parsed_output[1]:
-            loader = getattr(yaml, 'CLoader', yaml.Loader)
-            mock_yaml_load.assert_called_once_with(stream, Loader=loader)
-
-        self.assertEqual(parsed_output, expected_parsed_output[0])
+            parsed_output = serialization.parse_json_yaml(stream)
+            self.assertEqual(parsed_output, expected_parsed_output[0])
+        else:
+            with self.assertRaises(serialization.YamlParserConfigError):
+                serialization.parse_json_yaml(stream)
