@@ -96,3 +96,21 @@ class NetworkUtilsTest(unittest.TestCase):
         res = network.get_local_ip("fake address")
         self.assertEqual(res, "fake name")
         mock_socket().connect.assert_called_with(("fake address", 8000))
+
+    def _test_ip_netmask_to_cidr(self, expected_result, fake_ip_address,
+                                 fake_netmask):
+        result = network.ip_netmask_to_cidr(fake_ip_address, fake_netmask)
+        self.assertEqual(expected_result, result)
+
+    def test_ip_netmask_to_cidr(self):
+        fake_ip_address = '10.1.1.1'
+        expected_result = '10.1.1.1/24'
+        fake_netmask = '255.255.255.0'
+        self._test_ip_netmask_to_cidr(expected_result, fake_ip_address,
+                                      fake_netmask)
+
+    def test_ip_netmask_to_cidr_empty_netmask(self):
+        fake_ip_address = '10.1.1.1'
+        fake_netmask = None
+        self._test_ip_netmask_to_cidr(fake_ip_address, fake_ip_address,
+                                      fake_netmask)
