@@ -16,7 +16,6 @@
 import json
 import posixpath
 
-import netaddr
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import conf as cloudbaseinit_conf
@@ -25,6 +24,7 @@ from cloudbaseinit.metadata.services import base
 from cloudbaseinit.models import network as network_model
 from cloudbaseinit.utils import debiface
 from cloudbaseinit.utils import encoding
+from cloudbaseinit.utils import network as network_utils
 from cloudbaseinit.utils import x509constants
 
 NETWORK_LINK_TYPE_PHYSICAL = "phy"
@@ -100,14 +100,6 @@ class BaseOpenStackService(base.BaseMetadataService):
         content = encoding.get_as_string(content)
 
         return debiface.parse(content)
-
-    @staticmethod
-    def _ip_netmask_to_cidr(ip_address, netmask):
-        if netmask is None:
-            return ip_address
-        prefix_len = netaddr.IPNetwork(
-            u"%s/%s" % (ip_address, netmask)).prefixlen
-        return u"%s/%s" % (ip_address, prefix_len)
 
     @staticmethod
     def _parse_network_data_links(links_data):
@@ -195,7 +187,7 @@ class BaseOpenStackService(base.BaseMetadataService):
             link_id = network_data.get("link")
             ip_address = network_data.get("ip_address")
             netmask = network_data.get("netmask")
-            address_cidr = BaseOpenStackService._ip_netmask_to_cidr(
+            address_cidr = network_utils.ip_netmask_to_cidr(
                 ip_address, netmask)
 
             routes = []
@@ -203,7 +195,7 @@ class BaseOpenStackService(base.BaseMetadataService):
                 gateway = route_data.get("gateway")
                 network = route_data.get("network")
                 netmask = route_data.get("netmask")
-                network_cidr = BaseOpenStackService._ip_netmask_to_cidr(
+                network_cidr = network_utils.ip_netmask_to_cidr(
                     network, netmask)
 
                 route = network_model.Route(
