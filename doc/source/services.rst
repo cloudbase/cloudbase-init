@@ -587,3 +587,30 @@ Config options for `default` section:
 
     * retry_count (integer: 5)
     * retry_count_interval (integer: 4)
+
+
+HiBee Service
+-------------
+
+.. class:: cloudbaseinit.metadata.services.hibee.HiBeeService
+
+HiBee metadata is offered via an internal HTTP metadata endpoint, reachable at the magic URL
+`http://169.254.169.254/metadata/`.
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * user data
+    * admin user password
+    * static network configuration
+
+Config options for `hibee` section:
+
+    * metadata_base_url (string: http://169.254.169.254/metadata/")
+
+Config options for `default` section:
+
+    * retry_count (integer: 5)
+    * retry_count_interval (integer: 4)
