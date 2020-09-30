@@ -333,16 +333,11 @@ class TestInitManager(unittest.TestCase):
         self.assertFalse(mock_check_last_version.called)
 
     @testutils.ConfPatcher('check_latest_version', True)
-    @mock.patch('functools.partial')
     @mock.patch('cloudbaseinit.version.check_latest_version')
-    def test_configure_host_with_version_check(self, mock_check_last_version,
-                                               mock_partial):
+    def test_configure_host_with_version_check(self, mock_check_last_version):
         self._init._check_latest_version()
 
-        mock_check_last_version.assert_called_once_with(
-            mock_partial.return_value)
-        mock_partial.assert_called_once_with(
-            init.LOG.info, 'Found new version of cloudbase-init %s')
+        mock_check_last_version.assert_called_once()
 
     @mock.patch('os.path.basename')
     @mock.patch("sys.executable")
