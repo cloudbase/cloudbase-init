@@ -249,6 +249,9 @@ class BaseOpenStackService(base.BaseMetadataService):
             services=services
         )
 
+    def get_admin_username(self):
+        return self._get_meta_data().get('meta', {}).get('admin_username')
+
     def get_admin_password(self):
         meta_data = self._get_meta_data()
         meta = meta_data.get('meta')
