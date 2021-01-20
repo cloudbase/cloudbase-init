@@ -49,6 +49,7 @@ Capabilities:
     * public keys
     * `WinRM <https://docs.microsoft.com/en-us/windows/win32/winrm/authentication-for-remote-connections#client-certificate-based-authentication>`_ authentication certificates
     * static network configuration
+    * admin user name
     * admin user password
     * post admin user password (only once)
     * user data
@@ -101,6 +102,7 @@ Capabilities:
     * public keys
     * authentication certificates
     * static network configuration
+    * admin user name
     * admin user password
     * user data
 
