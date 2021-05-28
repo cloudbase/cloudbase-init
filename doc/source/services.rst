@@ -265,12 +265,12 @@ Config options for `default` section:
 .. note:: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 
-Apache CloudStack
+Apache CloudStack (DataServer)
 -----------------
 
-.. class:: cloudbaseinit.metadata.services.cloudstack.CloudStack
+.. class:: cloudbaseinit.metadata.services.cloudstack.DataServer
 
-Another web-based service which usually uses "10.1.1.1" or DHCP addresses for
+Another web-based service which usually uses "data-server" DNS record or DHCP addresses for
 retrieving content. If no metadata can be found at the `metadata_base_url`,
 the service will look for the metadata at the DHCP server URL.
 
@@ -285,7 +285,7 @@ Capabilities:
 
 Config options for `cloudstack` section:
 
-    * metadata_base_url (string: "http://10.1.1.1/")
+    * metadata_base_url (string: "http://data-server/")
     * password_server_port (int: 8080)
     * add_metadata_private_ip_route (bool: True)
     * https_allow_insecure (bool: False)
