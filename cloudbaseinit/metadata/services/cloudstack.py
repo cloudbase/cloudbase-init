@@ -33,9 +33,9 @@ SAVED_PASSWORD = "saved_password"
 TIMEOUT = 10
 
 
-class CloudStack(base.BaseHTTPMetadataService):
+class DataServer(base.BaseHTTPMetadataService):
 
-    """Metadata service for Apache CloudStack.
+    """Metadata service based on DataServer for Apache CloudStack.
 
     Apache CloudStack is an open source software designed to deploy and
     manage large networks of virtual machines, as a highly available,
@@ -44,7 +44,7 @@ class CloudStack(base.BaseHTTPMetadataService):
     """
 
     def __init__(self):
-        super(CloudStack, self).__init__(
+        super(DataServer, self).__init__(
             # Note(alexcoman): The base url used by the current metadata
             # service will be updated later by the `_test_api` method.
             base_url=None,
@@ -83,7 +83,7 @@ class CloudStack(base.BaseHTTPMetadataService):
 
     def load(self):
         """Obtain all the required information."""
-        super(CloudStack, self).load()
+        super(DataServer, self).load()
 
         if CONF.cloudstack.add_metadata_private_ip_route:
             network.check_metadata_ip_route(CONF.cloudstack.metadata_base_url)
@@ -259,3 +259,8 @@ class CloudStack(base.BaseHTTPMetadataService):
     def is_password_changed(self):
         """Check if a new password exists in the Password Server."""
         return bool(self._get_password())
+
+
+# For backward compatibiliy, CloudStack Class is an alias to DataServer Class
+CloudStack = DataServer
+
