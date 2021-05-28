@@ -14,6 +14,7 @@
 
 import contextlib
 import posixpath
+import hashlib
 
 from oslo_log import log as oslo_logging
 from six.moves import http_client
@@ -21,6 +22,8 @@ from six.moves import urllib
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import baseconfigdrive
+from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import network
@@ -264,3 +267,60 @@ class DataServer(base.BaseHTTPMetadataService):
 # For backward compatibiliy, CloudStack Class is an alias to DataServer Class
 CloudStack = DataServer
 
+
+class ConfigDrive(baseconfigdrive.BaseConfigDriveService,
+                  baseopenstackservice.BaseOpenStackService):
+
+    """Metadata service based on ConfigDrive for Apache CloudStack.
+
+    Apache CloudStack is an open source software designed to deploy and
+    manage large networks of virtual machines, as a highly available,
+    highly scalable Infrastructure as a Service (IaaS) cloud computing
+    platform.
+    """
+
+    def __init__(self):
+        super(ConfigDrive, self).__init__(
+            CONF.cloudstack.disk_label, 'openstack\\latest\\meta_data.json')
+
+    def _preprocess_options(self):
+        """CloudStack ConfigDrive only supports CD-ROM"""
+        self._searched_types = set(['iso'])
+        self._searched_locations = set(['cdrom'])
+
+    def _get_password(self):
+        """Read password from cloudstack/password/vm_password.txt file if exist
+        """
+        password = None
+        path = posixpath.normpath(
+            posixpath.join('cloudstack', 'password', 'vm_password.txt'))
+        try:
+            password = self._get_cache_data(path, True)
+            LOG.info('Password file was found in ConfigDrive')
+        except base.NotExistingMetadataException:
+            LOG.info('No password file was found in ConfigDrive')
+        return password
+
+    def get_admin_password(self):
+        return self._get_password()
+
+    @property
+    def can_update_password(self):
+        """The CloudStack Password Server supports password update."""
+        return True
+
+    def is_password_changed(self):
+        """Check if a new password exists in the ConfigDrive."""
+        password = self._get_password()
+        if password:
+            osutils = osutils_factory.get_os_utils()
+            old_password_hash = osutils.get_config_value(
+                'PasswordHash', self.get_instance_id())
+            new_password_hash = hashlib.sha256(
+                password.encode('utf-8')).hexdigest()
+            if old_password_hash != new_password_hash:
+                LOG.debug('New password is detected')
+                osutils.set_config_value('PasswordHash', new_password_hash,
+                                         self.get_instance_id())
+                return True
+        return False

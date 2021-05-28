@@ -46,6 +46,10 @@ class CloudStackOptions(conf_base.Options):
             cfg.BoolOpt(
                 "add_metadata_private_ip_route", default=False,
                 help="Add a route for the metadata ip address to the gateway"),
+            cfg.StrOpt(
+                "disk_label", default="config-2",
+                help="Disk label of ConfigDrive"
+            )
         ]
 
     def register(self):
