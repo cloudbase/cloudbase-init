@@ -302,6 +302,37 @@ Config options for `default` section:
           and no updating will occur until a new password is available on the
           server.
 
+.. _configdrive:
+
+Apache CloudStack (ConfigDrive)
+-------------------------------
+
+.. class:: cloudbaseinit.metadata.services.cloudstack.ConfigDrive
+
+CloudStack also provides meta-data and user-data with help of CD-ROM without
+requiring network access.
+
+This service is usually faster than the HTTP twin, as there is no timeout
+waiting for the network to be up.
+
+Metadata version used: `latest`.
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * admin user password
+    * user data
+
+Config options for `cloudstack` section:
+
+    * disk_label (string: "config-2")
+
+.. note:: By design, this service can update the password anytime, so it will
+    cause the `setuserpassword` plugin to run at every boot and the password hash
+    is stored right after retrieval and no updating will occur until a new password
+    is available on the server.
 
 OpenNebula Service
 ------------------
