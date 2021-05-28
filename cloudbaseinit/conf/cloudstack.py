@@ -27,7 +27,7 @@ class CloudStackOptions(conf_base.Options):
         super(CloudStackOptions, self).__init__(config, group="cloudstack")
         self._options = [
             cfg.StrOpt(
-                "metadata_base_url", default="http://10.1.1.1/",
+                "metadata_base_url", default="http://data-server/",
                 help="The base URL where the service looks for metadata",
                 deprecated_name="cloudstack_metadata_ip",
                 deprecated_group="DEFAULT"),
