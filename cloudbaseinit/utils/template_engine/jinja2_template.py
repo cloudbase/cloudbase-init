@@ -14,12 +14,10 @@
 import jinja2
 
 from cloudbaseinit.utils.template_engine import base_template
-from jinja2 import runtime
 
 MISSING_JINJA_VARIABLE = u'CI_MISSING_JINJA_VAR/'
 
 
-@runtime.implements_to_string
 class MissingJinjaVariable(jinja2.DebugUndefined):
     """Missing Jinja2 variable class."""
 
