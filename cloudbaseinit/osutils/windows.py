@@ -912,19 +912,21 @@ class WindowsUtils(base.BaseOSUtils):
         return reboot_required
 
     @staticmethod
-    def _fix_network_adapter_dhcp(interface_name, enable_dhcp, address_family):
-        interface_id = WindowsUtils._get_network_adapter(interface_name).GUID
-        tcpip_key = "Tcpip6" if address_family == AF_INET6 else "Tcpip"
+    def _fix_network_adapter_dhcp(interface_name,
+                                  enable_dhcp,
+                                  address_family):
+        enable_dhcp_value = 1 if enable_dhcp else 0
 
-        with winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE,
-                "SYSTEM\\CurrentControlSet\\services\\%(tcpip_key)s\\"
-                "Parameters\\Interfaces\\%(interface_id)s" %
-                {"tcpip_key": tcpip_key, "interface_id": interface_id},
-                0, winreg.KEY_SET_VALUE) as key:
-            winreg.SetValueEx(
-                key, 'EnableDHCP', 0, winreg.REG_DWORD,
-                1 if enable_dhcp else 0)
+        conn = wmi.WMI(moniker='//./root/standardcimv2')
+        net_interface = conn.MSFT_NetIPInterface(
+            InterfaceAlias=interface_name, AddressFamily=address_family)
+        if not len(net_interface):
+            raise exception.ItemNotFoundException(
+                'Network interface with name "%s" not found' %
+                interface_name)
+        net_interface = net_interface[0]
+        net_interface.Dhcp = enable_dhcp_value
+        net_interface.put()
 
     @staticmethod
     def _set_interface_dns(interface_name, dnsnameservers):

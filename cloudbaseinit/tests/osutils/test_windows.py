@@ -2000,6 +2000,40 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                            mock.sentinel.mac_address,
                            mock.sentinel.dhcp_server)], response)
 
+    def test_fix_network_adapter_dhcp(self):
+        self._test_fix_network_adapter_dhcp(True)
+
+    def test_fix_network_adapter_dhcp_no_network_adapter(self):
+        self._test_fix_network_adapter_dhcp(False)
+
+    def _test_fix_network_adapter_dhcp(self, no_net_interface_found):
+        mock_interface_name = "eth12"
+        mock_enable_dhcp = True
+        mock_address_family = self.windows_utils.AF_INET
+
+        conn = self._wmi_mock.WMI.return_value
+        existing_net_interface = mock.Mock()
+        existing_net_interface.Dhcp = 0
+
+        if not no_net_interface_found:
+            conn.MSFT_NetIPInterface.return_value = [existing_net_interface]
+
+        if no_net_interface_found:
+            with self.assertRaises(exception.ItemNotFoundException):
+                self._winutils._fix_network_adapter_dhcp(
+                    mock_interface_name, mock_enable_dhcp,
+                    mock_address_family)
+        else:
+            self._winutils._fix_network_adapter_dhcp(
+                mock_interface_name, mock_enable_dhcp,
+                mock_address_family)
+
+            conn.MSFT_NetIPInterface.assert_called_once_with(
+                InterfaceAlias=mock_interface_name,
+                AddressFamily=mock_address_family)
+            self.assertEqual(existing_net_interface.Dhcp, 1)
+            existing_net_interface.put.assert_called_once()
+
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.check_sysnative_dir_exists')
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
