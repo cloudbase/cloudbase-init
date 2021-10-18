@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import comtypes
 import ctypes
 import re
 
@@ -21,6 +22,8 @@ from cloudbaseinit.utils.windows.storage import base
 from cloudbaseinit.utils.windows import vds
 
 LOG = oslo_logging.getLogger(__name__)
+
+VDS_E_EXTENT_SIZE_LESS_THAN_MIN = -2147212237
 
 ole32 = ctypes.windll.ole32
 ole32.CoTaskMemFree.restype = None
@@ -89,10 +92,19 @@ class VDSStorageManager(base.BaseStorageManager):
             LOG.info('Extending volume "%s" with %s bytes' %
                      (volume_name, extend_size))
 
-            input_disks_ar = (vds.VDS_INPUT_DISK *
-                              len(input_disks))(*input_disks)
-            extend_job = volume.Extend(input_disks_ar, len(input_disks))
-            extend_job.Wait()
+            try:
+                input_disks_ar = (vds.VDS_INPUT_DISK *
+                                  len(input_disks))(*input_disks)
+                extend_job = volume.Extend(input_disks_ar, len(input_disks))
+                extend_job.Wait()
+            except comtypes.COMError as ex:
+                if ex.hresult == VDS_E_EXTENT_SIZE_LESS_THAN_MIN:
+                    LOG.debug(
+                        'Volume extension failed because of a '
+                        'Windows disk management bug issue where the '
+                        'estimated extend size is less than the minimum.')
+                else:
+                    raise
 
     def _get_volume_extents_to_resize(self, pack, volume_id):
         volume_extents = []
