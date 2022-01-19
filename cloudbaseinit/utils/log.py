@@ -101,5 +101,5 @@ def setup(product_name):
                 formatters.ContextFormatter(project=product_name,
                                             datefmt=datefmt))
         except serial.SerialException:
-            LOG.warn("Serial port: {0} could not be opened".format(
-                     CONF.logging_serial_port_settings))
+            LOG.warning("Serial port: {0} could not be opened".format(
+                        CONF.logging_serial_port_settings))

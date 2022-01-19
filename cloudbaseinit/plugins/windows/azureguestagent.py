@@ -241,8 +241,8 @@ class AzureGuestAgentPlugin(base.BasePlugin):
                 self._configure_rd_agent(osutils, ga_target_path)
 
                 if not osutils.check_dotnet_is_installed("4"):
-                    LOG.warn("The .Net framework 4.5 or greater is required "
-                             "by the Azure guest agent")
+                    LOG.warning("The .Net framework 4.5 or greater is "
+                                "required by the Azure guest agent")
                 else:
                     osutils.set_service_start_mode(
                         SERVICE_NAME_RDAGENT,

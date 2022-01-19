@@ -40,8 +40,8 @@ class SetUserPasswordPlugin(base.BasePlugin):
 
         if password:
             injected = True
-            LOG.warn('Using admin_pass metadata user password. Consider '
-                     'changing it as soon as possible')
+            LOG.warning('Using admin_pass metadata user password. Consider '
+                        'changing it as soon as possible')
         else:
             password = shared_data.get(plugin_constant.SHARED_DATA_PASSWORD)
 

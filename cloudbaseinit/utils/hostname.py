@@ -45,11 +45,11 @@ def set_hostname(osutils, hostname):
     hostname = hostname.split('.', 1)[0]
     if (len(hostname) > NETBIOS_HOST_NAME_MAX_LEN and
             CONF.netbios_host_name_compatibility):
-            LOG.warn('Truncating host name for Netbios compatibility. '
-                     'Old name: %(old_hostname)s, new name: '
-                     '%(new_hostname)s' %
-                     {'old_hostname': hostname,
-                      'new_hostname': hostname[:NETBIOS_HOST_NAME_MAX_LEN]})
+            LOG.warning('Truncating host name for Netbios compatibility. '
+                        'Old name: %(old_hostname)s, new name: '
+                        '%(new_hostname)s' %
+                        {'old_hostname': hostname,
+                         'new_hostname': hostname[:NETBIOS_HOST_NAME_MAX_LEN]})
             hostname = hostname[:NETBIOS_HOST_NAME_MAX_LEN]
     hostname = re.sub(r'-$', '0', hostname)
     if platform.node().lower() == hostname.lower():

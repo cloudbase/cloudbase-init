@@ -34,8 +34,8 @@ class ConfigWinRMListenerPlugin(base.BasePlugin):
 
     def _check_winrm_service(self, osutils):
         if not osutils.check_service_exists(self._winrm_service_name):
-            LOG.warn("Cannot configure the WinRM listener as the service "
-                     "is not available")
+            LOG.warning("Cannot configure the WinRM listener as the service "
+                        "is not available")
             return False
 
         start_mode = osutils.get_service_start_mode(self._winrm_service_name)

@@ -84,7 +84,7 @@ class LogSnatcher(object):
         with LogSnatcher('plugins.windows.createuser') as snatcher:
             LOG.info("doing stuff")
             LOG.info("doing stuff %s", 1)
-            LOG.warn("doing other stuff")
+            LOG.warning("doing other stuff")
             ...
         self.assertEqual(snatcher.output,
                          ['INFO:unknown:doing stuff',

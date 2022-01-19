@@ -59,9 +59,9 @@ def load_plugins(stage):
     for class_path in CONF.plugins:
         if class_path in OLD_PLUGINS:
             new_class_path = OLD_PLUGINS[class_path]
-            LOG.warn("Old plugin module %r was found. The new name is %r. "
-                     "The old name will not be supported starting with "
-                     "cloudbaseinit 1.0", class_path, new_class_path)
+            LOG.warning("Old plugin module %r was found. The new name is %r. "
+                        "The old name will not be supported starting with "
+                        "cloudbaseinit 1.0", class_path, new_class_path)
             class_path = new_class_path
 
         try:

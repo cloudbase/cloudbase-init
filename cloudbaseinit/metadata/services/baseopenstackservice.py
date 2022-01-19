@@ -167,7 +167,8 @@ class BaseOpenStackService(base.BaseMetadataService):
         for service_data in services_data:
             service_type = service_data.get("type")
             if service_type != NETWORK_SERVICE_TYPE_DNS:
-                LOG.warn("Skipping unsupported service type: %s", service_type)
+                LOG.warning("Skipping unsupported service type: %s",
+                            service_type)
                 continue
 
             address = service_data.get("address")

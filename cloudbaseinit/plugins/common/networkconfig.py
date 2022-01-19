@@ -140,7 +140,7 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
         for mac in adapter_macs:
             nic = macnics.pop(mac, None)
             if not nic:
-                LOG.warn("Missing details for adapter %s", mac)
+                LOG.warning("Missing details for adapter %s", mac)
                 continue
 
             name = osutils.get_network_adapter_name_by_mac_address(mac)
@@ -168,7 +168,7 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
             reboot_required = reboot or reboot_required
             configured = True
         for mac in macnics:
-            LOG.warn("Details not used for adapter %s", mac)
+            LOG.warning("Details not used for adapter %s", mac)
         if not configured:
             LOG.error("No adapters were configured")
 
