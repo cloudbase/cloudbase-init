@@ -25,7 +25,7 @@ from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import serialization
-from cloudbaseinit.metadata.services.nocloudservice import NoCloudNetworkConfigV1Parser
+from cloudbaseinit.metadata.services import nocloudservice
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
@@ -163,5 +163,5 @@ class VMwareGuestInfoService(base.BaseMetadataService):
             LOG.error("Network data version '%s' is not supported",
                       network_data_version)
             return
-        network_config_parser = NoCloudNetworkConfigV1Parser()
+        network_config_parser = nocloudservice.NoCloudNetworkConfigV1Parser()
         return network_config_parser.parse(network_data.get("config"))
