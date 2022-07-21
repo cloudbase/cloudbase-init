@@ -302,6 +302,12 @@ class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):
     def get_instance_id(self):
         return self._get_meta_data().get('instance-id')
 
+    def get_admin_username(self):
+        return self._get_meta_data().get('admin-username')
+
+    def get_admin_password(self):
+        return self._get_meta_data().get('admin-password')
+
     def get_public_keys(self):
         raw_ssh_keys = self._get_meta_data().get('public-keys')
         if not raw_ssh_keys:
