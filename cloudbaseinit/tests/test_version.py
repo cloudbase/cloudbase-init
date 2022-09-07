@@ -78,8 +78,9 @@ class TestVersion(unittest.TestCase):
         thread = mock_thread.return_value
         thread.start.assert_called_once_with()
 
+    @mock.patch('cloudbaseinit.version.get_version')
     @mock.patch('cloudbaseinit.version._read_url')
-    def test__check_latest_version(self, mock_read_url):
+    def test__check_latest_version(self, mock_read_url, mock_ver):
         mock_read_url.return_value = {'new_version': 42}
         mock_callback = mock.Mock()
 
@@ -87,8 +88,9 @@ class TestVersion(unittest.TestCase):
 
         mock_callback.assert_called_once_with(42)
 
+    @mock.patch('cloudbaseinit.version.get_version')
     @mock.patch('cloudbaseinit.version._read_url')
-    def test__check_latest_version_fails(self, mock_read_url):
+    def test__check_latest_version_fails(self, mock_read_url, mock_ver):
         mock_read_url.side_effect = Exception('no worky')
         mock_callback = mock.Mock()
 
@@ -99,8 +101,9 @@ class TestVersion(unittest.TestCase):
         self.assertEqual(expected_logging, snatcher.output)
         self.assertFalse(mock_callback.called)
 
+    @mock.patch('cloudbaseinit.version.get_version')
     @mock.patch('cloudbaseinit.version._read_url')
-    def test__check_latest_version_no_content(self, mock_read_url):
+    def test__check_latest_version_no_content(self, mock_read_url, mock_ver):
         mock_read_url.return_value = None
         mock_callback = mock.Mock()
 
@@ -108,8 +111,10 @@ class TestVersion(unittest.TestCase):
 
         self.assertFalse(mock_callback.called)
 
+    @mock.patch('cloudbaseinit.version.get_version')
     @mock.patch('cloudbaseinit.version._read_url')
-    def test__check_latest_version_no_new_version(self, mock_read_url):
+    def test__check_latest_version_no_new_version(
+            self, mock_read_url, mock_ver):
         mock_read_url.return_value = {'new_versio': 42}
         mock_callback = mock.Mock()
 

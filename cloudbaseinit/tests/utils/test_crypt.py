@@ -23,9 +23,10 @@ class TestOpenSSLException(unittest.TestCase):
         self._openssl = crypt.OpenSSLException()
 
     def test_get_openssl_error_msg(self):
-        expected_error_msg = u'error:00000000:lib(0):func(0):reason(0)'
-        error_msg = self._openssl._get_openssl_error_msg()
-        self.assertEqual(expected_error_msg, error_msg)
+        expected_err_msg = u'error:00000000:lib(0):func(0):reason(0)'
+        expected_err_msg_py10 = u'error:00000000:lib(0)::reason(0)'
+        err_msg = self._openssl._get_openssl_error_msg()
+        self.assertIn(err_msg, [expected_err_msg, expected_err_msg_py10])
 
 
 class TestCryptManager(unittest.TestCase):
