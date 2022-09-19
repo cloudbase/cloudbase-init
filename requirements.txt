@@ -10,7 +10,7 @@ oauthlib
 netifaces
 PyYAML
 requests
-untangle==1.1.1
+untangle==1.2.1
 jinja2
 pywin32;sys_platform=="win32"
 comtypes;sys_platform=="win32"
