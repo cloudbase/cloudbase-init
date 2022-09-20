@@ -36,6 +36,7 @@ LOG = oslo_logging.getLogger(__name__)
 
 WIRESERVER_DHCP_OPTION = 245
 WIRE_SERVER_VERSION = '2015-04-05'
+WIRE_SERVER_FALLBACK_IP = '168.63.129.16'
 
 GOAL_STATE_STARTED = "Started"
 
@@ -66,8 +67,8 @@ class AzureService(base.BaseHTTPMetadataService):
         self._osutils = osutils_factory.get_os_utils()
 
     def _get_wire_server_endpoint_address(self):
-        total_time = 300
-        poll_time = 5
+        total_time = 150
+        poll_time = 2
         retries = total_time / poll_time
 
         while True:
@@ -78,7 +79,8 @@ class AzureService(base.BaseHTTPMetadataService):
                     raise exception.MetadataNotFoundException(
                         "Cannot find Azure WireServer endpoint address")
                 return socket.inet_ntoa(endpoint)
-            except Exception:
+            except Exception as ex:
+                LOG.debug(ex)
                 if not retries:
                     raise
                 time.sleep(poll_time)
@@ -452,10 +454,13 @@ class AzureService(base.BaseHTTPMetadataService):
     def load(self):
         try:
             wire_server_endpoint = self._get_wire_server_endpoint_address()
-            self._base_url = "http://%s" % wire_server_endpoint
         except Exception:
-            LOG.debug("Azure WireServer endpoint not found")
-            return False
+            LOG.debug(
+                "Azure WireServer endpoint not found. "
+                "Using default endpoint %s.", WIRE_SERVER_FALLBACK_IP)
+            wire_server_endpoint = WIRE_SERVER_FALLBACK_IP
+
+        self._base_url = "http://%s" % wire_server_endpoint
 
         try:
             super(AzureService, self).load()
