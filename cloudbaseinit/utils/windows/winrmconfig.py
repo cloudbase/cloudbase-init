@@ -191,5 +191,5 @@ class WinRMConfig(object):
                 new_value = self._get_xml_bool(value)
                 if node.text.lower() != new_value:
                     node.text = new_value
-                    data_xml = ElementTree.tostring(tree)
+                    data_xml = ElementTree.tostring(tree, encoding="unicode")
                     session.Put(self._SERVICE_AUTH_URI, data_xml)
