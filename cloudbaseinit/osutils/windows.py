@@ -855,7 +855,6 @@ class WindowsUtils(base.BaseOSUtils):
                     'value "%(mtu)s" failed' % {'name': name, 'mtu': mtu})
 
     def rename_network_adapter(self, old_name, new_name):
-        
         conn = wmi.WMI(moniker='//./root/standardcimv2')
         net_adapter = conn.MSFT_NetAdapter(Name=old_name)
         if not len(net_adapter):
