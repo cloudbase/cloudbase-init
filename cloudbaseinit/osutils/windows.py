@@ -855,16 +855,16 @@ class WindowsUtils(base.BaseOSUtils):
                     'value "%(mtu)s" failed' % {'name': name, 'mtu': mtu})
 
     def rename_network_adapter(self, old_name, new_name):
-        base_dir = self._get_system_dir()
-        netsh_path = os.path.join(base_dir, 'netsh.exe')
-
-        args = [netsh_path, "interface", "set", "interface",
-                'name=%s' % old_name, 'newname=%s' % new_name]
-        (out, err, ret_val) = self.execute_process(args, shell=False)
-        if ret_val:
-            raise exception.CloudbaseInitException(
-                'Renaming interface "%(old_name)s" to "%(new_name)s" '
-                'failed' % {'old_name': old_name, 'new_name': new_name})
+        
+        conn = wmi.WMI(moniker='//./root/standardcimv2')
+        net_adapter = conn.MSFT_NetAdapter(Name=old_name)
+        if not len(net_adapter):
+            raise exception.ItemNotFoundException(
+                'Network adapter with name "%s" not found' %
+                old_name)
+        net_adapter = net_adapter[0]
+        net_adapter.Name = new_name
+        net_adapter.put()
 
     @staticmethod
     def _get_network_adapter(name):
