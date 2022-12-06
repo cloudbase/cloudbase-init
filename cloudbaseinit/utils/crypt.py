@@ -26,12 +26,20 @@ if sys.platform == "win32":
     else:
         clib = ctypes.cdll.ucrtbase
 
-    # Note(mbivolan): The library name has changed in OpenSSL 1.1.0
-    # Keeping the old name for backward compatibility
-    try:
-        openssl = ctypes.cdll.libeay32
-    except Exception:
-        openssl = ctypes.cdll.libcrypto
+    # for backwards compatibility, try the older names
+    # libcrypto-1_1 comes bundled with PY 3.7 to 3.12
+    ssl_lib_names = [
+        "libcrypto-1_1",
+        "libcrypto",
+        "libeay32"
+    ]
+
+    for ssl_lib_name in ssl_lib_names:
+        try:
+            openssl = ctypes.CDLL(ssl_lib_name)
+            break
+        except Exception:
+            pass
 else:
     clib = ctypes.CDLL(clib_path)
     openssl_lib_path = ctypes.util.find_library("ssl")
@@ -63,6 +71,7 @@ class RSA(ctypes.Structure):
         ("blinding", ctypes.c_void_p),
         ("mt_blinding", ctypes.c_void_p)
     ]
+
 
 openssl.RSA_PKCS1_PADDING = 1
 
