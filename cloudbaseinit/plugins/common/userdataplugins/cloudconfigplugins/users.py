@@ -115,7 +115,7 @@ class UsersPlugin(base.BaseCloudConfigPlugin):
 
             public_keys = item.get('ssh_authorized_keys', [])
             should_create_home = (public_keys or
-                                  not item.get('no_create_home ', False))
+                                  not item.get('no_create_home', False))
             if user_disabled and should_create_home:
                 raise exception.CloudbaseInitException(
                     "The user is required to be enabled if public_keys "
