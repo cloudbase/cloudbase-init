@@ -452,7 +452,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_create_user(fail=True)
 
     @mock.patch('cloudbaseinit.osutils.windows.Win32_PROFILEINFO')
-    def _test_create_user_logon_session(self, mock_Win32_PROFILEINFO, logon,
+    @mock.patch('time.sleep')
+    def _test_create_user_logon_session(self, mock_time_sleep,
+                                        mock_Win32_PROFILEINFO, logon,
                                         loaduser, load_profile=True,
                                         last_error=None):
         self._wintypes_mock.HANDLE = mock.MagicMock()
@@ -474,7 +476,9 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             userenv.LoadUserProfileW.return_value = None
             kernel32.CloseHandle.return_value = None
             with self.assert_raises_windows_message(
-                    "Cannot load user profile: %r", last_error):
+                    "Cannot load user profile: %r", last_error,
+                    get_last_error_called_times=4,
+                    format_error_called_times=4):
                 self._winutils.create_user_logon_session(
                     self._USERNAME, self._PASSWORD, domain='.',
                     load_profile=load_profile)

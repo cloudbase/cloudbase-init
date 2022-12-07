@@ -159,7 +159,9 @@ class CloudbaseInitTestBase(unittest.TestCase):
     @contextlib.contextmanager
     def assert_raises_windows_message(
             self, expected_msg, error_code,
-            exc=exception.WindowsCloudbaseInitException):
+            exc=exception.WindowsCloudbaseInitException,
+            get_last_error_called_times=1,
+            format_error_called_times=1):
         """Helper method for testing raised error messages
 
         This assert method is similar to :meth:`~assertRaises`, but
@@ -188,11 +190,16 @@ class CloudbaseInitTestBase(unittest.TestCase):
             # This can be called when the error code is not given,
             # but we don't have control over that, so test that
             # it's actually called only once.
-            mock_get_last_error.assert_called_once_with()
-            mock_format_error.assert_called_once_with(
+            mock_get_last_error.assert_called()
+            self.assertEqual(mock_get_last_error.call_count,
+                             get_last_error_called_times)
+            mock_format_error.assert_called_with(
                 mock_get_last_error.return_value)
         else:
-            mock_format_error.assert_called_once_with(error_code)
+            mock_format_error.assert_called_with(error_code)
+
+        self.assertEqual(mock_format_error.call_count,
+                         format_error_called_times)
 
         expected_msg = expected_msg % mock_format_error.return_value
         self.assertEqual(expected_msg, cm.exception.args[0])

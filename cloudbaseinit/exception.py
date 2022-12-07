@@ -71,3 +71,14 @@ class WindowsCloudbaseInitException(CloudbaseInitException):
         except TypeError:
             formatted_msg = msg
         super(WindowsCloudbaseInitException, self).__init__(formatted_msg)
+
+
+class LoadUserProfileCloudbaseInitException(WindowsCloudbaseInitException):
+    """Windows cannot load the newly created user profile.
+
+    The load user profile can fail if the Windows subsystems responsible for
+    the action are not ready. This usually happens on laggy systems and should
+    be retried.
+    """
+
+    pass

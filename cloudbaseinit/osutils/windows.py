@@ -642,6 +642,9 @@ class WindowsUtils(base.BaseOSUtils):
             # User not found
             pass
 
+    @retry_decorator.retry_decorator(
+        max_retry_count=3,
+        exceptions=exception.LoadUserProfileCloudbaseInitException)
     def create_user_logon_session(self, username, password, domain='.',
                                   load_profile=True,
                                   logon_type=LOGON32_LOGON_INTERACTIVE):
@@ -666,7 +669,7 @@ class WindowsUtils(base.BaseOSUtils):
             ret_val = userenv.LoadUserProfileW(token, ctypes.byref(pi))
             if not ret_val:
                 kernel32.CloseHandle(token)
-                raise exception.WindowsCloudbaseInitException(
+                raise exception.LoadUserProfileCloudbaseInitException(
                     "Cannot load user profile: %r")
 
         return token
