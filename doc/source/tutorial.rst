@@ -55,7 +55,7 @@ services and plugins ready for execution and also customizing user experience.
     # Which devices to inspect for a possible configuration drive (metadata).
     config_drive_raw_hhd=true
     config_drive_cdrom=true
-    # Path to tar implementation from Ubuntu.
+    # Path to tar implementation from FreeBSD: https://www.freebsd.org/cgi/man.cgi?tar(1).
     bsdtar_path=C:\Program Files (x86)\Cloudbase Solutions\Cloudbase-Init\bin\bsdtar.exe
     # Logging debugging level.
     verbose=true

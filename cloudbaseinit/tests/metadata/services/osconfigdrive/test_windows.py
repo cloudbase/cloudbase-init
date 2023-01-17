@@ -176,10 +176,13 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         device.read.assert_has_calls(device_read_calls)
         OPEN.return_value.write.assert_has_calls(stream_write_calls)
 
-    def _test_extract_files_from_iso(self, exit_code):
+    @mock.patch('os.path.exists')
+    def _test_extract_files_from_iso(self, os_path_exists, exit_code,
+                                     enforce_os_path_exists=True):
         fake_path = os.path.join('fake', 'path')
         fake_target_path = os.path.join(fake_path, 'target')
         self._config_manager.target_path = fake_target_path
+        os_path_exists.return_code = enforce_os_path_exists
         args = [CONF.bsdtar_path, '-xf', fake_path, '-C', fake_target_path]
 
         self.osutils.execute_process.return_value = ('fake out', 'fake err',
@@ -198,6 +201,10 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
 
     def test_extract_files_from_iso_fail(self):
         self._test_extract_files_from_iso(exit_code=1)
+
+    def test_extract_files_from_iso_fail_bsdtar_does_not_exist(self):
+        self._test_extract_files_from_iso(exit_code=1,
+                                          enforce_os_path_exists=False)
 
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager._extract_files_from_iso')
