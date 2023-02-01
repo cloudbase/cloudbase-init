@@ -158,11 +158,16 @@ class VMwareGuestInfoService(base.BaseMetadataService):
         if not network_data:
             LOG.info("No network configuration found in metadata")
             return
-        network_data_version = network_data.get("version")
+        if 'version' not in network_data:
+            LOG.error("No network version information found in metadata")
+            return
+        network_data_version = network_data.get('version')
         if network_data_version != 1:
             LOG.error("Network data version '%s' is not supported",
                       network_data_version)
             return
+        if 'config' not in network_data:
+            LOG.error("Network configuration does not exist")
+            return
         network_config_parser = nocloudservice.NoCloudNetworkConfigV1Parser()
         return network_config_parser.parse(network_data.get("config"))
-
