@@ -994,9 +994,22 @@ class WindowsUtils(base.BaseOSUtils):
                 {"route": existing_route.DestinationPrefix, "name": name})
             existing_route.Delete_()
 
+        defroute = ""
+        if family == AF_INET:
+            defroute = "0.0.0.0/0"
+        elif family == AF_INET6:
+            defroute = "::/0"
+
+        conn.MSFT_NetRoute.create(
+            AddressFamily=family, InterfaceAlias=name,
+            DestinationPrefix=f"{gateway}/32")
+        conn.MSFT_NetRoute.create(
+            AddressFamily=family, InterfaceAlias=name,
+            DestinationPrefix=defroute, NextHop=gateway)
+
         conn.MSFT_NetIPAddress.create(
             AddressFamily=family, InterfaceAlias=name, IPAddress=address,
-            PrefixLength=prefix_len, DefaultGateway=gateway)
+            PrefixLength=prefix_len)
 
     def set_static_network_config(self, name, address, prefix_len_or_netmask,
                                   gateway, dnsnameservers):
