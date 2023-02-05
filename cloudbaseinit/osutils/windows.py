@@ -1000,9 +1000,15 @@ class WindowsUtils(base.BaseOSUtils):
         elif family == AF_INET6:
             defroute = "::/0"
 
+        gw_prefix_len = ""
+        if family == AF_INET:
+            gw_prefix_len = "32"
+        elif family == AF_INET6:
+            gw_prefix_len = "128"
+
         conn.MSFT_NetRoute.create(
             AddressFamily=family, InterfaceAlias=name,
-            DestinationPrefix=f"{gateway}/32")
+            DestinationPrefix=f"{gateway}/{gw_prefix_len}")
         conn.MSFT_NetRoute.create(
             AddressFamily=family, InterfaceAlias=name,
             DestinationPrefix=defroute, NextHop=gateway)
