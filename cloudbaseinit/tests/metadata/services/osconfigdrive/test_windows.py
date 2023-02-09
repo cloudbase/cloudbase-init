@@ -329,8 +329,8 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
         self.osutils.get_physical_disks.assert_called_once_with()
 
         expected_is_vfat_calls = [
-            mock.call(self.osutils, mock.sentinel.drive1),
-            mock.call(self.osutils, mock.sentinel.drive2),
+            mock.call(self.osutils, mock.sentinel.drive1, self._fake_label),
+            mock.call(self.osutils, mock.sentinel.drive2, self._fake_label),
         ]
         self.assertEqual(expected_is_vfat_calls, mock_is_vfat_drive.mock_calls)
         mock_copy_from_vfat_drive.assert_called_once_with(

@@ -22,7 +22,6 @@ from cloudbaseinit import exception
 
 
 CONF = cloudbaseinit_conf.CONF
-CONFIG_DRIVE_LABELS = ['config-2', 'CONFIG-2']
 LOG = oslo_logging.getLogger(__name__)
 VOLUME_LABEL_REGEX = re.compile("Volume label is (.*?)$")
 
@@ -34,7 +33,7 @@ def _check_mtools_path():
             'to access VFAT drives')
 
 
-def is_vfat_drive(osutils, drive_path):
+def is_vfat_drive(osutils, drive_path, drive_label):
     """Check if the given drive contains a VFAT filesystem."""
     _check_mtools_path()
     mlabel = os.path.join(CONF.mtools_path, "mlabel.exe")
@@ -50,7 +49,8 @@ def is_vfat_drive(osutils, drive_path):
     LOG.debug("Obtained label information for drive %r: %r", drive_path, out)
     out = out.decode().strip()
     match = VOLUME_LABEL_REGEX.search(out)
-    return match.group(1) in CONFIG_DRIVE_LABELS if match else False
+    drive_labels = [drive_label.lower(), drive_label.upper()]
+    return match.group(1) in drive_labels if match else False
 
 
 def copy_from_vfat_drive(osutils, drive_path, target_path):
