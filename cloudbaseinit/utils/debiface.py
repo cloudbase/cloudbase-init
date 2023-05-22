@@ -98,10 +98,16 @@ def _get_field(line):
             yield field, match.group(field)
 
 
-def _add_nic(iface, nics):
+def _add_nic(iface, nics, dns):
     if not iface or iface == IFACE_TEMPLATE:
         return    # no information gathered
+    
+    # setting dns globally for all interfaces if provided
+    if dns:
+        iface[DNSNS] = dns
+        
     LOG.debug("Found new interface: %s", iface)
+
     # Each missing detail is marked as None.
     nic = network_model.NetworkDetails(**iface)
     nics.append(nic)
@@ -115,6 +121,7 @@ def parse(data):
 
     LOG.info("Parsing Debian config...\n%s", data)
     nics = []    # list of NetworkDetails objects
+    global_dns = None
     for lines_pair in _get_iface_blocks(data):
         iface = IFACE_TEMPLATE.copy()
         for lines, use_proxy in zip(lines_pair, (False, True)):
@@ -126,6 +133,10 @@ def parse(data):
                             continue
                     func = DETAIL_PREPROCESS.get(field, lambda value: value)
                     iface[field] = func(value) if value != "None" else None
-        _add_nic(iface, nics)
+
+                    # obtain dns global settings if provided
+                    if field == DNSNS and value != None:
+                        global_dns = value
+        _add_nic(iface, nics, global_dns)
 
     return nics

@@ -933,28 +933,7 @@ class WindowsUtils(base.BaseOSUtils):
 
     @staticmethod
     def _set_interface_dns(interface_name, dnsnameservers):
-        # Import here to avoid loading errors on Windows versions where MI is
-        # not available
-        import mi
-
-        conn = wmi.WMI(moniker='//./root/standardcimv2')
-        # Requires Windows >= 6.2
-        dns_client = conn.MSFT_DnsClientServerAddress(
-            InterfaceAlias=interface_name)
-        if not len(dns_client):
-            raise exception.ItemNotFoundException(
-                'Network interface with name "%s" not found' %
-                interface_name)
-        dns_client = dns_client[0]
-
-        custom_options = [{
-            u'name': u'ServerAddresses',
-            u'value_type': mi.MI_ARRAY | mi.MI_STRING,
-            u'value': dnsnameservers
-        }]
-
-        operation_options = {u'custom_options': custom_options}
-        dns_client.put(operation_options=operation_options)
+        os.system(f'netsh interface ip set dns {interface_name} static {dnsnameservers}')
 
     def enable_network_adapter(self, name, enabled):
         adapter = self._get_network_adapter(name)
