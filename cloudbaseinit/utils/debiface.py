@@ -53,7 +53,7 @@ FIELDS = {
                         r"(?P<{}>\S+)".format(GATEWAY)),
     GATEWAY6: re.compile(r"post-up ip -6 route add default via "
                          r"(?P<{}>.+) dev".format(GATEWAY6)),
-    DNSNS: re.compile(r"dns-nameservers\s+(?P<{}>.+)".format(DNSNS))
+    DNSNS: re.compile(r"(dns-nameservers|dns_nameservers|dns-nameserver|dns_nameserver)\s+(?P<dnsnameservers>.+)".format(DNSNS))
 }
 IFACE_TEMPLATE = dict.fromkeys(FIELDS.keys())
 # Map IPv6 availability by value index under `NetworkDetails`.
