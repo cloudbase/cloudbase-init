@@ -163,6 +163,7 @@ class GlobalOptions(conf_base.Options):
                     'cloudbaseinit.metadata.services.httpservice.HttpService',
                     'cloudbaseinit.metadata.services'
                     '.configdrive.ConfigDriveService',
+                    '.nocloudservice.NoCloudConfigDriveService',
                     'cloudbaseinit.metadata.services.ec2service.EC2Service',
                     'cloudbaseinit.metadata.services'
                     '.maasservice.MaaSHttpService',
