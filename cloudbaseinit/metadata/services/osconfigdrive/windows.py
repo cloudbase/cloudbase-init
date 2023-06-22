@@ -58,7 +58,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
     def _meta_data_file_exists(self, drive, metadata_file):
         if self._osutils._has_cdfs(drive):
             LOG.debug("Drive %s has cdfs. Respecting upper-case "
-                "file names when looking for meta-data." % drive)
+                      "file names when looking for meta-data." % drive)
             metadata_file = self._to_cdfs_filename(metadata_file)
 
         if os.path.exists(os.path.join(drive, metadata_file)):
@@ -80,8 +80,8 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 LOG.info('Metadata file could not be found on %s', drive)
         else:
             LOG.info("Looking for a Config Drive with label '%s' on '%s'. "
-                  "Found mismatching label '%s'.",
-                  required_drive_label, drive, label)
+                     "Found mismatching label '%s'.",
+                     required_drive_label, drive, label)
         return False
 
     def _get_iso_file_size(self, device):
@@ -169,11 +169,11 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                                             metadata_file):
                 os.rmdir(self.target_path)
                 shutil.copytree(drive_letter, self.target_path)
-                LOG.debug("Renaming local copy of cdfs file names to lower-case.")
                 for file in os.listdir(self.target_path):
-                    shutil.move(os.path.join(self.target_path, file), 
-                        os.path.join(self.target_path, self._from_cdfs_filename(file)))
-
+                    shutil.move(
+                        os.path.join(self.target_path, file),
+                        os.path.join(self.target_path,
+                                     self._from_cdfs_filename(file)))
                 return True
 
         return False
@@ -221,8 +221,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 return get_config_drive(drive_label, metadata_file)
             else:
                 LOG.info("Irrelevant type %(type)s in %(location)s "
-                          "location; skip",
-                          {"type": cd_type, "location": cd_location})
+                         "location; skip", {"type": cd_type, "location": cd_location})
         except Exception as exc:
             LOG.warning("Config type %(type)s not found in %(loc)s "
                         "location; Error: '%(err)r'",
@@ -238,9 +237,9 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         for cd_type, cd_location in itertools.product(searched_types,
                                                       searched_locations):
             LOG.info('Looking for Config Drive %(type)s in %(location)s '
-                      'with expected label %(drive_label)s',
-                      {"type": cd_type, "location": cd_location,
-                       "drive_label": drive_label})
+                     'with expected label %(drive_label)s',
+                     {"type": cd_type, "location": cd_location,
+                      "drive_label": drive_label})
             if self._get_config_drive_files(drive_label, metadata_file,
                                             cd_type, cd_location):
                 return True
