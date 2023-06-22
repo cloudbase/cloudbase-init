@@ -60,7 +60,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
             LOG.debug("Drive %s has cdfs. Respecting upper-case file names when looking for meta-data.")
             metadata_file = self._to_cdfs_filename(metadata_file)
 
-        if os.path.exists(os.path.join(drive, metadata_file))
+        if os.path.exists(os.path.join(drive, metadata_file)):
             return True
 
         LOG.debug('%s not found', metadata_file)
