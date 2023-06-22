@@ -1482,20 +1482,19 @@ class WindowsUtils(base.BaseOSUtils):
 
     def _has_cdfs(self, drive):
         out,err,code = self.execute_powershell_command("wmic logicaldisk get deviceid,filesystem")
+        LOG.info("Checking if drive %s has CDFS filesystem" % drive)
         if code == 0:
             lines = out.decode('ascii').replace('\r\r','').splitlines()[1:] # skip header line
             for line in lines:
                 drive_fs = line.split()
-                LOG.info("Checking drive/fs combination %s/%s" % (drive_fs[0], drive_fs[1]))
+                LOG.info("Found candidate %s with %s" % (drive_fs[0], drive_fs[1]))
 
                 if drive.startswith(drive_fs[0].upper()) and drive_fs[1].upper() == "CDFS":
                     return True
         else:
             raise exception.WindowsCloudbaseInitException(
                         "Could not determine file system of drive %s" % drive)
-
         return False
-
 
     def get_physical_disks(self):
         physical_disks = []
