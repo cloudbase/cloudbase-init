@@ -1480,6 +1480,23 @@ class WindowsUtils(base.BaseOSUtils):
         # interpreter's bits
         return struct.calcsize("P") == 8
 
+    def _has_cdfs(self, drive):
+        out,err,code = self.execute_powershell_command("wmic logicaldisk get deviceid,filesystem")
+        if code == 0:
+            lines = out.decode('ascii').replace('\r\r','').splitlines()[1:] # skip header line
+            for line in lines:                
+                drive_fs = line.split()
+                LOG.info("Checking drive/fs combination %s/%s" % (drive_fs[0], drive_fs[1]))
+
+                if drive.startswith(drive_fs[0].upper()) and drive_fs[1].upper() == "CDFS":
+                    return True
+        else:
+            raise exception.WindowsCloudbaseInitException(
+                        "Could not determine file system of drive %s" % drive)
+
+        return False
+
+
     def get_physical_disks(self):
         physical_disks = []
 
@@ -1672,6 +1689,16 @@ class WindowsUtils(base.BaseOSUtils):
                 return False
             else:
                 raise
+
+    def execute_powershell_command(self, command, sysnative=True):
+        base_dir = self._get_system_dir(sysnative)
+        powershell_path = os.path.join(base_dir,
+                                       'WindowsPowerShell\\v1.0\\'
+                                       'powershell.exe')
+        
+        args = [powershell_path, "-command", command]
+        return self.execute_process(args, shell=False)
+
 
     def execute_powershell_script(self, script_path, sysnative=True):
         base_dir = self._get_system_dir(sysnative)
