@@ -55,8 +55,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
     def _from_cdfs_filename(self, name):
         return name.lower().replace('_', '-')
 
-    def _meta_data_file_exists(self, drive, metadata_file):        
-
+    def _meta_data_file_exists(self, drive, metadata_file):
         if self._osutils._has_cdfs(drive):
             LOG.debug("Drive %s has cdfs. Respecting upper-case file names when looking for meta-data.")
             metadata_file = self._to_cdfs_filename(metadata_file)
@@ -72,7 +71,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
         label = self._osutils.get_volume_label(drive)
         if label and label.lower() == required_drive_label:
             LOG.info('Config Drive found on %s', drive)
-            
+
             if self._meta_data_file_exists(drive, metadata_file):
                 LOG.info('Metadata file found on %s', drive)
                 return True
@@ -170,7 +169,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 os.rmdir(self.target_path)
                 shutil.copytree(drive_letter, self.target_path)
                 LOG.debug("Renaming local copy of cdfs file names to lower-case.")
-                for file in os.listdir():                    
+                for file in os.listdir():
                     shutil.move(os.path.join(self.target_path, file), os.path.join(self.target_path, self._from_cdfs_filename(file)))
 
                 return True

@@ -1484,7 +1484,7 @@ class WindowsUtils(base.BaseOSUtils):
         out,err,code = self.execute_powershell_command("wmic logicaldisk get deviceid,filesystem")
         if code == 0:
             lines = out.decode('ascii').replace('\r\r','').splitlines()[1:] # skip header line
-            for line in lines:                
+            for line in lines:
                 drive_fs = line.split()
                 LOG.info("Checking drive/fs combination %s/%s" % (drive_fs[0], drive_fs[1]))
 
@@ -1695,7 +1695,7 @@ class WindowsUtils(base.BaseOSUtils):
         powershell_path = os.path.join(base_dir,
                                        'WindowsPowerShell\\v1.0\\'
                                        'powershell.exe')
-        
+
         args = [powershell_path, "-command", command]
         return self.execute_process(args, shell=False)
 

@@ -67,7 +67,7 @@ class BaseConfigDriveService(base.BaseMetadataService):
         super(BaseConfigDriveService, self).load()
 
         self._preprocess_options()
-        self._mgr = factory.get_config_drive_manager()        
+        self._mgr = factory.get_config_drive_manager()
         found = self._mgr.get_config_drive_files(
             drive_label=self._drive_label,
             metadata_file=self._metadata_file,
