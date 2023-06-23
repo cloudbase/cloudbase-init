@@ -1481,8 +1481,9 @@ class WindowsUtils(base.BaseOSUtils):
         return struct.calcsize("P") == 8
 
     def _has_cdfs(self, drive):
-        (out, err, exit_code) = self.execute_powershell_command("wmic "
-                                                                "logicaldisk get deviceid,filesystem")
+        (out, err, exit_code) =
+        self.execute_powershell_command("wmic logicaldisk "
+                                        "get deviceid,filesystem")
         LOG.info("Checking if drive %s has CDFS filesystem" % drive)
         if exit_code == 0:
             lines = out.decode('ascii').replace('\r\r', '').splitlines()[1:]

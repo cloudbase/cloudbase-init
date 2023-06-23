@@ -221,7 +221,8 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 return get_config_drive(drive_label, metadata_file)
             else:
                 LOG.info("Irrelevant type %(type)s in %(location)s "
-                         "location; skip", {"type": cd_type, "location": cd_location})
+                         "location; skip", {"type": cd_type,
+                                            "location": cd_location})
         except Exception as exc:
             LOG.warning("Config type %(type)s not found in %(loc)s "
                         "location; Error: '%(err)r'",
