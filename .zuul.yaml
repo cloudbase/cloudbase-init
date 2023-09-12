@@ -16,11 +16,11 @@
       git_mirror_repository: cloudbase/cloudbase-init
     secrets:
       - name: git_mirror_credentials
-        secret: cbsl-init-github-secret
+        secret: cbsl-init-github-secret-v2
         pass-to-parent: true
 
 - secret:
-    name: cbsl-init-github-secret
+    name: cbsl-init-github-secret-v2
     data:
       user: git
       host: github.com
