@@ -60,12 +60,16 @@ class TestInitManager(unittest.TestCase):
         if not instance_id:
             self.assertEqual(self._init._PLUGINS_CONFIG_SECTION, response)
         else:
-            self.assertEqual(
-                instance_id + "/" + self._init._PLUGINS_CONFIG_SECTION,
-                response)
+            expected_response = (
+                "%s/%s" % (instance_id, self._init._PLUGINS_CONFIG_SECTION))
+            self.assertEqual(expected_response, response)
 
     def test_get_plugin_section_id(self):
         fake_id = "100"
+        self._test_get_plugin_section(instance_id=fake_id)
+
+    def test_get_plugin_section_id_int(self):
+        fake_id = 100
         self._test_get_plugin_section(instance_id=fake_id)
 
     def test_get_plugin_section_no_id(self):

@@ -39,7 +39,7 @@ class InitManager(object):
         if not instance_id:
             return self._PLUGINS_CONFIG_SECTION
         else:
-            return instance_id + "/" + self._PLUGINS_CONFIG_SECTION
+            return ("%s/%s" % (instance_id, self._PLUGINS_CONFIG_SECTION))
 
     def _get_plugin_status(self, osutils, instance_id, plugin_name):
         return osutils.get_config_value(plugin_name,
