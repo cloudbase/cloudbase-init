@@ -839,28 +839,33 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_set_static_network_config(ipv6=True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '.execute_process')
-    @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
-                '._get_system_dir')
-    def _test_rename_network_adapter(self, should_fail, mock_get_system_dir,
-                                     mock_execute_process):
-        base_dir = "fake path"
+                '._get_network_msft_adapter')
+    def _test_rename_network_adapter(self, rename_exception,
+                                     mock_get_network_adapter):
         old_name = "fake_old"
         new_name = "fake_new"
-        mock_get_system_dir.return_value = base_dir
-        ret_val = 1 if should_fail else 0
-        mock_execute_process.return_value = (None, None, ret_val)
 
-        if should_fail:
+        adapter = mock.Mock()
+        adapter.Name = mock.sentinel.old_name
+        mock_get_network_adapter.return_value = adapter
+        get_network_adapter_called = 1
+        if rename_exception:
+            adapter.rename.side_effect = Exception("fake exception")
             with self.assertRaises(exception.CloudbaseInitException):
                 self._winutils.rename_network_adapter(old_name, new_name)
         else:
+            get_network_adapter_called = 2
             self._winutils.rename_network_adapter(old_name, new_name)
 
-        mock_get_system_dir.assert_called_once_with()
-        args = [os.path.join(base_dir, "netsh.exe"), "interface", "set",
-                "interface", 'name=%s' % old_name, 'newname=%s' % new_name]
-        mock_execute_process.assert_called_once_with(args, shell=False)
+        adapter.rename.assert_called()
+
+        self.assertEqual(mock_get_network_adapter.call_count,
+                         get_network_adapter_called)
+        self.assertEqual(mock_get_network_adapter.call_args_list[0].args,
+                         (old_name,))
+        if not exception:
+            self.assertEqual(mock_get_network_adapter.call_args_list[1].args,
+                             (new_name,))
 
     def _test_get_config_key_name(self, section):
         response = self._winutils._get_config_key_name(section)
