@@ -2,7 +2,7 @@
     templates:
       - openstack-cover-jobs
       - build-openstack-docs-pti
-      - openstack-python3-zed-jobs
+      - openstack-python3-jobs
       - build-release-notes-jobs-python3
     post:
       jobs:
