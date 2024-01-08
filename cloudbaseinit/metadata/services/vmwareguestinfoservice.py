@@ -155,7 +155,7 @@ class VMwareGuestInfoService(base.BaseMetadataService):
     
     def get_network_details_v2(self):
         try:
-            raw_data = self._meta_data.get('network-config', decode=True)
+            raw_data = self._meta_data.get('network', decode=True)
             network_data = serialization.parse_json_yaml(raw_data)
         except base.NotExistingMetadataException:
             LOG.info("V2 network metadata not found")
