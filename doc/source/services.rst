@@ -128,12 +128,14 @@ similar to the EC2 metadata in terms of how the metadata files are named and str
 
 The metadata is provided on a config-drive (vfat or iso9660) with the label cidata or CIDATA.
 
-The folder structure for NoCloud is:
+The default folder structure for NoCloud is:
 
   * /user-data
   * /meta-data
 
 The user-data and meta-data files respect the EC2 metadata service format.
+
+The names of the meta-data and user-data files can be configured.
 
 Capabilities:
 
@@ -152,6 +154,11 @@ Config options for `config_drive` section:
     * vfat (bool: True)
     * types (list: ["vfat", "iso"])
     * locations (list: ["cdrom", "hdd", "partition"])
+
+Config options for `nocloud` section:
+
+    * metadata_file (string: "meta-data")
+    * userdata_file (string: "user-data")
 
 Example metadata:
 

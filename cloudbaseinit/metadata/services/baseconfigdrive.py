@@ -32,10 +32,12 @@ CD_LOCATIONS = constant.CD_LOCATIONS
 
 class BaseConfigDriveService(base.BaseMetadataService):
 
-    def __init__(self, drive_label, metadata_file):
+    def __init__(self, drive_label, metadata_file,
+                 userdata_file='user-data'):
         super(BaseConfigDriveService, self).__init__()
         self._drive_label = drive_label
         self._metadata_file = metadata_file
+        self._userdata_file = userdata_file
         self._metadata_path = None
         self._searched_types = set()
         self._searched_locations = set()
