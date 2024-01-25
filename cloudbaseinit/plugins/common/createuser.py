@@ -15,7 +15,6 @@
 import abc
 
 from oslo_log import log as oslo_logging
-import six
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.osutils import factory as osutils_factory
@@ -26,8 +25,7 @@ CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseCreateUserPlugin(base.BasePlugin):
+class BaseCreateUserPlugin(base.BasePlugin, metaclass=abc.ABCMeta):
     """This is a base class for creating or modifying an user."""
 
     @abc.abstractmethod

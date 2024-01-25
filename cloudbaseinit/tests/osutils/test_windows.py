@@ -24,7 +24,6 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-import six
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
@@ -66,7 +65,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._mi_mock = mock.MagicMock()
         self._wmi_mock = mock.MagicMock()
         self._wmi_mock.x_wmi = WMIError
-        self._moves_mock = mock.MagicMock()
+        self._winreg_mock = mock.MagicMock()
         self._xmlrpc_client_mock = mock.MagicMock()
         self._ctypes_mock = mock.MagicMock()
         self._tzlocal_mock = mock.Mock()
@@ -86,12 +85,12 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
              'winerror': self._winerror_mock,
              'mi': self._mi_mock,
              'wmi': self._wmi_mock,
-             'six.moves': self._moves_mock,
-             'six.moves.xmlrpc_client': self._xmlrpc_client_mock,
+             'xmlrpc.client': self._xmlrpc_client_mock,
              'ctypes': self._ctypes_mock,
              'pywintypes': self._pywintypes_mock,
              'tzlocal': self._tzlocal_mock,
-             'winioctlcon': mock.MagicMock()})
+             'winioctlcon': mock.MagicMock(),
+             'winreg': self._winreg_mock})
         _module_patcher.start()
         self.addCleanup(_module_patcher.stop)
 
@@ -100,7 +99,6 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         with mock.patch("cloudbaseinit.utils.windows.disk.GUID"):
             self.windows_utils = importlib.import_module(module_path)
 
-        self._winreg_mock = self._moves_mock.winreg
         self._windll_mock = self._ctypes_mock.windll
         self._wintypes_mock = self._ctypes_mock.wintypes
         self._client_mock = self._win32com_mock.client
@@ -322,7 +320,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
             response = self._winutils._get_user_sid_and_domain(self._USERNAME)
 
             advapi32.LookupAccountNameW.assert_called_with(
-                0, six.text_type(self._USERNAME), sid,
+                0, str(self._USERNAME), sid,
                 self._ctypes_mock.byref(cbSid), domainName,
                 self._ctypes_mock.byref(cchReferencedDomainName),
                 self._ctypes_mock.byref(sidNameUse))
@@ -369,12 +367,11 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                                                    group_name)
 
             netapi32.NetLocalGroupAddMembers.assert_called_with(
-                0, six.text_type(group_name), 3,
+                0, str(group_name), 3,
                 self._ctypes_mock.pointer.return_value, 1)
 
             self._ctypes_mock.pointer.assert_called_once_with(lmi)
-            self.assertEqual(lmi.lgrmi3_domainandname,
-                             six.text_type(self._USERNAME))
+            self.assertEqual(lmi.lgrmi3_domainandname, str(self._USERNAME))
 
     def test_add_user_to_local_group_no_error(self):
         self._test_add_user_to_local_group(ret_value=0)
@@ -567,7 +564,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
         mock_SetComputerNameExW.assert_called_with(
             self._winutils.ComputerNamePhysicalDnsHostname,
-            six.text_type('fake name'))
+            str('fake name'))
 
     def test_set_host_name(self):
         self._test_set_host_name(ret_value='fake response')

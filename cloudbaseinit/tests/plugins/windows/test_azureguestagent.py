@@ -35,17 +35,16 @@ class AzureGuestAgentPluginTest(unittest.TestCase):
 
     def setUp(self):
         self.mock_wmi = mock.MagicMock()
-        self._moves_mock = mock.MagicMock()
+        self._winreg_mock = mock.MagicMock()
         patcher = mock.patch.dict(
             "sys.modules",
             {
                 "wmi": self.mock_wmi,
-                "six.moves": self._moves_mock
+                "winreg": self._winreg_mock
             }
         )
         patcher.start()
         self.addCleanup(patcher.stop)
-        self._winreg_mock = self._moves_mock.winreg
         self._azureguestagent = importlib.import_module(MODPATH)
         self._azureagentplugin = self._azureguestagent.AzureGuestAgentPlugin()
         self.snatcher = testutils.LogSnatcher(MODPATH)

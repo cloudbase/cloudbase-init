@@ -18,7 +18,6 @@ import io
 import os
 
 from oslo_log import log as oslo_logging
-import six
 
 from cloudbaseinit import exception
 from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
@@ -59,7 +58,7 @@ def _convert_permissions(permissions):
 def _process_content(content, encoding):
     """Decode the content taking into consideration the encoding."""
     result = content
-    if six.PY3 and not isinstance(result, six.binary_type):
+    if not isinstance(result, bytes):
         # At this point, content will be string, which is wrong for Python 3.
         result = result.encode()
 

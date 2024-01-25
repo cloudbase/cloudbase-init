@@ -32,7 +32,6 @@ class FakeWindowsError(Exception):
 class TestTimezone(unittest.TestCase):
 
     def setUp(self):
-        self._mock_moves = mock.MagicMock()
         self._mock_winreg = mock.Mock()
         self._mock_ctypes = mock.Mock()
         self._mock_win32security = mock.Mock()
@@ -42,11 +41,10 @@ class TestTimezone(unittest.TestCase):
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'ctypes': self._mock_ctypes,
-             'six.moves': self._mock_moves,
+             'winreg': self._mock_winreg,
              'win32process': self._mock_win32process,
              'win32security': self._mock_win32security})
         self._module_patcher.start()
-        self._mock_moves.winreg = self._mock_winreg
         self._timezone_module = importlib.import_module(
             'cloudbaseinit.utils.windows.timezone')
         self._timezone_module.WindowsError = FakeWindowsError

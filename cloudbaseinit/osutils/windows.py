@@ -20,12 +20,11 @@ import re
 import struct
 import subprocess
 import time
+import winreg
 
 import netaddr
 from oslo_log import log as oslo_logging
 import pywintypes
-import six
-from six.moves import winreg
 from tzlocal import windows_tz
 import win32api
 from win32com import client
@@ -602,7 +601,7 @@ class WindowsUtils(base.BaseOSUtils):
         sidNameUse = wintypes.DWORD()
 
         ret_val = advapi32.LookupAccountNameW(
-            0, six.text_type(username), sid, ctypes.byref(cbSid), domainName,
+            0, str(username), sid, ctypes.byref(cbSid), domainName,
             ctypes.byref(cchReferencedDomainName), ctypes.byref(sidNameUse))
         if not ret_val:
             raise exception.WindowsCloudbaseInitException(
@@ -613,9 +612,9 @@ class WindowsUtils(base.BaseOSUtils):
     def add_user_to_local_group(self, username, groupname):
 
         lmi = Win32_LOCALGROUP_MEMBERS_INFO_3()
-        lmi.lgrmi3_domainandname = six.text_type(username)
+        lmi.lgrmi3_domainandname = str(username)
 
-        ret_val = netapi32.NetLocalGroupAddMembers(0, six.text_type(groupname),
+        ret_val = netapi32.NetLocalGroupAddMembers(0, str(groupname),
                                                    3, ctypes.pointer(lmi), 1)
 
         if ret_val == self.NERR_GroupNotFound:
@@ -652,9 +651,9 @@ class WindowsUtils(base.BaseOSUtils):
                   {"username": username, "domain": domain})
 
         token = wintypes.HANDLE()
-        ret_val = advapi32.LogonUserW(six.text_type(username),
-                                      six.text_type(domain),
-                                      six.text_type(password),
+        ret_val = advapi32.LogonUserW(str(username),
+                                      str(domain),
+                                      str(password),
                                       logon_type,
                                       self.LOGON32_PROVIDER_DEFAULT,
                                       ctypes.byref(token))
@@ -665,7 +664,7 @@ class WindowsUtils(base.BaseOSUtils):
         if load_profile:
             pi = Win32_PROFILEINFO()
             pi.dwSize = ctypes.sizeof(Win32_PROFILEINFO)
-            pi.lpUserName = six.text_type(username)
+            pi.lpUserName = str(username)
             ret_val = userenv.LoadUserProfileW(token, ctypes.byref(pi))
             if not ret_val:
                 kernel32.CloseHandle(token)
@@ -756,8 +755,7 @@ class WindowsUtils(base.BaseOSUtils):
 
     def set_host_name(self, new_host_name):
         ret_val = kernel32.SetComputerNameExW(
-            self.ComputerNamePhysicalDnsHostname,
-            six.text_type(new_host_name))
+            self.ComputerNamePhysicalDnsHostname, str(new_host_name))
         if not ret_val:
             raise exception.WindowsCloudbaseInitException(
                 "Cannot set host name: %r")
@@ -1401,7 +1399,7 @@ class WindowsUtils(base.BaseOSUtils):
     def get_volume_label(self, drive):
         max_label_size = 261
         label = ctypes.create_unicode_buffer(max_label_size)
-        ret_val = kernel32.GetVolumeInformationW(six.text_type(drive), label,
+        ret_val = kernel32.GetVolumeInformationW(str(drive), label,
                                                  max_label_size, 0, 0, 0, 0, 0)
         if ret_val:
             return label.value
@@ -1411,8 +1409,7 @@ class WindowsUtils(base.BaseOSUtils):
         volume_name = ctypes.create_unicode_buffer(max_volume_name_len)
 
         if not kernel32.GetVolumeNameForVolumeMountPointW(
-                six.text_type(mount_point), volume_name,
-                max_volume_name_len):
+                str(mount_point), volume_name, max_volume_name_len):
             if kernel32.GetLastError() in [self.ERROR_INVALID_NAME,
                                            self.ERROR_PATH_NOT_FOUND]:
                 raise exception.ItemNotFoundException(

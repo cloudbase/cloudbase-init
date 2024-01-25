@@ -20,7 +20,6 @@ from ctypes import wintypes
 import random
 import re
 
-import six
 import winioctlcon
 
 from cloudbaseinit import exception
@@ -146,8 +145,7 @@ class Win32_DRIVE_LAYOUT_INFORMATION_EX(ctypes.Structure):
     ]
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseDevice(object):
+class BaseDevice(object, metaclass=abc.ABCMeta):
     """Base class for devices like disks and partitions.
 
     It has common methods for getting physical disk geometry,

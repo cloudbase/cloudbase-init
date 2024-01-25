@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseUserDataPlugin(object):
+class BaseUserDataPlugin(object, metaclass=abc.ABCMeta):
 
     def __init__(self, mime_type):
         self._mime_type = mime_type

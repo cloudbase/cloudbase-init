@@ -13,9 +13,9 @@
 #    under the License.
 
 import ctypes
+import winreg
 
 from ctypes import wintypes
-from six.moves import winreg
 
 from cloudbaseinit import exception
 from cloudbaseinit.utils.windows import iphlpapi

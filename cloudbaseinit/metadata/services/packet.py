@@ -15,12 +15,12 @@
 
 import json
 import requests
+from urllib import error
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from oslo_log import log as oslo_logging
-from six.moves.urllib import error
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)

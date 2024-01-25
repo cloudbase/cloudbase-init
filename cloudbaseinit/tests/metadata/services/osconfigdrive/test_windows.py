@@ -151,7 +151,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
     def test_get_iso_file_size(self):
         self._test_get_iso_file_size()
 
-    @mock.patch("six.moves.builtins.open", new=OPEN)
+    @mock.patch("builtins.open", new=OPEN)
     def test_write_iso_file(self):
         file_path = "fake\\path"
         file_size = 100 * 512
@@ -293,7 +293,7 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
     @mock.patch('cloudbaseinit.metadata.services.osconfigdrive.windows.'
                 'WindowsConfigDriveManager.'
                 '_extract_iso_from_devices')
-    @mock.patch("six.moves.builtins.map")
+    @mock.patch("builtins.map")
     def test_get_config_drive_from_raw_hdd(self, mock_map,
                                            mock_extract_iso_from_devices):
         Disk = self.conf_module.disk.Disk

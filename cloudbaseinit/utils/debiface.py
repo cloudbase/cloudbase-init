@@ -16,7 +16,6 @@
 import re
 
 from oslo_log import log as oslo_logging
-import six
 
 from cloudbaseinit.models import network as network_model
 
@@ -109,7 +108,7 @@ def _add_nic(iface, nics):
 
 def parse(data):
     """Parse the received content and obtain network details."""
-    if not data or not isinstance(data, six.string_types):
+    if not data or not isinstance(data, str):
         LOG.error("Invalid Debian config to parse:\n%s", data)
         return
 

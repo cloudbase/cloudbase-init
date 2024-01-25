@@ -33,12 +33,10 @@ class BootConfigPluginTest(unittest.TestCase):
 
     def setUp(self):
         self.mock_wmi = mock.MagicMock()
-        self._moves_mock = mock.MagicMock()
         patcher = mock.patch.dict(
             "sys.modules",
             {
                 "wmi": self.mock_wmi,
-                "six.moves": self._moves_mock,
                 'ctypes': mock.MagicMock(),
                 'ctypes.windll': mock.MagicMock(),
                 'ctypes.wintypes': mock.MagicMock(),

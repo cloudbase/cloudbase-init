@@ -13,9 +13,9 @@
 #    under the License.
 
 import ctypes
+import winreg
 
 from oslo_log import log as oslo_logging
-from six.moves import winreg
 
 from cloudbaseinit import exception
 from cloudbaseinit.utils.windows import kernel32

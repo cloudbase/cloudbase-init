@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import winreg
+
 from oslo_log import log as oslo_logging
-from six.moves import winreg
 
 from cloudbaseinit import exception
 from cloudbaseinit.utils.windows import wmi_loader

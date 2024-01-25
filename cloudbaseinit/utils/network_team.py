@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseNetworkTeamManager(object):
+class BaseNetworkTeamManager(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def create_team(self, team_name, mode, load_balancing_algorithm,
                     members, mac_address, primary_nic_name=None,

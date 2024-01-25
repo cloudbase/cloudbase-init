@@ -21,7 +21,6 @@ import socket
 import struct
 
 from oslo_log import log as oslo_logging
-import six
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.models import network as network_model
@@ -108,8 +107,7 @@ class OpenNebulaService(base.BaseMetadataService):
         address_chunks = address.split(".")
         gateway_chunks = gateway.split(".")
         netmask_chunks = []
-        for achunk, gchunk in six.moves.zip(
-                address_chunks, gateway_chunks):
+        for achunk, gchunk in zip(address_chunks, gateway_chunks):
             if achunk == gchunk:
                 nchunk = "255"
             else:

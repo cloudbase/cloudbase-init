@@ -117,7 +117,7 @@ class TestBaseConfigDriveService(unittest.TestCase):
     @mock.patch('os.path.join')
     def test_get_data(self, mock_join, mock_normpath):
         fake_path = os.path.join('fake', 'path')
-        with mock.patch('six.moves.builtins.open',
+        with mock.patch('builtins.open',
                         mock.mock_open(read_data='fake data'), create=True):
             response = self._config_drive._get_data(fake_path)
             self.assertEqual('fake data', response)

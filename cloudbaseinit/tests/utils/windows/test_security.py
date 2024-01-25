@@ -26,14 +26,13 @@ from cloudbaseinit.tests import testutils
 class WindowsSecurityUtilsTests(unittest.TestCase):
 
     def setUp(self):
-        self._moves_mock = mock.MagicMock()
+        self._winreg_mock = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
-            {'six.moves': self._moves_mock})
+            {'winreg': self._winreg_mock})
 
         self._module_patcher.start()
-        self._winreg_mock = self._moves_mock.winreg
 
         self.security = importlib.import_module(
             "cloudbaseinit.utils.windows.security")

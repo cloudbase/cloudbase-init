@@ -13,11 +13,11 @@
 #    under the License.
 
 import contextlib
+import http.client
 import posixpath
+import urllib
 
 from oslo_log import log as oslo_logging
-from six.moves import http_client
-from six.moves import urllib
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
@@ -131,12 +131,12 @@ class CloudStack(base.BaseHTTPMetadataService):
     def _password_client(self, body=None, headers=None, decode=True):
         """Client for the Password Server."""
         port = CONF.cloudstack.password_server_port
-        with contextlib.closing(http_client.HTTPConnection(
+        with contextlib.closing(http.client.HTTPConnection(
                 self._metadata_host, port, timeout=TIMEOUT)) as connection:
             try:
                 connection.request("GET", "/", body=body, headers=headers)
                 response = connection.getresponse()
-            except http_client.HTTPException as exc:
+            except http.client.HTTPException as exc:
                 LOG.error("Request failed: %s", exc)
                 raise
 
@@ -145,7 +145,7 @@ class CloudStack(base.BaseHTTPMetadataService):
                 content = encoding.get_as_string(content)
 
             if response.status != 200:
-                raise http_client.HTTPException(
+                raise http.client.HTTPException(
                     "%(status)s %(reason)s - %(message)r",
                     {"status": response.status, "reason": response.reason,
                      "message": content})

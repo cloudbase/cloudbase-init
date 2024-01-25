@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from oslo_log import log as oslo_logging
 
 
@@ -21,7 +19,7 @@ LOG = oslo_logging.getLogger(__name__)
 
 
 def get_as_string(value):
-    if value is None or isinstance(value, six.text_type):
+    if value is None or isinstance(value, str):
         return value
     else:
         try:
@@ -33,7 +31,7 @@ def get_as_string(value):
 
 
 def write_file(target_path, data, mode='wb'):
-    if isinstance(data, six.text_type) and 'b' in mode:
+    if isinstance(data, str) and 'b' in mode:
         data = data.encode()
 
     with open(target_path, mode) as f:
@@ -41,7 +39,4 @@ def write_file(target_path, data, mode='wb'):
 
 
 def hex_to_bytes(value):
-    if six.PY2:
-        return value.decode("hex")
-    else:
-        return bytes.fromhex(value)
+    return bytes.fromhex(value)

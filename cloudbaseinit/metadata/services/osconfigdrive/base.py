@@ -15,11 +15,8 @@
 import abc
 import tempfile
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class BaseConfigDriveManager(object):
+class BaseConfigDriveManager(object, metaclass=abc.ABCMeta):
 
     def __init__(self):
         self.target_path = tempfile.mkdtemp()

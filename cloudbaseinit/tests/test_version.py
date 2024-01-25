@@ -16,7 +16,6 @@ import importlib
 import unittest
 
 import mock
-import six
 
 from cloudbaseinit.tests import testutils
 
@@ -51,7 +50,7 @@ class TestVersion(unittest.TestCase):
         result = self.version._read_url(mock_url)
 
         headers = {'User-Agent': self.version._PRODUCT_NAME}
-        mock_get.assert_called_once_with(mock_url, verify=six.PY3,
+        mock_get.assert_called_once_with(mock_url, verify=True,
                                          headers=headers)
         request = mock_get.return_value
         request.raise_for_status.assert_called_once_with()

@@ -32,18 +32,16 @@ class ConfigWinRMCertificateAuthPluginTests(unittest.TestCase):
         self._ctypes_mock = mock.MagicMock()
         self._win32com_mock = mock.MagicMock()
         self._pywintypes_mock = mock.MagicMock()
-        self._moves_mock = mock.MagicMock()
+        self._winreg_mock = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'ctypes': self._ctypes_mock,
              'win32com': self._win32com_mock,
              'pywintypes': self._pywintypes_mock,
-             'six.moves': self._moves_mock})
+             'winreg': self._winreg_mock})
 
         self._module_patcher.start()
-
-        self._winreg_mock = self._moves_mock.winreg
 
         self.winrmcert = importlib.import_module(
             'cloudbaseinit.plugins.windows.winrmcertificateauth')

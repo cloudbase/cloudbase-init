@@ -14,7 +14,6 @@
 
 import logging
 import serial
-import six
 
 from oslo_log import formatters
 from oslo_log import log
@@ -29,7 +28,7 @@ def _safe_write(function):
     """Avoid issues related to unicode strings handling."""
     def _wrapper(message):
         # Unicode strings are not properly handled by the serial module
-        if isinstance(message, six.text_type):
+        if isinstance(message, str):
             function(message.encode("utf-8"))
         else:
             function(message)

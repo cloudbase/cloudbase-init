@@ -126,7 +126,7 @@ class _TestOpenNebulaService(unittest.TestCase):
         self._service = opennebulaservice.OpenNebulaService()
 
 
-@mock.patch("six.moves.builtins.open", new=OPEN)
+@mock.patch("builtins.open", new=OPEN)
 class TestOpenNebulaService(_TestOpenNebulaService):
 
     @classmethod

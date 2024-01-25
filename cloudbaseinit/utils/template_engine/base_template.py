@@ -14,11 +14,9 @@
 
 import abc
 import re
-import six
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseTemplateEngine(object):
+class BaseTemplateEngine(object, metaclass=abc.ABCMeta):
     def __init__(self):
         self._template_matcher = re.compile(r"##\s*template:(.*)", re.I)
 

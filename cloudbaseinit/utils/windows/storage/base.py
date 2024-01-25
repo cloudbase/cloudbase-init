@@ -14,16 +14,13 @@
 
 import abc
 
-import six
-
 SAN_POLICY_UNKNOWN = 0
 SAN_POLICY_ONLINE = 1
 SAN_POLICY_OFFLINE_SHARED = 2
 SAN_POLICY_OFFLINE = 3
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseStorageManager(object):
+class BaseStorageManager(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def extend_volumes(self, volume_indexes=None):

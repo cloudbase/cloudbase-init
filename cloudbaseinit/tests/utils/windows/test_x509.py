@@ -13,7 +13,6 @@
 #    under the License.
 
 import importlib
-import six
 import unittest
 
 try:
@@ -231,7 +230,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             mock_CertOpenStore.assert_called_with(
                 self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
-                six.text_type(self.x509.STORE_NAME_MY))
+                str(self.x509.STORE_NAME_MY))
             mock_get_cert_thumprint.assert_called_once_with(
                 mock_CertCreateSelfSignCertificate())
             mock_add_system_time_interval.assert_has_calls(
@@ -396,7 +395,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
             mock_CertOpenStore.assert_called_with(
                 self.x509.cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0,
                 self.x509.cryptoapi.CERT_SYSTEM_STORE_LOCAL_MACHINE,
-                six.text_type(self.x509.STORE_NAME_MY))
+                str(self.x509.STORE_NAME_MY))
 
             mock_CertAddEncodedCertificateToStore.assert_called_with(
                 mock_CertOpenStore(),
@@ -510,7 +509,7 @@ class CryptoAPICertManagerTests(unittest.TestCase):
                     flags = mock.sentinel.current_user
                 mock_cert_open_store.assert_called_once_with(
                     mock.sentinel.store_prov_system, 0, 0, flags,
-                    six.text_type(self.x509.STORE_NAME_MY))
+                    str(self.x509.STORE_NAME_MY))
                 if store_handle:
                     mock_add_cert_store.assert_called_once_with(
                         mock_cert_open_store.return_value, cert_context_p,

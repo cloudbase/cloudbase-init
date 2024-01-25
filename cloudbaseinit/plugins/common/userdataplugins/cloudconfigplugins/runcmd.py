@@ -13,7 +13,6 @@
 #    under the License.
 
 import os
-import six
 
 from oslo_log import log as oslo_logging
 
@@ -49,7 +48,7 @@ class RunCmdPlugin(base.BaseCloudConfigPlugin):
 
         entries = 0
         for command in commands:
-            if isinstance(command, six.string_types):
+            if isinstance(command, str):
                 script_content += command
             elif isinstance(command, (list, tuple)):
                 subcommand_content = []

@@ -33,7 +33,7 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
         self._mock_wintypes = mock.MagicMock()
         self._mock_pywintypes = mock.MagicMock()
         self._mock_win32 = mock.MagicMock()
-        self._moves_mock = mock.MagicMock()
+        self._winreg_mock = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
@@ -41,10 +41,9 @@ class ConfigWinRMListenerPluginTests(unittest.TestCase):
              'ctypes.wintypes': self._mock_wintypes,
              'pywintypes': self._mock_pywintypes,
              'win32com': self._mock_win32,
-             'six.moves': self._moves_mock
+             'winreg': self._winreg_mock
              })
         self._module_patcher.start()
-        self._winreg_mock = self._moves_mock.winreg
 
         winrmlistener = importlib.import_module('cloudbaseinit.plugins.'
                                                 'windows.winrmlistener')

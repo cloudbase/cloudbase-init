@@ -14,11 +14,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class Options(object):
+class Options(object, metaclass=abc.ABCMeta):
 
     """Contact class for all the collections of config options."""
 

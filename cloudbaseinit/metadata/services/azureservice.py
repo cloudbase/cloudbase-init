@@ -13,13 +13,13 @@
 #    under the License.
 
 import contextlib
+import io
 import os
 import socket
 import time
 from xml.etree import ElementTree
 
 from oslo_log import log as oslo_logging
-import six
 import untangle
 
 from cloudbaseinit import conf as cloudbaseinit_conf
@@ -115,13 +115,13 @@ class AzureService(base.BaseHTTPMetadataService):
                 path, data_xml, headers=all_headers))
 
         if parse_xml:
-            return untangle.parse(six.StringIO(encoding.get_as_string(data)))
+            return untangle.parse(io.StringIO(encoding.get_as_string(data)))
         else:
             return data
 
     @staticmethod
     def _encode_xml(xml_root):
-        bio = six.BytesIO()
+        bio = io.BytesIO()
         ElementTree.ElementTree(xml_root).write(
             bio, encoding='utf-8', xml_declaration=True)
         return bio.getvalue()

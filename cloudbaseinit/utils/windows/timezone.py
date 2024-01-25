@@ -16,8 +16,8 @@ import ctypes
 from ctypes import wintypes
 import os
 import struct
+import winreg
 
-from six.moves import winreg
 import win32security
 
 from cloudbaseinit import exception

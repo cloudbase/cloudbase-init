@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import conf as cloudbaseinit_conf
@@ -45,7 +43,7 @@ class GroupsPlugin(base.BaseCloudConfigPlugin):
             group_name = None
             group_users = []
 
-            if isinstance(item, six.string_types):
+            if isinstance(item, str):
                 group_name = item
             elif isinstance(item, dict):
                 try:

@@ -17,8 +17,6 @@ import ctypes
 from ctypes import wintypes
 import uuid
 
-import six
-
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils.windows import cryptoapi
 from cloudbaseinit.utils import x509constants
@@ -226,8 +224,7 @@ class CryptoAPICertManager(object):
                 flags = cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER
 
             store_handle = cryptoapi.CertOpenStore(
-                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
-                six.text_type(store_name))
+                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags, str(store_name))
             if not store_handle:
                 raise cryptoapi.CryptoAPIException()
 
@@ -297,8 +294,7 @@ class CryptoAPICertManager(object):
                 flags |= cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER
 
             store_handle = cryptoapi.CertOpenStore(
-                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
-                six.text_type(store_name))
+                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags, str(store_name))
             if not store_handle:
                 raise cryptoapi.CryptoAPIException()
 
@@ -364,8 +360,7 @@ class CryptoAPICertManager(object):
                 flags = cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER
 
             store_handle = cryptoapi.CertOpenStore(
-                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
-                six.text_type(store_name))
+                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags, str(store_name))
             if not store_handle:
                 raise cryptoapi.CryptoAPIException()
 
@@ -500,8 +495,7 @@ class CryptoAPICertManager(object):
                 flags = cryptoapi.CERT_SYSTEM_STORE_CURRENT_USER
 
             store_handle = cryptoapi.CertOpenStore(
-                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags,
-                six.text_type(store_name))
+                cryptoapi.CERT_STORE_PROV_SYSTEM, 0, 0, flags, str(store_name))
             if not store_handle:
                 raise cryptoapi.CryptoAPIException()
 

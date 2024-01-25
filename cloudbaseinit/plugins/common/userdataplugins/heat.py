@@ -15,8 +15,6 @@
 
 import os
 
-import six
-
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.plugins.common.userdataplugins import base
 from cloudbaseinit.plugins.common import userdatautils
@@ -47,6 +45,6 @@ class HeatPlugin(base.BaseUserDataPlugin):
             # Normalize the payload to bytes, since `execute_user_data_script`
             # operates on bytes and `get_payload` returns a string on
             # Python 3.
-            if isinstance(payload, six.text_type):
+            if isinstance(payload, str):
                 payload = payload.encode()
             return userdatautils.execute_user_data_script(payload)

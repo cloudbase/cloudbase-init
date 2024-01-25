@@ -21,7 +21,6 @@ import time
 
 from oslo_log import log as oslo_logging
 import requests
-import six
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
@@ -35,8 +34,7 @@ class NotExistingMetadataException(Exception):
     pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseMetadataService(object):
+class BaseMetadataService(object, metaclass=abc.ABCMeta):
     _GZIP_MAGIC_NUMBER = b'\x1f\x8b'
 
     def __init__(self):

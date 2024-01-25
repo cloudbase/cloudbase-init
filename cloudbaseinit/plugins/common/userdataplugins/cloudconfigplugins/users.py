@@ -15,7 +15,6 @@
 import datetime
 import os
 import pytz
-import six
 
 from oslo_log import log as oslo_logging
 
@@ -41,11 +40,11 @@ class UsersPlugin(base.BaseCloudConfigPlugin):
         groups = data.get('groups', None)
         primary_group = data.get('primary_group', None)
         user_groups = []
-        if isinstance(groups, six.string_types):
+        if isinstance(groups, str):
                 user_groups.extend(groups.split(', '))
         elif isinstance(groups, (list, tuple)):
                 user_groups.extend(groups)
-        if isinstance(primary_group, six.string_types):
+        if isinstance(primary_group, str):
                 user_groups.extend(primary_group.split(', '))
         elif isinstance(primary_group, (list, tuple)):
                 user_groups.extend(primary_group)
@@ -68,7 +67,7 @@ class UsersPlugin(base.BaseCloudConfigPlugin):
         expiredate = data.get('expiredate', None)
         expire_interval = None
 
-        if isinstance(expiredate, six.string_types):
+        if isinstance(expiredate, str):
             year, month, day = map(int, expiredate.split('-'))
             expiredate = datetime.datetime(year=year, month=month, day=day,
                                            tzinfo=pytz.utc)

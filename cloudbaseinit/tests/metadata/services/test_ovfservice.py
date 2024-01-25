@@ -37,14 +37,12 @@ class OvfServiceTest(unittest.TestCase):
         self._mock_untangle = mock.MagicMock()
         self._mock_ctypes = mock.MagicMock()
         self._mock_wintypes = mock.MagicMock()
-        self._moves_mock = mock.MagicMock()
 
         self._module_patcher = mock.patch.dict(
             'sys.modules',
             {'untangle': self._mock_untangle,
              'ctypes': self._mock_ctypes,
              'ctypes.wintypes': self._mock_wintypes,
-             'six.moves': self._moves_mock
              })
         self._module_patcher.start()
         self._ovfservice_module = importlib.import_module(

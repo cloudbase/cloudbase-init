@@ -18,10 +18,10 @@ import netaddr
 import socket
 import struct
 import sys
+from urllib import parse
+from urllib import request
 
 from oslo_log import log as oslo_logging
-from six.moves.urllib import parse
-from six.moves.urllib import request
 
 from cloudbaseinit.osutils import factory as osutils_factory
 

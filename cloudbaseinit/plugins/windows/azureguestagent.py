@@ -15,10 +15,10 @@
 import datetime
 import os
 import shutil
+import winreg
 import zipfile
 
 from oslo_log import log as oslo_logging
-from six.moves import winreg
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
