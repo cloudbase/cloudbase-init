@@ -518,6 +518,20 @@ Example metadata in yaml format:
     public-keys-data: |
       ssh-key 1
       ssh-key 2
+    network:
+      version: 2
+      ethernets:
+        id0:
+          match:
+            macaddress: "00:50:56:a1:8e:43"
+          set-name: "eth0"
+          addresses:
+          - 172.26.0.37/28
+          gateway4: 172.26.0.33
+          nameservers:
+            addresses:
+            - 10.20.145.1
+            - 10.20.145.2
 
 This metadata content needs to be set as string in the guestinfo
 dictionary, thus needs to be converted to base64 (it is recommended to
@@ -548,6 +562,7 @@ Capabilities:
     * instance id
     * hostname
     * public keys
+    * static network configuration
     * admin user name
     * admin user password
     * user data

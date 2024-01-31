@@ -14,6 +14,8 @@
 #    under the License.
 
 import base64
+import collections
+import copy
 import gzip
 import io
 import os
@@ -23,6 +25,7 @@ from oslo_log import log as oslo_logging
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import nocloudservice
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import serialization
 
@@ -114,16 +117,16 @@ class VMwareGuestInfoService(base.BaseMetadataService):
                      % self._rpc_tool_path)
             return False
 
-        self._meta_data = serialization.parse_json_yaml(
-            self._get_guest_data('metadata'))
+        metadata = self._get_guest_data('metadata')
+        self._meta_data = serialization.parse_json_yaml(metadata) \
+            if metadata else {}
         if not isinstance(self._meta_data, dict):
             LOG.warning("Instance metadata is not a dictionary.")
             self._meta_data = {}
 
         self._user_data = self._get_guest_data('userdata')
 
-        if self._meta_data or self._user_data:
-            return True
+        return True if self._meta_data or self._user_data else None
 
     def _get_data(self, path):
         pass
@@ -151,3 +154,88 @@ class VMwareGuestInfoService(base.BaseMetadataService):
 
     def get_admin_password(self):
         return self._meta_data.get('admin-password')
+
+    def get_network_details_v2(self):
+        """Return a `NetworkDetailsV2` object."""
+        network = self._process_network_config(self._meta_data)
+        if not network:
+            LOG.info("V2 network metadata not found")
+            return
+
+        return nocloudservice.NoCloudNetworkConfigParser.parse(network)
+
+    def _decode(self, key, enc_type, data):
+        """Returns the decoded string value of data
+
+        _decode returns the decoded string value of data
+        key is a string used to identify the data being decoded in log messages
+        """
+        LOG.debug("Getting encoded data for key=%s, enc=%s", key, enc_type)
+
+        if enc_type in ["gzip+base64", "gz+b64"]:
+            LOG.debug("Decoding %s format %s", enc_type, key)
+            raw_data = self._decode_data(data, True, True)
+        elif enc_type in ["base64", "b64"]:
+            LOG.debug("Decoding %s format %s", enc_type, key)
+            raw_data = self._b64d(data)
+        else:
+            LOG.debug("Plain-text data %s", key)
+            raw_data = data
+
+        if isinstance(raw_data, str):
+            return raw_data
+
+        return raw_data.decode('utf-8')
+
+    @staticmethod
+    def _load_json_or_yaml(data):
+        """Load a JSON or YAML string into a dictionary
+
+        load first attempts to unmarshal the provided data as JSON, and if
+        that fails then attempts to unmarshal the data as YAML. If data is
+        None then a new dictionary is returned.
+        """
+        if not data:
+            return {}
+        # If data is already a dictionary, here will return it directly.
+        if isinstance(data, dict):
+            return data
+
+        return serialization.parse_json_yaml(data)
+
+    @staticmethod
+    def _b64d(source):
+        # Base64 decode some data, accepting bytes or unicode/str, and
+        # returning str/unicode if the result is utf-8 compatible,
+        # otherwise returning bytes.
+        decoded = base64.b64decode(source)
+        try:
+            return decoded.decode("utf-8")
+        except UnicodeDecodeError:
+            return decoded
+
+    def _process_network_config(self, data):
+        """Loads and parse the optional network configuration."""
+        if not data:
+            return {}
+
+        network = None
+        if "network" in data:
+            network = data["network"]
+
+        network_enc = None
+        if "network.encoding" in data:
+            network_enc = data["network.encoding"]
+
+        if not network:
+            return {}
+
+        if isinstance(network, collections.abc.Mapping):
+            network = copy.deepcopy(network)
+        else:
+            LOG.debug("network data to be decoded %s", network)
+            dec_net = self._decode("metadata.network", network_enc, network)
+            network = self._load_json_or_yaml(dec_net)
+
+        LOG.debug("network data %s", network)
+        return {"network": network}
