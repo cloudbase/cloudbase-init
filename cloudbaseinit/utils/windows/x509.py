@@ -195,7 +195,7 @@ class CryptoAPICertManager(object):
                 key_prov_info.dwFlags = 0
 
             sign_alg = cryptoapi.CRYPT_ALGORITHM_IDENTIFIER()
-            sign_alg.pszObjId = cryptoapi.szOID_RSA_SHA1RSA
+            sign_alg.pszObjId = cryptoapi.szOID_RSA_SHA256RSA
 
             start_time = cryptoapi.SYSTEMTIME()
             cryptoapi.GetSystemTime(ctypes.byref(start_time))

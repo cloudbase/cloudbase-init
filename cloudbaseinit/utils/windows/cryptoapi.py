@@ -137,8 +137,10 @@ CERT_FIND_SHA1_HASH = 0x10000
 CERT_KEY_PROV_INFO_PROP_ID = 2
 CERT_KEY_CONTEXT_PROP_ID = 5
 
+# https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/ns-wincrypt-crypt_algorithm_identifier
 szOID_PKIX_KP_SERVER_AUTH = b"1.3.6.1.5.5.7.3.1"
 szOID_RSA_SHA1RSA = b"1.2.840.113549.1.1.5"
+szOID_RSA_SHA256RSA = b"1.2.840.113549.1.1.11"
 
 advapi32 = windll.advapi32
 crypt32 = windll.crypt32
