@@ -141,7 +141,7 @@ Capabilities:
     * hostname
     * public keys
     * static network configuration (Debian and `network config v1
-      <https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v1.html>`_
+      <https://cloudinit.readthedocs.io/en/22.4.2/topics/network-config-format-v1.html>`__
       formats)
     * user data
 
