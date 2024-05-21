@@ -518,6 +518,19 @@ Example metadata in yaml format:
     public-keys-data: |
       ssh-key 1
       ssh-key 2
+    network:
+      version: 1
+      config:
+        - type: physical
+          name: interface0
+          mac_address: "52:54:00:12:34:00"
+          subnets:
+            - type: static
+              address: 192.168.1.10
+              netmask: 255.255.255.0
+              dns_nameservers:
+                - 192.168.1.11
+
 
 This metadata content needs to be set as string in the guestinfo
 dictionary, thus needs to be converted to base64 (it is recommended to
@@ -551,6 +564,9 @@ Capabilities:
     * admin user name
     * admin user password
     * user data
+    * static network configuration (`network config v1
+      <https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v1.html>`_
+      format)
 
 Config options for `vmwareguestinfo` section:
 

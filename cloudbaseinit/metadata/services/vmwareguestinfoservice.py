@@ -23,6 +23,7 @@ from oslo_log import log as oslo_logging
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import nocloudservice
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import serialization
 
@@ -151,3 +152,22 @@ class VMwareGuestInfoService(base.BaseMetadataService):
 
     def get_admin_password(self):
         return self._meta_data.get('admin-password')
+
+    def get_network_details_v2(self):
+        network_data = self._meta_data.get('network')
+        if not network_data:
+            LOG.info("No network configuration found in metadata")
+            return
+        if 'version' not in network_data:
+            LOG.error("No network version information found in metadata")
+            return
+        network_data_version = network_data.get('version')
+        if network_data_version != 1:
+            LOG.error("Network data version '%s' is not supported",
+                      network_data_version)
+            return
+        if 'config' not in network_data:
+            LOG.error("Network configuration does not exist")
+            return
+        network_config_parser = nocloudservice.NoCloudNetworkConfigV1Parser()
+        return network_config_parser.parse(network_data.get("config"))
