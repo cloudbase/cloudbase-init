@@ -265,12 +265,12 @@ Config options for `default` section:
 .. note:: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 
-Apache CloudStack
+Apache CloudStack (DataServer)
 -----------------
 
-.. class:: cloudbaseinit.metadata.services.cloudstack.CloudStack
+.. class:: cloudbaseinit.metadata.services.cloudstack.DataServer
 
-Another web-based service which usually uses "10.1.1.1" or DHCP addresses for
+Another web-based service which usually uses "data-server" DNS record or DHCP addresses for
 retrieving content. If no metadata can be found at the `metadata_base_url`,
 the service will look for the metadata at the DHCP server URL.
 
@@ -285,7 +285,7 @@ Capabilities:
 
 Config options for `cloudstack` section:
 
-    * metadata_base_url (string: "http://10.1.1.1/")
+    * metadata_base_url (string: "http://data-server/")
     * password_server_port (int: 8080)
     * add_metadata_private_ip_route (bool: True)
     * https_allow_insecure (bool: False)
@@ -302,6 +302,37 @@ Config options for `default` section:
           and no updating will occur until a new password is available on the
           server.
 
+.. _configdrive:
+
+Apache CloudStack (ConfigDrive)
+-------------------------------
+
+.. class:: cloudbaseinit.metadata.services.cloudstack.ConfigDrive
+
+CloudStack also provides meta-data and user-data with help of CD-ROM without
+requiring network access.
+
+This service is usually faster than the HTTP twin, as there is no timeout
+waiting for the network to be up.
+
+Metadata version used: `latest`.
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * admin user password
+    * user data
+
+Config options for `cloudstack` section:
+
+    * disk_label (string: "config-2")
+
+.. note:: By design, this service can update the password anytime, so it will
+    cause the `setuserpassword` plugin to run at every boot and the password hash
+    is stored right after retrieval and no updating will occur until a new password
+    is available on the server.
 
 OpenNebula Service
 ------------------
