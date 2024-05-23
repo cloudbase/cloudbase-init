@@ -28,6 +28,159 @@ from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import serialization
 
 MODULE_PATH = "cloudbaseinit.metadata.services.nocloudservice"
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_EMPTY_CONFIG = """
+network:
+  version: 1
+  t: 1
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_CONFIG_IS_NOT_LIST = """
+network:
+  version: 1
+  config: {
+    test: abc
+  }
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_CONFIG_ITEM_IS_NOT_DICT = """
+network:
+  version: 1
+  config:
+  - ['test', 'abc']
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_ROUTER_CONFIG_NOT_SUPPORTED = """
+network:
+  version: 1
+  config:
+  - type: router
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1 = """
+network:
+  version: 1
+  config:
+  - type: physical
+    name: interface0
+    mac_address: "52:54:00:12:34:00"
+    mtu: 1450
+    subnets:
+    - type: static
+      address: 192.168.1.10
+      netmask: 255.255.255.0
+      gateway: 192.168.1.1
+      dns_nameservers:
+      - 192.168.1.11
+  - type: bond
+    name: bond0
+    bond_interfaces:
+    - gbe0
+    - gbe1
+    mac_address: "52:54:00:12:34:00"
+    params:
+      bond-mode: active-backup
+      bond-lacp-rate: false
+    mtu: 1450
+    subnets:
+    - type: static
+      address: 192.168.1.10
+      netmask: 255.255.255.0
+      dns_nameservers:
+      - 192.168.1.11
+  - type: vlan
+    name: vlan0
+    vlan_link: eth1
+    vlan_id: 150
+    mac_address: "52:54:00:12:34:00"
+    mtu: 1450
+    subnets:
+    - type: static
+      address: 192.168.1.10
+      netmask: 255.255.255.0
+      dns_nameservers:
+      - 192.168.1.11
+  - type: nameserver
+    address:
+    - 192.168.23.2
+    - 8.8.8.8
+    search: acme.local
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_EMPTY_CONFIG = """
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_IS_NOT_DICT = """
+network:
+- config
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_ITEM_IS_NOT_DICT = """
+network:
+  version: 2
+  ethernets:
+  - test
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_ITEM_SETTING_IS_NOT_DICT = """
+network:
+  version: 2
+  ethernets:
+    eth0:
+     - test
+"""
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2 = """
+network:
+  version: 2
+  ethernets:
+    interface0:
+      match:
+        macaddress: "52:54:00:12:34:00"
+      set-name: "eth0"
+      addresses:
+      - 192.168.1.10/24
+      gateway4: 192.168.1.1
+      nameservers:
+        addresses:
+        - 192.168.1.11
+        - 192.168.1.12
+        search:
+        - acme.local
+      mtu: 1450
+    interface1:
+      set-name: "interface1"
+      addresses:
+      - 192.168.1.100/24
+      gateway4: 192.168.1.1
+      nameservers:
+        addresses:
+        - 192.168.1.11
+        - 192.168.1.12
+        search:
+        - acme.local
+  bonds:
+    bond0:
+      interfaces: ["gbe0", "gbe1"]
+      match:
+        macaddress: "52:54:00:12:34:00"
+      parameters:
+        mode: active-backup
+        lacp-rate: false
+      addresses:
+      - 192.168.1.10/24
+      nameservers:
+        addresses:
+        - 192.168.1.11
+      mtu: 1450
+  vlans:
+    vlan0:
+      id: 150
+      link: eth1
+      dhcp4: yes
+      match:
+        macaddress: "52:54:00:12:34:00"
+      addresses:
+      - 192.168.1.10/24
+      nameservers:
+        addresses:
+        - 192.168.1.11
+      mtu: 1450
+  bridges:
+    br0:
+      interfaces: ['eth0']
+      dhcp4: true
+"""
 
 
 @ddt.ddt
@@ -37,15 +190,18 @@ class TestNoCloudNetworkConfigV1Parser(unittest.TestCase):
         self._parser = module.NoCloudNetworkConfigV1Parser()
         self.snatcher = testutils.LogSnatcher(MODULE_PATH)
 
-    @ddt.data(('', ('Network configuration is empty', None)),
-              ('{t: 1}',
-               ("Network config '{'t': 1}' is not a list", None)),
-              ('["1"]',
-               ("Network config item '1' is not a dictionary",
-                nm.NetworkDetailsV2(links=[], networks=[], services=[]))),
-              ('[{"type": "router"}]',
-               ("Network config type 'router' is not supported",
-                nm.NetworkDetailsV2(links=[], networks=[], services=[]))))
+    @ddt.data(
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_EMPTY_CONFIG,
+            ('Network configuration is empty', None)),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_CONFIG_IS_NOT_LIST,
+         ("is not a list", None)),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_CONFIG_ITEM_IS_NOT_DICT,
+         ("is not a dictionary",
+          nm.NetworkDetailsV2(links=[], networks=[], services=[]))),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_ROUTER_CONFIG_NOT_SUPPORTED,
+         ("Network config type 'router' is not supported",
+          nm.NetworkDetailsV2(links=[], networks=[], services=[])))
+    )
     @ddt.unpack
     def test_parse_empty_result(self, input, expected_result):
 
@@ -122,55 +278,8 @@ class TestNoCloudNetworkConfigV1Parser(unittest.TestCase):
             addresses=['192.168.23.2', '8.8.8.8'],
             search='acme.local')
 
-        parser_data = """
-           - type: physical
-             name: interface0
-             mac_address: "52:54:00:12:34:00"
-             mtu: 1450
-             subnets:
-                - type: static
-                  address: 192.168.1.10
-                  netmask: 255.255.255.0
-                  gateway: 192.168.1.1
-                  dns_nameservers:
-                    - 192.168.1.11
-           - type: bond
-             name: bond0
-             bond_interfaces:
-               - gbe0
-               - gbe1
-             mac_address: "52:54:00:12:34:00"
-             params:
-               bond-mode: active-backup
-               bond-lacp-rate: false
-             mtu: 1450
-             subnets:
-                - type: static
-                  address: 192.168.1.10
-                  netmask: 255.255.255.0
-                  dns_nameservers:
-                    - 192.168.1.11
-           - type: vlan
-             name: vlan0
-             vlan_link: eth1
-             vlan_id: 150
-             mac_address: "52:54:00:12:34:00"
-             mtu: 1450
-             subnets:
-                - type: static
-                  address: 192.168.1.10
-                  netmask: 255.255.255.0
-                  dns_nameservers:
-                    - 192.168.1.11
-           - type: nameserver
-             address:
-               - 192.168.23.2
-               - 8.8.8.8
-             search: acme.local
-        """
-
         result = self._parser.parse(
-            serialization.parse_json_yaml(parser_data))
+            serialization.parse_json_yaml(NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1))
 
         self.assertEqual(result.links[0], expected_link)
         self.assertEqual(result.networks[0], expected_network)
@@ -180,6 +289,139 @@ class TestNoCloudNetworkConfigV1Parser(unittest.TestCase):
 
         self.assertEqual(result.links[2], expected_link_vlan)
         self.assertEqual(result.networks[2], expected_network_vlan)
+
+        self.assertEqual(result.services[0], expected_nameservers)
+
+
+@ddt.ddt
+class TestNoCloudNetworkConfigV2Parser(unittest.TestCase):
+    def setUp(self):
+        module = importlib.import_module(MODULE_PATH)
+        self._parser = module.NoCloudNetworkConfigV2Parser()
+        self.snatcher = testutils.LogSnatcher(MODULE_PATH)
+
+    @ddt.data(
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_EMPTY_CONFIG,
+         ('Network configuration is empty', None)),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_IS_NOT_DICT,
+         ('is not a dict', None)),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_ITEM_IS_NOT_DICT,
+         ('is not a dict',
+          nm.NetworkDetailsV2(links=[], networks=[], services=[])),
+         ),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_ITEM_SETTING_IS_NOT_DICT,
+         ('of type ethernet is not a dict',
+          nm.NetworkDetailsV2(links=[], networks=[], services=[])),
+         )
+    )
+    @ddt.unpack
+    def test_parse_empty_result(self, input, expected_result):
+        with self.snatcher:
+            result = self._parser.parse(serialization.parse_json_yaml(input))
+
+        self.assertEqual(True, expected_result[0] in self.snatcher.output[0])
+        self.assertEqual(result, expected_result[1])
+
+    def test_network_details_v2(self):
+        expected_bond = nm.Bond(
+            members=["gbe0", "gbe1"],
+            type=nm.BOND_TYPE_ACTIVE_BACKUP,
+            lb_algorithm=None,
+            lacp_rate=None,
+        )
+        expected_link_bond = nm.Link(
+            id='bond0',
+            name='bond0',
+            type=nm.LINK_TYPE_BOND,
+            enabled=True,
+            mac_address="52:54:00:12:34:00",
+            mtu=1450,
+            bond=expected_bond,
+            vlan_link=None,
+            vlan_id=None,
+        )
+        expected_link = nm.Link(
+            id='interface0',
+            name='eth0',
+            type=nm.LINK_TYPE_PHYSICAL,
+            enabled=True,
+            mac_address="52:54:00:12:34:00",
+            mtu=1450,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None,
+        )
+        expected_link_if1 = nm.Link(
+            id='interface1',
+            name='interface1',
+            type=nm.LINK_TYPE_PHYSICAL,
+            enabled=True,
+            mac_address=None,
+            mtu=None,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None,
+        )
+        expected_link_vlan = nm.Link(
+            id='vlan0',
+            name='vlan0',
+            type=nm.LINK_TYPE_VLAN,
+            enabled=True,
+            mac_address="52:54:00:12:34:00",
+            mtu=1450,
+            bond=None,
+            vlan_link='eth1',
+            vlan_id=150,
+        )
+        expected_network = nm.Network(
+            link='eth0',
+            address_cidr='192.168.1.10/24',
+            dns_nameservers=['192.168.1.11', '192.168.1.12'],
+            routes=[
+                nm.Route(network_cidr='0.0.0.0/0',
+                         gateway="192.168.1.1")
+            ]
+        )
+        expected_network_if1 = nm.Network(
+            link='interface1',
+            address_cidr='192.168.1.100/24',
+            dns_nameservers=['192.168.1.11', '192.168.1.12'],
+            routes=[
+                nm.Route(network_cidr='0.0.0.0/0',
+                         gateway="192.168.1.1")
+            ]
+        )
+
+        expected_network_bond = nm.Network(
+            link='bond0',
+            address_cidr='192.168.1.10/24',
+            dns_nameservers=['192.168.1.11'],
+            routes=[],
+        )
+
+        expected_network_vlan = nm.Network(
+            link='vlan0',
+            address_cidr='192.168.1.10/24',
+            dns_nameservers=['192.168.1.11'],
+            routes=[],
+        )
+        expected_nameservers = nm.NameServerService(
+            addresses=['192.168.1.11', '192.168.1.12'],
+            search='acme.local')
+
+        result = self._parser.parse(
+            serialization.parse_json_yaml(NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2))
+
+        self.assertEqual(result.links[0], expected_link)
+        self.assertEqual(result.links[1], expected_link_if1)
+        self.assertEqual(result.networks[0], expected_network)
+        self.assertEqual(result.networks[1], expected_network_if1)
+
+        self.assertEqual(result.links[2], expected_link_bond)
+        self.assertEqual(result.networks[2], expected_network_bond)
+
+        self.assertEqual(result.links[3], expected_link_vlan)
+        self.assertEqual(result.networks[3], expected_network_vlan)
 
         self.assertEqual(result.services[0], expected_nameservers)
 
@@ -261,8 +503,6 @@ class TestNoCloudConfigDriveService(unittest.TestCase):
               ('1', ('V2 network metadata is not a dictionary', None)),
               ('{}', ('V2 network metadata is empty', None)),
               ('{}}', ('V2 network metadata could not be deserialized', None)),
-              ('{version: 2}', ("Network data version '2' is not supported",
-               None)),
               (base.NotExistingMetadataException('exc'),
                ('V2 network metadata not found', True)))
     @ddt.unpack
