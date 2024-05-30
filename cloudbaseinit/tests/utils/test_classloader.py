@@ -35,12 +35,11 @@ class ClassLoaderTest(unittest.TestCase):
     def setUp(self):
         self._loader = classloader.ClassLoader()
 
-    @mock.patch('imp.load_compiled')
-    @mock.patch('imp.load_source')
-    def test_load_module_py(self, mock_source, mock_compiled):
+    @mock.patch('cloudbaseinit.utils.classloader.load_module_from_path')
+    def test_load_module_py(self, mock_source_compiled):
         mock_py = os.path.join(_create_tempfile(), "mock.py")
         mock_pyc = os.path.join(_create_tempfile(), "mock.pyc")
-        mock_source.return_value = mock_compiled.return_value = None
+        mock_source_compiled.return_value = None
         result_module_py = self._loader.load_module(mock_py)
         result_module_pyc = self._loader.load_module(mock_pyc)
         self.assertIsNone(result_module_py)

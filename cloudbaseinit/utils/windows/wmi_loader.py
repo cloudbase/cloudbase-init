@@ -12,13 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import imp
 import os
 import site
 
 from oslo_log import log as oslo_logging
 
 from cloudbaseinit import exception
+from cloudbaseinit.utils.classloader import load_module_from_path
 
 LOG = oslo_logging.getLogger(__name__)
 
@@ -41,4 +41,4 @@ def wmi():
         if wmi_path is None:
             raise exception.ItemNotFoundException("wmi module not found")
 
-        return imp.load_source("wmi", wmi_path)
+        return load_module_from_path("wmi", wmi_path)

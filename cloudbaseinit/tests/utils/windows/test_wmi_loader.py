@@ -32,15 +32,15 @@ class WMILoaderTests(unittest.TestCase):
             wmi_loader = importlib.import_module(MODPATH)
             self.assertEqual(mock.sentinel.wmi, wmi_loader.wmi())
 
-    @mock.patch('imp.load_source')
+    @mock.patch('cloudbaseinit.utils.classloader.load_module_from_path')
     @mock.patch('os.path.isfile')
-    def test_load_legacy_wmi(self, mock_isfile, mock_load_source):
+    def test_load_legacy_wmi(self, mock_isfile, mock_load_module_from_path):
         mock_isfile.return_value = True
 
         mock_site = mock.MagicMock()
         fake_site_path = "fake_site_path"
         mock_site.getsitepackages.return_value = [fake_site_path]
-        mock_load_source.return_value = mock.sentinel.wmi
+        mock_load_module_from_path.return_value = mock.sentinel.wmi
 
         with mock.patch.dict('sys.modules', {'wmi': None, 'site': mock_site}):
             wmi_loader = importlib.import_module(MODPATH)
@@ -48,7 +48,8 @@ class WMILoaderTests(unittest.TestCase):
 
         fake_wmi_path = os.path.join(fake_site_path, "wmi.py")
         mock_isfile.assert_called_once_with(fake_wmi_path)
-        mock_load_source.assert_called_once_with("wmi", fake_wmi_path)
+        mock_load_module_from_path.assert_called_once_with(
+            "wmi", fake_wmi_path)
 
     @mock.patch('os.path.isfile')
     def test_load_legacy_wmi_fail(self, mock_isfile):
