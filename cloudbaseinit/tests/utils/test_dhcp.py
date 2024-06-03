@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import netifaces
 import socket
 import struct
 import unittest
@@ -108,35 +107,19 @@ class DHCPUtilsTests(unittest.TestCase):
         self._test_parse_dhcp_reply(message_type=3, id_reply=111,
                                     equals_cookie=False)
 
-    @mock.patch('netifaces.ifaddresses')
-    @mock.patch('netifaces.interfaces')
-    def test_get_mac_address_by_local_ip(self, mock_interfaces,
-                                         mock_ifaddresses):
-        fake_addresses = {}
-        fake_addresses[netifaces.AF_INET] = [{'addr': 'fake address'}]
-        fake_addresses[netifaces.AF_LINK] = [{'addr': 'fake mac'}]
-
-        mock_interfaces.return_value = ['fake interface']
-        mock_ifaddresses.return_value = fake_addresses
-
-        response = dhcp._get_mac_address_by_local_ip('fake address')
-
-        mock_interfaces.assert_called_once_with()
-        mock_ifaddresses.assert_called_once_with('fake interface')
-        self.assertEqual(fake_addresses[netifaces.AF_LINK][0]['addr'],
-                         response)
-
     @mock.patch('random.randint')
     @mock.patch('socket.socket')
-    @mock.patch('cloudbaseinit.utils.dhcp._get_mac_address_by_local_ip')
     @mock.patch('cloudbaseinit.utils.dhcp._get_dhcp_request_data')
     @mock.patch('cloudbaseinit.utils.dhcp._parse_dhcp_reply')
-    def test_get_dhcp_options(self, mock_parse_dhcp_reply,
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    def test_get_dhcp_options(self, mock_get_os_utils,
+                              mock_parse_dhcp_reply,
                               mock_get_dhcp_request_data,
-                              mock_get_mac_address_by_local_ip, mock_socket,
-                              mock_randint):
+                              mock_socket, mock_randint):
         mock_randint.return_value = 'fake int'
         mock_socket().getsockname.return_value = ['fake local ip']
+        mock_get_mac_address_by_local_ip = (
+            mock_get_os_utils.return_value.get_mac_address_by_local_ip)
         mock_get_mac_address_by_local_ip.return_value = 'fake mac'
         mock_get_dhcp_request_data.return_value = 'fake data'
         mock_parse_dhcp_reply.return_value = (True, 'fake replied options')
