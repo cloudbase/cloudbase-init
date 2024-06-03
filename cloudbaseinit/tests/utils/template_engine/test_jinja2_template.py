@@ -15,10 +15,7 @@
 
 import ddt
 import unittest
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
+import unittest.mock as mock
 
 from cloudbaseinit.utils.template_engine.jinja2_template import (
     Jinja2TemplateEngine)

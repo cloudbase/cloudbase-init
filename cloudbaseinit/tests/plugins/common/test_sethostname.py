@@ -13,11 +13,7 @@
 #    under the License.
 
 import unittest
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
+import unittest.mock as mock
 
 from cloudbaseinit.plugins.common import base
 from cloudbaseinit.plugins.common import sethostname

@@ -17,8 +17,8 @@
 """
 Unit tests for the utils.retry_decorator module.
 """
-import mock
 import unittest
+import unittest.mock as mock
 
 import cloudbaseinit.utils.retry_decorator as retry_decorator
 

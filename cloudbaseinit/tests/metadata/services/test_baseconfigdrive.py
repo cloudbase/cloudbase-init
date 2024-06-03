@@ -16,11 +16,7 @@
 import importlib
 import os
 import unittest
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
+import unittest.mock as mock
 
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import baseconfigdrive

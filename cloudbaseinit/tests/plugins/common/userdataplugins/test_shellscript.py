@@ -14,12 +14,7 @@
 
 import os
 import unittest
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
-
+import unittest.mock as mock
 
 from cloudbaseinit.plugins.common.userdataplugins import shellscript
 from cloudbaseinit.tests import testutils

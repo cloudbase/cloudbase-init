@@ -16,13 +16,9 @@
 import functools
 import posixpath
 import unittest
+import unittest.mock as mock
 
 import netaddr
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception

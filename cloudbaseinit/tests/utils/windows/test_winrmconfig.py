@@ -14,12 +14,8 @@
 
 import importlib
 import unittest
+import unittest.mock as mock
 from xml.sax import saxutils
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
 
 from cloudbaseinit import exception
 from cloudbaseinit.tests import fake

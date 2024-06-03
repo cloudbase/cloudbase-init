@@ -13,11 +13,8 @@
 #    under the License.
 
 import unittest
+import unittest.mock as mock
 
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
 from oslo_config import cfg
 
 from cloudbaseinit import exception

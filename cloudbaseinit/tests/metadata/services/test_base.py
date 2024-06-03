@@ -12,9 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import requests
 import unittest
+import unittest.mock as mock
 
 from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base

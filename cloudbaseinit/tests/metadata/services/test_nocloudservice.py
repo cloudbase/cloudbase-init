@@ -16,11 +16,7 @@ import ddt
 import importlib
 import os
 import unittest
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
+import unittest.mock as mock
 
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.models import network as nm

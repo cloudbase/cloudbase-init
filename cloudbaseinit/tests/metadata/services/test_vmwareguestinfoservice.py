@@ -14,20 +14,15 @@
 
 import importlib
 import unittest
+import unittest.mock as mock
 
 import ddt
-
-from cloudbaseinit.utils import serialization
-
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit import exception
 from cloudbaseinit.models import network as network_model
 from cloudbaseinit.tests import testutils
+from cloudbaseinit.utils import serialization
 
 
 CONF = cloudbaseinit_conf.CONF

@@ -14,8 +14,7 @@
 
 import importlib
 import unittest
-
-import mock
+import unittest.mock as mock
 
 from cloudbaseinit.tests import testutils
 
