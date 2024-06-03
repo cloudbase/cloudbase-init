@@ -2146,6 +2146,44 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_get_network_adapter_name_by_mac_address(
             multiple_adapters_found=True)
 
+    @mock.patch("cloudbaseinit.utils.windows.network."
+                "get_adapter_addresses")
+    def test_get_mac_address_by_local_ip(self, mock_get_adapter_addresses):
+        fake_addresses = [
+            {
+                "friendly_name": "mgmt",
+                "mac_address": "24:6E:96:E0:FE:76",
+                "interface_type": 6,
+                "unicast_addresses": [("fe80::499d:b2f9:48c0:c88e%20", 23),
+                                      ("10.11.12.13", 2)],
+            },
+            {
+                "friendly_name": "Loopback Pseudo-Interface 1",
+                "mac_address": "",
+                "interface_type": 24,
+                "unicast_addresses": [("::1", 23), ("127.0.0.1", 2)],
+            },
+        ]
+
+        mock_get_adapter_addresses.return_value = fake_addresses
+
+        self.assertEqual(
+            "24:6e:96:e0:fe:76",
+            self._winutils.get_mac_address_by_local_ip("10.11.12.13"))
+        self.assertEqual(
+            "24:6e:96:e0:fe:76",
+            self._winutils.get_mac_address_by_local_ip(
+                "fe80::499d:b2f9:48c0:c88e%20"))
+        self.assertEqual(
+            "24:6e:96:e0:fe:76",
+            self._winutils.get_mac_address_by_local_ip(
+                "FE80::499D:B2F9:48C0:C88E%20"))
+        self.assertEqual(
+            "",
+            self._winutils.get_mac_address_by_local_ip("127.0.0.1"))
+        self.assertIsNone(
+            self._winutils.get_mac_address_by_local_ip("10.10.10.10"))
+
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '.execute_process')
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'

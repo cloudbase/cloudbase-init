@@ -821,6 +821,13 @@ class WindowsUtils(base.BaseOSUtils):
 
         return iface_index_list[0]["friendly_name"]
 
+    def get_mac_address_by_local_ip(self, ip_addr):
+        for iface in network.get_adapter_addresses():
+            addrs = iface.get('unicast_addresses', [])
+            for addr, family in addrs:
+                if ip_addr and addr and ip_addr.lower() == addr.lower():
+                    return iface['mac_address'].lower()
+
     @retry_decorator.retry_decorator(
         max_retry_count=3, exceptions=exception.ItemNotFoundException)
     def set_network_adapter_mtu(self, name, mtu):
