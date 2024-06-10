@@ -14,7 +14,6 @@
 
 import datetime
 import os
-import pytz
 
 from oslo_log import log as oslo_logging
 
@@ -70,11 +69,11 @@ class UsersPlugin(base.BaseCloudConfigPlugin):
         if isinstance(expiredate, str):
             year, month, day = map(int, expiredate.split('-'))
             expiredate = datetime.datetime(year=year, month=month, day=day,
-                                           tzinfo=pytz.utc)
+                                           tzinfo=datetime.timezone.utc)
             # Py2.7 does not support timestamps, this is the
             # only way to compute the seconds passed since the unix epoch
             unix_time = datetime.datetime(year=1970, month=1, day=1,
-                                          tzinfo=pytz.utc)
+                                          tzinfo=datetime.timezone.utc)
             expire_interval = (expiredate - unix_time).total_seconds()
 
         return expire_interval
