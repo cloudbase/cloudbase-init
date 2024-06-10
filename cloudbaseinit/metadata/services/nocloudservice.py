@@ -541,17 +541,19 @@ class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):
 
     def __init__(self):
         super(NoCloudConfigDriveService, self).__init__(
-            'cidata', 'meta-data')
+            'cidata', CONF.nocloud.metadata_file,
+            CONF.nocloud.userdata_file)
         self._meta_data = {}
 
     def get_user_data(self):
-        return self._get_cache_data("user-data")
+        return self._get_cache_data(self._userdata_file)
 
     def _get_meta_data(self):
         if self._meta_data:
             return self._meta_data
 
-        raw_meta_data = self._get_cache_data("meta-data", decode=True)
+        raw_meta_data = self._get_cache_data(
+            self._metadata_file, decode=True)
         try:
             self._meta_data = (
                 serialization.parse_json_yaml(raw_meta_data))
