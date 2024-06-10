@@ -13,7 +13,6 @@
 #    under the License.
 
 import datetime
-import netifaces
 import random
 import socket
 import struct
@@ -21,6 +20,7 @@ import time
 
 from oslo_log import log as oslo_logging
 
+from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import network
 
 _DHCP_COOKIE = b'\x63\x82\x53\x63'
@@ -96,14 +96,6 @@ def _parse_dhcp_reply(data, id_req):
     return True, options
 
 
-def _get_mac_address_by_local_ip(ip_addr):
-    for iface in netifaces.interfaces():
-        addrs = netifaces.ifaddresses(iface)
-        for addr in addrs.get(netifaces.AF_INET, []):
-            if addr['addr'] == ip_addr:
-                return addrs[netifaces.AF_LINK][0]['addr']
-
-
 def _bind_dhcp_client_socket(s, max_bind_attempts, bind_retry_interval):
     bind_attempts = 1
     while True:
@@ -138,7 +130,9 @@ def get_dhcp_options(dhcp_host=None, requested_options=[], timeout=5.0,
         s.settimeout(timeout)
 
         local_ip_addr = network.get_local_ip(dhcp_host)
-        mac_address = _get_mac_address_by_local_ip(local_ip_addr)
+
+        osutils = osutils_factory.get_os_utils()
+        mac_address = osutils.get_mac_address_by_local_ip(local_ip_addr)
 
         data = _get_dhcp_request_data(id_req, mac_address, requested_options,
                                       vendor_id)
