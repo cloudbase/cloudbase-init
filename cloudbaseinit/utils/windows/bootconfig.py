@@ -56,13 +56,19 @@ def get_boot_system_devices():
 
 def _get_current_bcd_store():
     conn = wmi.WMI(moniker='//./root/wmi')
-    success, store = conn.BcdStore.OpenStore(File="")
-    if not success:
+    # Under PyMI, the following returns one element if the store is found,
+    # two elements otherwise.
+    #
+    #     >>> conn.BcdStore.OpenStore(File="file not present")
+    #    (False, None)
+    #    >>> conn.BcdStore.OpenStore(File="")
+    #    (<pymi_object: >,)
+    store = conn.BcdStore.OpenStore(File="")[0]
+    if not store:
         raise exception.CloudbaseInitException("Cannot open BCD store")
-    store = wmi._wmi_object(store)
-    current_store, success = store.OpenObject(Id=STORE_CURRENT)
-    current_store = wmi._wmi_object(current_store)
-    if not success:
+
+    current_store = store.OpenObject(Id=STORE_CURRENT)[0]
+    if not current_store:
         raise exception.CloudbaseInitException("Cannot open BCD current store")
 
     return current_store
