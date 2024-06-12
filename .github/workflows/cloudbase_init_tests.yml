@@ -53,7 +53,7 @@ jobs:
     - name: Run Cloudbase-Init unit tests with tox
       shell: cmd
       run: |
-        tox run-parallel --parallel-live --parallel-no-spinner -e py3,pep8
+        tox -e py3,pep8
   windows-functional-tests:
     runs-on: windows-latest
     strategy:
