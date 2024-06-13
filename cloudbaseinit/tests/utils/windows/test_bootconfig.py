@@ -152,10 +152,15 @@ class BootConfigTest(unittest.TestCase):
                                    mock_success=True, mock_enable=True):
         mock_store = mock.Mock()
         mock_get_current_bcd_store.return_value = mock_store
-        mock_store.SetBooleanElement.side_effect = ((mock_success,),)
+        mock_store.SetBooleanElement.return_value = ()
+
+        mock_get_element = mock.MagicMock()
+        mock_get_element.Boolean = mock_success
+        mock_store.GetElement.return_value = [mock_get_element]
+
         expected_call = (
-            self.bootconfig.BCDLIBRARY_BOOLEAN_AUTO_RECOVERY_ENABLED,
-            mock_enable)
+            mock_enable,
+            self.bootconfig.BCDLIBRARY_BOOLEAN_AUTO_RECOVERY_ENABLED)
         if not mock_success:
             self.assertRaises(exception.CloudbaseInitException,
                               self.bootconfig.enable_auto_recovery,
