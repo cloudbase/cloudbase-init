@@ -3,6 +3,7 @@ name: Cloudbase-Init tests
 env:
   UPPER_CONSTRAINTS: "https://git.openstack.org/cgit/openstack/requirements/plain/upper-constraints.txt"
   TEST_RESOURCES: "https://github.com/cloudbase/cloudbase-init-test-resources"
+  TEST_RESOURCES_BRANCH: "master"
 
 on: [push, pull_request]
 
@@ -74,7 +75,7 @@ jobs:
     - name: Download external dependencies
       shell: cmd
       run: |
-        git clone %TEST_RESOURCES% test-resources
+        git clone %TEST_RESOURCES% -b %TEST_RESOURCES_BRANCH% test-resources
         python -W ignore -m pip install --upgrade pip
     - name: Install Cloudbase-Init
       shell: cmd
@@ -84,6 +85,10 @@ jobs:
     - name: Run Cloudbase-Init functional tests
       shell: powershell
       run: |
+        Install-Module -Force -AllowClobber -Confirm:$false "Pester"
+        $ENV:CLOUD = "${{ matrix.cloud }}"
+        $ENV:TEST_ARCHITECTURE = "${{ matrix.architecture }}"
+        Invoke-Pester test-resources/functional-tests -Output Detailed -FullNameFilter TestVerifyBeforeAllPlugins
         try {
             & cmd /c "cloudbase-init.exe --noreset_service_password --config-file ./test-resources/${{ matrix.cloud }}/cloudbase-init.conf 2>&1" | Tee-Object -FilePath cloudbase-init.log
         } catch {}
@@ -92,3 +97,4 @@ jobs:
         if ($errors -or !$pluginExecution) {
             exit 1
         }
+        Invoke-Pester test-resources/functional-tests -Output Detailed -FullNameFilter TestVerifyAfterAllPlugins
