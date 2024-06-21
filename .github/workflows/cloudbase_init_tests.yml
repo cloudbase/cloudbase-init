@@ -62,7 +62,7 @@ jobs:
       matrix:
         python-version: [ "3.12"]
         architecture: ["x64", "x86"]
-        cloud: ["empty"]
+        cloud: ["empty", "nocloud"]
 
     steps:
     - name: Checkout cloudbase-init repository
