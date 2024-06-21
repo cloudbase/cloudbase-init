@@ -237,10 +237,11 @@ class NoCloudNetworkConfigV1Parser(object):
         networks = []
         services = []
 
-        network_config = network_config.get('network') \
-            if network_config else {}
-        network_config = network_config.get('config') \
-            if network_config else None
+        if network_config and network_config.get('network'):
+            network_config = network_config.get('network')
+        if network_config:
+            network_config = network_config.get('config')
+
         if not network_config:
             LOG.warning("Network configuration is empty")
             return
@@ -479,8 +480,9 @@ class NoCloudNetworkConfigV2Parser(object):
         networks = []
         services = []
 
-        network_config = network_config.get('network') \
-            if network_config else {}
+        if network_config and network_config.get('network'):
+            network_config = network_config.get('network')
+
         if not network_config:
             LOG.warning("Network configuration is empty")
             return
@@ -529,12 +531,21 @@ class NoCloudNetworkConfigParser(object):
 
     @staticmethod
     def parse(network_data):
-        network_data_version = network_data.get("network", {}).get("version")
+        # we can have a network key in some cases
+        if network_data.get("network"):
+            network_data = network_data.get("network")
+        network_data_version = network_data.get("version")
+
         if network_data_version == 1:
             network_config_parser = NoCloudNetworkConfigV1Parser()
-            return network_config_parser.parse(network_data)
+        elif network_data_version == 2:
+            network_config_parser = NoCloudNetworkConfigV2Parser()
+        else:
+            raise exception.CloudbaseInitException(
+                "Unsupported network_data_version: '%s'"
+                % network_data_version)
 
-        return NoCloudNetworkConfigV2Parser().parse(network_data)
+        return network_config_parser.parse(network_data)
 
 
 class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):
