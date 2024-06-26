@@ -15,6 +15,7 @@
 import ddt
 import importlib
 import os
+import textwrap
 import unittest
 import unittest.mock as mock
 
@@ -48,55 +49,57 @@ network:
   config:
   - type: router
 """
-NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1 = """
-network:
-  version: 1
-  config:
-  - type: physical
-    name: interface0
-    mac_address: "52:54:00:12:34:00"
-    mtu: 1450
-    subnets:
-    - type: static
-      address: 192.168.1.10
-      netmask: 255.255.255.0
-      gateway: 192.168.1.1
-      dns_nameservers:
-      - 192.168.1.11
-  - type: bond
-    name: bond0
-    bond_interfaces:
-    - gbe0
-    - gbe1
-    mac_address: "52:54:00:12:34:00"
-    params:
-      bond-mode: active-backup
-      bond-lacp-rate: false
-    mtu: 1450
-    subnets:
-    - type: static
-      address: 192.168.1.10
-      netmask: 255.255.255.0
-      dns_nameservers:
-      - 192.168.1.11
-  - type: vlan
-    name: vlan0
-    vlan_link: eth1
-    vlan_id: 150
-    mac_address: "52:54:00:12:34:00"
-    mtu: 1450
-    subnets:
-    - type: static
-      address: 192.168.1.10
-      netmask: 255.255.255.0
-      dns_nameservers:
-      - 192.168.1.11
-  - type: nameserver
-    address:
-    - 192.168.23.2
-    - 8.8.8.8
-    search: acme.local
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_LEGACY = """
+version: 1
+config:
+- type: physical
+  name: interface0
+  mac_address: "52:54:00:12:34:00"
+  mtu: 1450
+  subnets:
+  - type: static
+    address: 192.168.1.10
+    netmask: 255.255.255.0
+    gateway: 192.168.1.1
+    dns_nameservers:
+    - 192.168.1.11
+- type: bond
+  name: bond0
+  bond_interfaces:
+  - gbe0
+  - gbe1
+  mac_address: "52:54:00:12:34:00"
+  params:
+    bond-mode: active-backup
+    bond-lacp-rate: false
+  mtu: 1450
+  subnets:
+  - type: static
+    address: 192.168.1.10
+    netmask: 255.255.255.0
+    dns_nameservers:
+    - 192.168.1.11
+- type: vlan
+  name: vlan0
+  vlan_link: eth1
+  vlan_id: 150
+  mac_address: "52:54:00:12:34:00"
+  mtu: 1450
+  subnets:
+  - type: static
+    address: 192.168.1.10
+    netmask: 255.255.255.0
+    dns_nameservers:
+    - 192.168.1.11
+- type: nameserver
+  address:
+  - 192.168.23.2
+  - 8.8.8.8
+  search: acme.local
 """
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1 = """
+network:%s
+""" % (textwrap.indent(NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_LEGACY, "  "))
 NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_EMPTY_CONFIG = """
 """
 NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_CONFIG_IS_NOT_DICT = """
@@ -116,67 +119,69 @@ network:
     eth0:
      - test
 """
-NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2 = """
-network:
-  version: 2
-  ethernets:
-    interface0:
-      match:
-        macaddress: "52:54:00:12:34:00"
-      set-name: "eth0"
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_LEGACY = """
+version: 2
+ethernets:
+  interface0:
+    match:
+      macaddress: "52:54:00:12:34:00"
+    set-name: "eth0"
+    addresses:
+    - 192.168.1.10/24
+    gateway4: 192.168.1.1
+    nameservers:
       addresses:
-      - 192.168.1.10/24
-      gateway4: 192.168.1.1
-      nameservers:
-        addresses:
-        - 192.168.1.11
-        - 192.168.1.12
-        search:
-        - acme.local
-      mtu: 1450
-    interface1:
-      set-name: "interface1"
+      - 192.168.1.11
+      - 192.168.1.12
+      search:
+      - acme.local
+    mtu: 1450
+  interface1:
+    set-name: "interface1"
+    addresses:
+    - 192.168.1.100/24
+    gateway4: 192.168.1.1
+    nameservers:
       addresses:
-      - 192.168.1.100/24
-      gateway4: 192.168.1.1
-      nameservers:
-        addresses:
-        - 192.168.1.11
-        - 192.168.1.12
-        search:
-        - acme.local
-  bonds:
-    bond0:
-      interfaces: ["gbe0", "gbe1"]
-      match:
-        macaddress: "52:54:00:12:34:00"
-      parameters:
-        mode: active-backup
-        lacp-rate: false
+      - 192.168.1.11
+      - 192.168.1.12
+      search:
+      - acme.local
+bonds:
+  bond0:
+    interfaces: ["gbe0", "gbe1"]
+    match:
+      macaddress: "52:54:00:12:34:00"
+    parameters:
+      mode: active-backup
+      lacp-rate: false
+    addresses:
+    - 192.168.1.10/24
+    nameservers:
       addresses:
-      - 192.168.1.10/24
-      nameservers:
-        addresses:
-        - 192.168.1.11
-      mtu: 1450
-  vlans:
-    vlan0:
-      id: 150
-      link: eth1
-      dhcp4: yes
-      match:
-        macaddress: "52:54:00:12:34:00"
+      - 192.168.1.11
+    mtu: 1450
+vlans:
+  vlan0:
+    id: 150
+    link: eth1
+    dhcp4: yes
+    match:
+      macaddress: "52:54:00:12:34:00"
+    addresses:
+    - 192.168.1.10/24
+    nameservers:
       addresses:
-      - 192.168.1.10/24
-      nameservers:
-        addresses:
-        - 192.168.1.11
-      mtu: 1450
-  bridges:
-    br0:
-      interfaces: ['eth0']
-      dhcp4: true
+      - 192.168.1.11
+    mtu: 1450
+bridges:
+  br0:
+    interfaces: ['eth0']
+    dhcp4: true
 """
+NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2 = """
+network:%s
+""" % (textwrap.indent(NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_LEGACY, "  "))
 
 
 @ddt.ddt
@@ -207,7 +212,12 @@ class TestNoCloudNetworkConfigV1Parser(unittest.TestCase):
         self.assertEqual(True, expected_result[0] in self.snatcher.output[0])
         self.assertEqual(result, expected_result[1])
 
-    def test_network_details_v2(self):
+    @ddt.data(
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1, True),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_LEGACY, True)
+    )
+    @ddt.unpack
+    def test_network_details_v2(self, test_data, expected_result):
         expected_bond = nm.Bond(
             members=["gbe0", "gbe1"],
             type=nm.BOND_TYPE_ACTIVE_BACKUP,
@@ -275,7 +285,7 @@ class TestNoCloudNetworkConfigV1Parser(unittest.TestCase):
             search='acme.local')
 
         result = self._parser.parse(
-            serialization.parse_json_yaml(NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1))
+            serialization.parse_json_yaml(test_data))
 
         self.assertEqual(result.links[0], expected_link)
         self.assertEqual(result.networks[0], expected_network)
@@ -318,7 +328,12 @@ class TestNoCloudNetworkConfigV2Parser(unittest.TestCase):
         self.assertEqual(True, expected_result[0] in self.snatcher.output[0])
         self.assertEqual(result, expected_result[1])
 
-    def test_network_details_v2(self):
+    @ddt.data(
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2, True),
+        (NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2_LEGACY, True)
+    )
+    @ddt.unpack
+    def test_network_details_v2(self, test_data, expected_result):
         expected_bond = nm.Bond(
             members=["gbe0", "gbe1"],
             type=nm.BOND_TYPE_ACTIVE_BACKUP,
@@ -406,7 +421,7 @@ class TestNoCloudNetworkConfigV2Parser(unittest.TestCase):
             search='acme.local')
 
         result = self._parser.parse(
-            serialization.parse_json_yaml(NOCLOUD_NETWORK_CONFIG_TEST_DATA_V2))
+            serialization.parse_json_yaml(test_data))
 
         self.assertEqual(result.links[0], expected_link)
         self.assertEqual(result.links[1], expected_link_if1)
