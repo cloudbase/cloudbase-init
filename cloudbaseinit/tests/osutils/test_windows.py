@@ -353,7 +353,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
         is_in_alias = ret_value != self._winutils.ERROR_MEMBER_IN_ALIAS
 
-        if ret_value is not 0 and is_in_alias:
+        if ret_value and is_in_alias:
             self.assertRaises(
                 exception.CloudbaseInitException,
                 self._winutils.add_user_to_local_group,
@@ -833,7 +833,11 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_network_msft_adapter')
-    def _test_rename_network_adapter(self, rename_exception,
+    @mock.patch('time.sleep')
+    def _test_rename_network_adapter(self,
+                                     rename_adapter_retries,
+                                     rename_adapter_failed,
+                                     mock_sleep,
                                      mock_get_network_adapter):
         old_name = "fake_old"
         new_name = "fake_new"
@@ -841,13 +845,18 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         adapter = mock.Mock()
         adapter.Name = mock.sentinel.old_name
         mock_get_network_adapter.return_value = adapter
-        get_network_adapter_called = 1
-        if rename_exception:
-            adapter.rename.side_effect = Exception("fake exception")
+        get_network_adapter_called = 1 + rename_adapter_retries
+        rename_adapter_side_effect = []
+        for i in range(rename_adapter_retries):
+            rename_adapter_side_effect.append(Exception("fake exception"))
+        if rename_adapter_failed:
+            adapter.rename.side_effect = rename_adapter_side_effect
             with self.assertRaises(exception.CloudbaseInitException):
                 self._winutils.rename_network_adapter(old_name, new_name)
         else:
-            get_network_adapter_called = 2
+            get_network_adapter_called += 1
+            rename_adapter_side_effect.append(None)
+            adapter.rename.side_effect = rename_adapter_side_effect
             self._winutils.rename_network_adapter(old_name, new_name)
 
         adapter.rename.assert_called()
@@ -856,9 +865,11 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
                          get_network_adapter_called)
         self.assertEqual(mock_get_network_adapter.call_args_list[0].args,
                          (old_name,))
-        if not exception:
-            self.assertEqual(mock_get_network_adapter.call_args_list[1].args,
-                             (new_name,))
+        if not rename_adapter_failed:
+            self.assertEqual(
+                mock_get_network_adapter.
+                call_args_list[get_network_adapter_called - 1].args,
+                (new_name,))
 
     def _test_get_config_key_name(self, section):
         response = self._winutils._get_config_key_name(section)
@@ -875,10 +886,13 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         self._test_get_config_key_name(None)
 
     def test_rename_network_adapter(self):
-        self._test_rename_network_adapter(False)
+        self._test_rename_network_adapter(0, False)
 
-    def test_rename_network_adapter_fail(self):
-        self._test_rename_network_adapter(True)
+    def test_rename_network_adapter_with_retry(self):
+        self._test_rename_network_adapter(3, False)
+
+    def test_rename_network_adapter_failed(self):
+        self._test_rename_network_adapter(5, True)
 
     @mock.patch('cloudbaseinit.osutils.windows.WindowsUtils'
                 '._get_config_key_name')

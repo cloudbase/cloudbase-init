@@ -855,12 +855,24 @@ class WindowsUtils(base.BaseOSUtils):
                     'Setting MTU for interface "%(name)s" with '
                     'value "%(mtu)s" failed' % {'name': name, 'mtu': mtu})
 
+    @retry_decorator.retry_decorator(
+        max_retry_count=5,
+        max_sleep_time=10,
+        exceptions=exception.CloudbaseInitException)
     def rename_network_adapter(self, old_name, new_name):
-        net_adapter = self._get_network_msft_adapter(old_name)
         try:
+            LOG.info('Renaming interface "%(old_name)s" to "%(new_name)s"...' %
+                     {'old_name': old_name,
+                      'new_name': new_name})
+            net_adapter = self._get_network_msft_adapter(old_name)
             net_adapter.rename(new_name)
             self._get_network_msft_adapter(new_name)
-        except Exception:
+        except Exception as ex:
+            LOG.warning('Renaming interface "%(old_name)s" to "%(new_name)s" '
+                        'failed: %(err)s' %
+                        {'old_name': old_name,
+                         'new_name': new_name,
+                         'err': ex})
             raise exception.CloudbaseInitException(
                 'Renaming interface "%(old_name)s" to "%(new_name)s" '
                 'failed' % {'old_name': old_name, 'new_name': new_name})
