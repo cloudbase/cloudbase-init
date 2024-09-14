@@ -30,6 +30,9 @@ from cloudbaseinit.utils import serialization
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
 
+DEFAULT_GATEWAY_CIDR_IPV4 = u"0.0.0.0/0"
+DEFAULT_GATEWAY_CIDR_IPV6 = u"::/0"
+
 
 class NoCloudNetworkConfigV1Parser(object):
     NETWORK_LINK_TYPE_PHY = 'physical'
@@ -280,9 +283,6 @@ class NoCloudNetworkConfigV1Parser(object):
 
 
 class NoCloudNetworkConfigV2Parser(object):
-    DEFAULT_GATEWAY_CIDR_IPV4 = u"0.0.0.0/0"
-    DEFAULT_GATEWAY_CIDR_IPV6 = u"::/0"
-
     NETWORK_LINK_TYPE_ETHERNET = 'ethernet'
     NETWORK_LINK_TYPE_BOND = 'bond'
     NETWORK_LINK_TYPE_VLAN = 'vlan'
@@ -308,11 +308,11 @@ class NoCloudNetworkConfigV2Parser(object):
         default_route = None
         if gateway6 and netaddr.valid_ipv6(gateway6):
             default_route = network_model.Route(
-                network_cidr=self.DEFAULT_GATEWAY_CIDR_IPV6,
+                network_cidr=DEFAULT_GATEWAY_CIDR_IPV6,
                 gateway=gateway6)
         elif gateway4 and netaddr.valid_ipv4(gateway4):
             default_route = network_model.Route(
-                network_cidr=self.DEFAULT_GATEWAY_CIDR_IPV4,
+                network_cidr=DEFAULT_GATEWAY_CIDR_IPV4,
                 gateway=gateway4)
         if default_route:
             routes.append(default_route)
@@ -324,9 +324,9 @@ class NoCloudNetworkConfigV2Parser(object):
             gateway = route_config.get("via")
             if network_cidr.lower() == "default":
                 if netaddr.valid_ipv6(gateway):
-                    network_cidr = self.DEFAULT_GATEWAY_CIDR_IPV6
+                    network_cidr = DEFAULT_GATEWAY_CIDR_IPV6
                 else:
-                    network_cidr = self.DEFAULT_GATEWAY_CIDR_IPV4
+                    network_cidr = DEFAULT_GATEWAY_CIDR_IPV4
             route = network_model.Route(
                 network_cidr=network_cidr,
                 gateway=gateway)
@@ -546,6 +546,113 @@ class NoCloudNetworkConfigParser(object):
                 % network_data_version)
 
         return network_config_parser.parse(network_data)
+
+    @staticmethod
+    def network_details_v1_to_v2(v1_networks):
+        """Converts `NetworkDetails` objects to `NetworkDetailsV2` object.
+
+        """
+        if not v1_networks:
+            return None
+
+        links = []
+        networks = []
+        services = []
+        for nic in v1_networks:
+            link = network_model.Link(
+                id=nic.name,
+                name=nic.name,
+                type=network_model.LINK_TYPE_PHYSICAL,
+                mac_address=nic.mac,
+                enabled=None,
+                mtu=None,
+                bond=None,
+                vlan_link=None,
+                vlan_id=None,
+            )
+            links.append(link)
+
+            dns_addresses_v4 = []
+            dns_addresses_v6 = []
+            if nic.dnsnameservers:
+                for ns in nic.dnsnameservers:
+                    if netaddr.valid_ipv6(ns):
+                        dns_addresses_v6.append(ns)
+                    else:
+                        dns_addresses_v4.append(ns)
+
+            dns_services_v6 = None
+            if dns_addresses_v6:
+                dns_service_v6 = network_model.NameServerService(
+                    addresses=dns_addresses_v6,
+                    search=None,
+                )
+                dns_services_v6 = [dns_service_v6]
+                services.append(dns_service_v6)
+
+            dns_services_v4 = None
+            if dns_addresses_v4:
+                dns_service_v4 = network_model.NameServerService(
+                    addresses=dns_addresses_v4,
+                    search=None,
+                )
+                dns_services_v4 = [dns_service_v4]
+                services.append(dns_service_v4)
+
+            # Note: IPv6 address might be set to IPv4 field
+            # Not sure if it's a bug
+            default_route_v6 = None
+            default_route_v4 = None
+            if nic.gateway6:
+                default_route_v6 = network_model.Route(
+                    network_cidr=DEFAULT_GATEWAY_CIDR_IPV6,
+                    gateway=nic.gateway6)
+
+            if nic.gateway:
+                if netaddr.valid_ipv6(nic.gateway):
+                    default_route_v6 = network_model.Route(
+                        network_cidr=DEFAULT_GATEWAY_CIDR_IPV6,
+                        gateway=nic.gateway)
+                else:
+                    default_route_v4 = network_model.Route(
+                        network_cidr=DEFAULT_GATEWAY_CIDR_IPV4,
+                        gateway=nic.gateway)
+
+            routes_v6 = [default_route_v6] if default_route_v6 else []
+            routes_v4 = [default_route_v4] if default_route_v4 else []
+
+            if nic.address6:
+                net = network_model.Network(
+                    link=link.name,
+                    address_cidr=network_utils.ip_netmask_to_cidr(
+                        nic.address6, nic.netmask6),
+                    routes=routes_v6,
+                    dns_nameservers=dns_services_v6,
+                )
+                networks.append(net)
+
+            if nic.address:
+                if netaddr.valid_ipv6(nic.address):
+                    net = network_model.Network(
+                        link=link.name,
+                        address_cidr=network_utils.ip_netmask_to_cidr(
+                            nic.address, nic.netmask),
+                        routes=routes_v6,
+                        dns_nameservers=dns_services_v6,
+                    )
+                else:
+                    net = network_model.Network(
+                        link=link.name,
+                        address_cidr=network_utils.ip_netmask_to_cidr(
+                            nic.address, nic.netmask),
+                        routes=routes_v4,
+                        dns_nameservers=dns_services_v4,
+                    )
+                networks.append(net)
+
+        return network_model.NetworkDetailsV2(links=links,
+                                              networks=networks,
+                                              services=services)
 
 
 class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):

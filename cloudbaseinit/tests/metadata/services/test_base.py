@@ -62,36 +62,61 @@ class TestBase(unittest.TestCase):
         self.assertEqual(result, mock_get_public_keys.return_value[0])
 
     @mock.patch('cloudbaseinit.metadata.services.base.'
+                'BaseMetadataService._get_datasource_instance_meta_data')
+    @mock.patch('cloudbaseinit.metadata.services.base.'
                 'BaseMetadataService.get_public_keys')
     @mock.patch('cloudbaseinit.metadata.services.base.'
                 'BaseMetadataService.get_host_name')
     @mock.patch('cloudbaseinit.metadata.services.base.'
                 'BaseMetadataService.get_instance_id')
-    def test_get_instance_data(self, mock_instance_id, mock_hostname,
-                               mock_public_keys):
+    def _test_get_instance_data_with_datasource_meta_data(
+            self, mock_instance_id, mock_hostname, mock_public_keys,
+            mock_get_datasource_instance_meta_data, datasource_meta_data=None):
         fake_instance_id = 'id'
         mock_instance_id.return_value = fake_instance_id
         fake_hostname = 'host'
         mock_hostname.return_value = fake_hostname
         fake_keys = ['ssh1', 'ssh2']
         mock_public_keys.return_value = fake_keys
+        mock_get_datasource_instance_meta_data.return_value = \
+            datasource_meta_data
 
+        if datasource_meta_data:
+            ds_md = datasource_meta_data
+        else:
+            ds_md = {
+                "instance_id": fake_instance_id,
+                "instance-id": fake_instance_id,
+                "local_hostname": fake_hostname,
+                "local-hostname": fake_hostname,
+                "hostname": fake_hostname
+            }
         expected_response = {
             'v1': {
                 "instance_id": fake_instance_id,
+                "instance-id": fake_instance_id,
                 "local_hostname": fake_hostname,
+                "local-hostname": fake_hostname,
                 "public_ssh_keys": fake_keys
             },
             'ds': {
-                'meta_data': {
-                    "instance_id": fake_instance_id,
-                    "local_hostname": fake_hostname,
-                    "public_ssh_keys": fake_keys,
-                    "hostname": fake_hostname
-                },
-            }
+                '_doc': base.EXPERIMENTAL_NOTICE,
+                'meta_data': ds_md,
+            },
+            "instance_id": fake_instance_id,
+            "instance-id": fake_instance_id,
+            "local_hostname": fake_hostname,
+            "local-hostname": fake_hostname,
+            "public_ssh_keys": fake_keys,
         }
         self.assertEqual(expected_response, self._service.get_instance_data())
+
+    def test_get_instance_data(self):
+        self._test_get_instance_data_with_datasource_meta_data()
+
+    def test_get_instance_data_with_datasource_meta_data(self):
+        self._test_get_instance_data_with_datasource_meta_data(
+            datasource_meta_data={'fake-data': 'fake-value'})
 
 
 class TestBaseHTTPMetadataService(unittest.TestCase):

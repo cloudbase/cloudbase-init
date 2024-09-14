@@ -28,6 +28,9 @@ from cloudbaseinit.utils import encoding
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
+EXPERIMENTAL_NOTICE = ("EXPERIMENTAL: The structure and format of content "
+                       "scoped under the 'ds' key may change in subsequent "
+                       "releases of cloud-init.")
 
 
 class NotExistingMetadataException(Exception):
@@ -236,28 +239,52 @@ class BaseMetadataService(object, metaclass=abc.ABCMeta):
         The ds namespace can change without prior notice and should not be
         used in production.
         """
-
         instance_id = self.get_instance_id()
         hostname = self.get_host_name()
 
         v1_data = {
+            "instance-id": instance_id,
             "instance_id": instance_id,
+            "local-hostname": hostname,
             "local_hostname": hostname,
-            "public_ssh_keys": self.get_public_keys()
         }
 
         # Copy the v1 data to the ds.meta_data and add more fields
-        ds_meta_data = copy.deepcopy(v1_data)
-        ds_meta_data.update({
-            "hostname": hostname
-        })
+        ds_meta_data = self._get_datasource_instance_meta_data()
+        if not ds_meta_data:
+            ds_meta_data = copy.deepcopy(v1_data)
+            ds_meta_data.update({
+                "hostname": hostname
+            })
 
-        return {
+        v1_data["public_ssh_keys"] = self.get_public_keys()
+        md = {
             "v1": v1_data,
             "ds": {
+                "_doc": EXPERIMENTAL_NOTICE,
                 "meta_data": ds_meta_data,
-            }
+            },
+            "instance-id": instance_id,
+            "instance_id": instance_id,
+            "local-hostname": hostname,
+            "local_hostname": hostname,
+            "public_ssh_keys": self.get_public_keys()
         }
+        return md
+
+    def _get_datasource_instance_meta_data(self):
+        """Returns a dictionary with datasource specific instance data
+
+        The instance data structure is based on the cloud-init specifications:
+        https://cloudinit.readthedocs.io/en/latest/explanation/instancedata.html
+
+        Datasource-specific metadata crawled for the specific cloud platform.
+        It should closely represent the structure of the cloud metadata
+        crawled. The structure of content and details provided are entirely
+        cloud-dependent.
+
+        """
+        pass
 
 
 class BaseHTTPMetadataService(BaseMetadataService):

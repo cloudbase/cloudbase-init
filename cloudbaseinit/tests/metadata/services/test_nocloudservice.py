@@ -20,9 +20,15 @@ import unittest
 import unittest.mock as mock
 
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services.nocloudservice import \
+    NoCloudNetworkConfigParser
 from cloudbaseinit.models import network as nm
+from cloudbaseinit.tests.metadata import fake_json_response
 from cloudbaseinit.tests import testutils
+from cloudbaseinit.utils import debiface
+from cloudbaseinit.utils import network
 from cloudbaseinit.utils import serialization
+
 
 MODULE_PATH = "cloudbaseinit.metadata.services.nocloudservice"
 NOCLOUD_NETWORK_CONFIG_TEST_DATA_V1_EMPTY_CONFIG = """
@@ -531,3 +537,98 @@ class TestNoCloudConfigDriveService(unittest.TestCase):
 
         mock_get_cache_data.assert_called_with(
             "network-config", decode=True)
+
+    def test_to_network_details_v2(self):
+        date = "2013-04-04"
+        content = fake_json_response.get_fake_metadata_json(date)
+        nics = debiface.parse(content["network_config"]["debian_config"])
+        v2 = NoCloudNetworkConfigParser.network_details_v1_to_v2(nics)
+        link0 = nm.Link(
+            id=fake_json_response.NAME0,
+            name=fake_json_response.NAME0,
+            type=nm.LINK_TYPE_PHYSICAL,
+            mac_address=fake_json_response.MAC0.upper(),
+            enabled=None,
+            mtu=None,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None,
+        )
+        link1 = nm.Link(
+            id=fake_json_response.NAME1,
+            name=fake_json_response.NAME1,
+            type=nm.LINK_TYPE_PHYSICAL,
+            mac_address=None,
+            enabled=None,
+            mtu=None,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None,
+        )
+        link2 = nm.Link(
+            id=fake_json_response.NAME2,
+            name=fake_json_response.NAME2,
+            type=nm.LINK_TYPE_PHYSICAL,
+            mac_address=fake_json_response.MAC2,
+            enabled=None,
+            mtu=None,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None,
+        )
+        dns_service0 = nm.NameServerService(
+            addresses=fake_json_response.DNSNS0.split(),
+            search=None,
+        )
+        network0 = nm.Network(
+            link=fake_json_response.NAME0,
+            address_cidr=network.ip_netmask_to_cidr(
+                fake_json_response.ADDRESS0, fake_json_response.NETMASK0),
+            routes=[nm.Route(
+                network_cidr=u"0.0.0.0/0",
+                gateway=fake_json_response.GATEWAY0,
+            )],
+            dns_nameservers=[dns_service0],
+        )
+        network0_v6 = nm.Network(
+            link=fake_json_response.NAME0,
+            address_cidr=network.ip_netmask_to_cidr(
+                fake_json_response.ADDRESS60, fake_json_response.NETMASK60),
+            routes=[nm.Route(
+                network_cidr=u"::/0",
+                gateway=fake_json_response.GATEWAY60,
+            )],
+            dns_nameservers=None,
+        )
+        network1 = nm.Network(
+            link=fake_json_response.NAME1,
+            address_cidr=network.ip_netmask_to_cidr(
+                fake_json_response.ADDRESS1, fake_json_response.NETMASK1),
+            routes=[nm.Route(
+                network_cidr=u"0.0.0.0/0",
+                gateway=fake_json_response.GATEWAY1,
+            )],
+            dns_nameservers=None,
+        )
+        network2 = nm.Network(
+            link=fake_json_response.NAME2,
+            address_cidr=network.ip_netmask_to_cidr(
+                fake_json_response.ADDRESS2, fake_json_response.NETMASK2),
+            routes=[nm.Route(
+                network_cidr=u"::/0",
+                gateway=fake_json_response.GATEWAY2,
+            )],
+            dns_nameservers=None,
+        )
+        expected = nm.NetworkDetailsV2(
+            links=[
+                link0, link1, link2,
+            ],
+            networks=[
+                network0_v6, network0, network1, network2,
+            ],
+            services=[
+                dns_service0
+            ],
+        )
+        self.assertEqual(expected, v2)

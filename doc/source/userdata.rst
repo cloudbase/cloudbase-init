@@ -99,6 +99,9 @@ The following cloud-config directives are supported:
 
     1. path - Absolute path on disk where the content should be written.
     2. content - The content which will be written in the given file.
+       Instance metadata can be used as template variables.
+       You may refer to https://cloudinit.readthedocs.io/en/latest/explanation/instancedata.html
+       for the example of instance data.
     3. permissions - Integer representing file permissions.
     4. encoding - The encoding of the data in content. Supported encodings
        are: b64, base64 for base64-encoded content, gz,
@@ -133,6 +136,11 @@ The following cloud-config directives are supported:
                    H4sIAGUfoFQC/zMxAgCIsCQyAgAAAA==
                path: C:\gzip
                permissions: '0644'
+           -   path: C:\run\node-config.yaml
+               permissions: '0640'
+               content: |
+                 ---
+                 node_ip: '{{ ds.meta_data.local_ipv4 }}'
 
 * set_timezone - Change the underlying timezone.
 

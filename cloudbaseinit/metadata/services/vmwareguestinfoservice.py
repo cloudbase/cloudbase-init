@@ -27,6 +27,7 @@ from cloudbaseinit import exception
 from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import nocloudservice
 from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils import network
 from cloudbaseinit.utils import serialization
 
 CONF = cloudbaseinit_conf.CONF
@@ -239,3 +240,22 @@ class VMwareGuestInfoService(base.BaseMetadataService):
 
         LOG.debug("network data %s", network)
         return {"network": network}
+
+    def _get_datasource_instance_meta_data(self):
+        """Returns a dictionary with datasource specific instance data
+
+        The instance data structure is based on the cloud-init specifications:
+        https://cloudinit.readthedocs.io/en/latest/explanation/instancedata.html
+
+        Datasource-specific metadata crawled for the specific cloud platform.
+        It should closely represent the structure of the cloud metadata
+        crawled. The structure of content and details provided are entirely
+        cloud-dependent.
+
+        """
+        ds = dict()
+        network_details = self.get_network_details_v2()
+        host_info = network.get_host_info(self.get_host_name(),
+                                          network_details)
+        ds.update(host_info)
+        return ds
