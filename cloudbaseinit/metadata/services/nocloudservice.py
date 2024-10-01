@@ -332,7 +332,7 @@ class NoCloudNetworkConfigV2Parser(object):
                 gateway=gateway)
             routes.append(route)
 
-        nameservers = item.get("nameservers")
+        nameservers = item.get("nameservers", {})
         nameserver_addresses = nameservers.get("addresses", []) \
             if nameservers else []
         searches = nameservers.get("search", [])
