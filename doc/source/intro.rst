@@ -8,7 +8,7 @@ It was designed to initialize and configure guest operating systems under
 `OpenStack <https://www.openstack.org/>`_,
 `OpenNebula <http://opennebula.org/>`_,
 `CloudStack <https://cloudstack.apache.org/>`_,
-`MaaS <https://maas.ubuntu.com/>`_ and many others.
+`MAAS <https://maas.io/>`_ and many others.
 Under `Cloudbase <http://www.cloudbase.it/cloud-init-windows/>`_ page,
 stable and beta installers can be found and the service itself is very easy to
 configure through configuration files. It can also customize instances based
