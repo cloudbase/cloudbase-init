@@ -53,6 +53,7 @@ Capabilities:
     * admin user password
     * post admin user password (only once)
     * user data
+    * kms host
 
 Config options for `openstack` section:
 
@@ -105,6 +106,7 @@ Capabilities:
     * admin user name
     * admin user password
     * user data
+    * kms host
 
 Config options for `config_drive` section:
 

@@ -528,3 +528,26 @@ class TestBaseOpenStackService(unittest.TestCase):
 
         self.assertIsNone(network_details)
         self.assertTrue(mock_log_exception.called)
+
+    @mock.patch(MODPATH +
+                ".BaseOpenStackService._get_meta_data")
+    def _test_get_kms_host(self, mock_get_meta_data, meta_data):
+        mock_get_meta_data.return_value = meta_data
+        response = self._service.get_kms_host()
+        mock_get_meta_data.assert_called_once_with()
+        if meta_data and 'kms_host' in meta_data:
+            self.assertEqual(meta_data['kms_host'], response)
+        elif meta_data and 'kms_host' in meta_data.get('meta'):
+            self.assertEqual(meta_data.get('meta')['kms_host'], response)
+        else:
+            self.assertIsNone(response)
+
+    def test_get_kms_host(self):
+        self._test_get_kms_host(meta_data={'kms_host': 'fake host'})
+
+    def test_get_kms_host_in_meta(self):
+        self._test_get_kms_host(
+            meta_data={'meta': {'kms_host': 'fake host'}})
+
+    def test_get_kms_host_no_pass(self):
+        self._test_get_kms_host(meta_data={})
