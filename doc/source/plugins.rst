@@ -135,6 +135,48 @@ Notes:
       metadata service supports this behaviour.
 
 
+Local static networking (PRE_NETWORKING)
+--------------------------
+
+.. class:: cloudbaseinit.plugins.common.localnetworkconfig.LocalNetworkConfigPlugin
+
+Statically configures each network adapter for which corresponding details
+are loaded from a local file. The details/addresses association is done using
+MAC matching and if this fails, then name or interface index matching.
+The basic setting is based on IPv4 addresses, but it supports IPv6 addresses
+too if they are enabled and exposed to the metadata. The purpose of this plugin
+is to configure network adapters, prior to calling metadata services; which
+is useful when DHCP is not available or your metadata services relies on a
+network without DHCP.
+
+NIC teaming (bonding) is supported and uses `NetLBFO <https://docs.microsoft.com/en-us/windows-server/networking/technologies/nic-teaming/nic-teaming>`_ implementation. VLANs configured directly ontop a network interface will automatically create a single interface NIC team.
+
+This plugin by default will read from the following possible network config files:
+    * /curtin/network.json
+    * /network.json
+    * /network.yaml
+    * /network.cfg
+
+The configuration is expected to be JSON and will be parsed as YAML if the extension is one of:
+    * .yaml
+    * .yml
+    * .cfg
+
+The configuration is expected to follow the NoCloud or MaaS network config format, which an example can be found in :ref:`services#nocloud-configuration-drive`.
+
+Configuring the `cloudbase-init.conf` file, you will want to change the plugin list to disable the DHCP and metadata service based network configuration plugin. For an example:
+
+.. code-block:: ini
+    [DEFAULT]
+    plugins = cloudbaseinit.plugins.common.localnetworkconfig.LocalNetworkConfigPlugin, cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin, cloudbaseinit.plugins.windows.createuser.CreateUserPlugin, cloudbaseinit.plugins.windows.licensing.WindowsLicensingPlugin, cloudbaseinit.plugins.common.sshpublickeys.SetUserSSHPublicKeysPlugin, cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin, cloudbaseinit.plugins.common.userdata.UserDataPlugin, cloudbaseinit.plugins.common.setuserpassword.SetUserPasswordPlugin, cloudbaseinit.plugins.windows.winrmlistener.ConfigWinRMListenerPlugin, cloudbaseinit.plugins.windows.winrmcertificateauth.ConfigWinRMCertificateAuthPlugin, cloudbaseinit.plugins.common.localscripts.LocalScriptsPlugin
+
+If you wish to place the network configuration file in a different location, you may add the following to your configuration file:
+
+.. code-block:: ini
+    [local_network_config]
+    config_path=c:\path\to\network.yaml
+
+
 Static networking (MAIN)
 --------------------------
 
