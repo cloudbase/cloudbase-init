@@ -160,6 +160,10 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
 
     @staticmethod
     def _configure_interfaces_dhcp(config: list, links: list):
+        # Ignore other platforms.
+        if sys.platform != "win32":
+            return
+
         # Loop through each local config item, find its interface name,
         # and enable or disable DHCP.
         for config_item in config:
@@ -200,6 +204,11 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
                 elif subnet_type=="dhcp6":
                     dhcpv6Enabled = True
 
+            # Get the adapters current state, ignoring disabled adapters.
+            adapter = windows.WindowsUtils._get_network_adapter(name)
+            if not adapter.NetEnabled:
+                continue
+
             # Fix the network adapter's DHCP config.
             if dhcpv4Enabled:
                 LOG.debug('Enabling DHCP4 on %s' % name)
@@ -214,6 +223,12 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
             else:
                 LOG.debug('Disabling DHCP6 on %s' % name)
                 windows.WindowsUtils._fix_network_adapter_dhcp(name, False, windows.AF_INET6)
+
+            # If we're disabling DHCP, we should toggle the interface state.
+            # Otherwise, its possible that DHCP already got an address.
+            if not dhcpv4Enabled or not dhcpv6Enabled:
+                adapter.Disable()
+                adapter.Enable()
 
     def execute(self, service, shared_data):
         reboot_required = False
