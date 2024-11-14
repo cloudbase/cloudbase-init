@@ -15,6 +15,7 @@
 import os
 import json
 import yaml
+import sys
 
 from oslo_log import log as oslo_logging
 from oslo_config import cfg
