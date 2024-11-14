@@ -26,6 +26,8 @@ from cloudbaseinit.metadata.services import maasservice
 from cloudbaseinit.models import network as network_model
 from cloudbaseinit.plugins.common import base, networkconfig
 from cloudbaseinit.osutils import windows
+from cloudbaseinit.osutils import factory as osutils_factory
+from cloudbaseinit.utils.windows import wmi_loader
 
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
@@ -93,6 +95,26 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
         return network_data
 
     @staticmethod
+    def _enable_disabled_network_adapters():
+        if sys.platform != "win32":
+            return
+
+        # Find disabled interfaces, and enable them.
+        # If the interfaces are disabled, WMI won't know their MAC address.
+        wmi = wmi_loader.wmi()
+        conn = wmi.WMI(moniker='//./root/cimv2')
+        # Get disabled adapters.
+        wql = 'SELECT * FROM Win32_NetworkAdapter WHERE NetEnabled = False'
+        osutils = osutils_factory.get_os_utils()
+        if osutils.check_os_version(6, 0):
+            wql += ' AND PhysicalAdapter = True'
+        q = conn.query(wql)
+
+        # Loop results, and enable.
+        for r in q:
+            r.Enable()
+
+    @staticmethod
     def _create_bond_for_bondless_vlans(links: list, networks: list):
         # It is possible to have a vlan attached to an individual interface,
         # without a bond being created. The network configuration code requires
@@ -158,6 +180,67 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
                         if net.link==link1.id:
                             networks[index] = net._replace(link=bond_id)
                     break
+
+    @staticmethod
+    def _prepare_and_clean_links(links: list, networks: list):
+        # Get adapters on this system.
+        osutils = osutils_factory.get_os_utils()
+        network_adapters = osutils.get_network_adapters()
+
+        # Keep track of what needs to be removed, we cannot remove links
+        # as we are looping through the list.
+        linksToRemove = []
+
+        # Prepare links.
+        for link in links:
+            # If link type is physical, we need to verify it exists and
+            # ensure its enabled. If it doesn't exist, we should remove it.
+            if link.type == network_model.LINK_TYPE_PHYSICAL:
+                # Find the physical link.
+                foundPhysical = False
+                for adapter in network_adapters:
+                    if adapter[1].lower() == link.mac_address.lower():
+                        foundPhysical = True
+                        break
+
+                # If not found, add to list of links to remove.
+                if not foundPhysical:
+                    LOG.info("The interface '%s' does not have an matching physical adapter, removing." % link.id)
+                    linksToRemove.append(link.id)
+                    continue
+
+            # If link type is bond, and bond interface is already on server.
+            # We need to reset, by removing the bond. Otherwise, we'll
+            # get the error "Multiple network interfaces with MAC address".
+            elif link.type == network_model.LINK_TYPE_BOND:
+                # Find the link in adapter list.
+                foundBond = False
+                for adapter in network_adapters:
+                    if adapter[0]==link.id:
+                        foundBond = True
+                        break
+
+                # Remove the bond if it exists.
+                if foundBond and sys.platform == "win32":
+                    osutils._get_network_team_manager().delete_team(networkconfig.BOND_FORMAT_STR % link.id)
+
+        # Remove links that physical interfaces do not exist for.
+        for link_id in linksToRemove:
+            # Remove all links.
+            for index, link in enumerate(links):
+                if link.id == link_id:
+                    links.pop(index)
+                    break
+
+            # Remove all networks relating to this link.
+            foundNet = True
+            while foundNet:
+                foundNet = False
+                for index, net in enumerate(networks):
+                    if net.link == link_id:
+                        foundNet = True
+                        networks.pop(index)
+                        break
 
     @staticmethod
     def _configure_interfaces_dhcp(config: list, links: list):
@@ -234,6 +317,10 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
     def execute(self, service, shared_data):
         reboot_required = False
 
+        # Enable disabled adapters to ensure all adapters are available
+        # to configure.
+        self._enable_disabled_network_adapters()
+
         # Parse the network config file.
         network_data = self._get_network_data()
         if network_data is None:
@@ -268,6 +355,9 @@ class LocalNetworkConfigPlugin(base.BasePlugin):
         # Interfaces that are on a bond in MaaS does not have subnets which ends up going disabled.
         # We need to re-enable the interfaces, so that the bond can be created ontop of it.
         maasservice.MaaSHttpService._enable_bond_physical_links(links)
+
+        # Cleanup the link and network list, to ensure we do not have stray networks.
+        self._prepare_and_clean_links(links, networks)
 
         # Create a network details version 2 model for processing.
         network_details = network_model.NetworkDetailsV2(
