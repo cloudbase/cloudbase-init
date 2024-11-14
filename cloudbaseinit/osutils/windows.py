@@ -981,6 +981,8 @@ class WindowsUtils(base.BaseOSUtils):
             adapter.Disable()
 
     @staticmethod
+    @retry_decorator.retry_decorator(max_retry_count=10,
+                                     max_sleep_time=10)
     def _set_static_network_config(name, address, prefix_len, gateway):
         if netaddr.valid_ipv6(address):
             family = AF_INET6
@@ -1011,29 +1013,9 @@ class WindowsUtils(base.BaseOSUtils):
                 {"route": existing_route.DestinationPrefix, "name": name})
             existing_route.Delete_()
 
-        # If an adapter was created recently, we may run into a race condition
-        # and the dhcp disable state may not have been applied.
-        # This re-try loop tries to allow windows the time to finish its interface
-        # configurations.
-        tries = 0
-        success = False
-        while tries<10:
-            try:
-                conn.MSFT_NetIPAddress.create(
-                    AddressFamily=family, InterfaceAlias=name, IPAddress=address,
-                    PrefixLength=prefix_len, DefaultGateway=gateway)
-                success = True
-                break
-            except:
-                time.sleep(2)
-                tries += 1
-
-        # If the last try wasn't successful, give it one last try without the try/catch.
-        # This will allow the error to be logged, if the issue isn't the same.
-        if not success:
-            conn.MSFT_NetIPAddress.create(
-                AddressFamily=family, InterfaceAlias=name, IPAddress=address,
-                PrefixLength=prefix_len, DefaultGateway=gateway)
+        conn.MSFT_NetIPAddress.create(
+            AddressFamily=family, InterfaceAlias=name, IPAddress=address,
+            PrefixLength=prefix_len, DefaultGateway=gateway)
 
     def set_static_network_config(self, name, address, prefix_len_or_netmask,
                                   gateway, dnsnameservers):
