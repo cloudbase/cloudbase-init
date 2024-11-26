@@ -297,7 +297,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
     def test_execute_missing_gateway(self):
         self._test_execute_missing_smth(gateway=True)
 
-    def _get_network_details_v2(self):
+    def _get_network_details_v2(self, dns1, dns3):
         links = []
         link1 = network_model.Link(
             id=mock.sentinel.link_id1,
@@ -359,7 +359,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
 
         services = []
         service1 = network_model.NameServerService(
-            addresses=[mock.sentinel.dns1, mock.sentinel.dns3],
+            addresses=[dns1, dns3],
             search=mock.sentinel.dns_search1)
         services.append(service1)
 
@@ -377,19 +377,25 @@ class TestNetworkConfigPlugin(unittest.TestCase):
         mock.sentinel.network_cidr2 = u"172.16.0.0/16"
         mock.sentinel.gateway2 = u"172.16.1.1"
         mock.sentinel.address_cidr1 = u"10.0.0.1/24"
-        mock.sentinel.dns1 = "10.0.0.1"
+        dns1 = "10.0.0.1"
+        dns3 = "10.0.0.3"
+        dns3_ipv6 = "2001:db8::3"
+        dns3_ipv6_v2 = "2001:db8::4"
+        mock.sentinel.dns1 = dns1
         mock.sentinel.dns2 = "10.0.0.2"
         mock.sentinel.network_dns_list1 = []
 
         if empty_network_dns_list:
-            mock.sentinel.dns3 = "10.0.0.3"
+            mock.sentinel.dns3 = dns3
             expected_dns_list = [mock.sentinel.dns1, mock.sentinel.dns3]
         elif both_ipv4_dns_list:
-            mock.sentinel.dns3 = "2001:db8::3"
+            mock.sentinel.dns3 = dns3_ipv6
             expected_dns_list = [mock.sentinel.dns1]
+            dns3 = dns3_ipv6
         elif both_ipv6_dns_list:
             mock.sentinel.address_cidr1 = u"2001:db8::3/24"
-            mock.sentinel.dns3 = "2001:db8::4"
+            mock.sentinel.dns3 = dns3_ipv6_v2
+            dns3 = dns3_ipv6_v2
             expected_dns_list = [mock.sentinel.dns3]
         else:
             mock.sentinel.network_dns_list1 = [
@@ -397,7 +403,7 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             expected_dns_list = mock.sentinel.network_dns_list1
 
         service = mock.Mock()
-        network_details = self._get_network_details_v2()
+        network_details = self._get_network_details_v2(dns1, dns3)
         service.get_network_details_v2.return_value = network_details
 
         mock_os_utils = mock.Mock()
