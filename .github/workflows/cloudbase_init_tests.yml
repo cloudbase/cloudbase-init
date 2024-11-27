@@ -36,7 +36,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ "3.8", "3.12"]
+        python-version: [ "3.9", "3.12"]
         architecture: ["x64", "x86"]
 
     steps:
