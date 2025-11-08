@@ -34,6 +34,9 @@ class NoCloudOptions(conf_base.Options):
                 "userdata_file", default="user-data",
                 help="The file name where the service looks for"
                      "userdata"),
+            cfg.StrOpt(
+                "drive_label", default="cidata",
+                help="The path the service looks for metadata"),
         ]
 
     def register(self):
