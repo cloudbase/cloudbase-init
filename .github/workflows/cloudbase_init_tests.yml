@@ -98,3 +98,11 @@ jobs:
             exit 1
         }
         Invoke-Pester test-resources/functional-tests -Output Detailed -FullNameFilter TestVerifyAfterAllPlugins
+    - name: Audit Cloudbase-Init pip packages
+      shell: powershell
+      run: |
+        python -W ignore -m pip install pip-audit
+        pip-audit.exe
+        if ($LASTEXITCODE) {
+            exit 1
+        }
