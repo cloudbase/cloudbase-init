@@ -16,6 +16,7 @@
 CD_TYPES = {
     "vfat",    # Visible device (with partition table).
     "iso",     # "Raw" format containing ISO bytes.
+    "local",   # Cloud-drive is just a local folder
 }
 CD_LOCATIONS = {
     # Look into optical devices. Only an ISO format could be
@@ -27,6 +28,7 @@ CD_LOCATIONS = {
     # Search through partitions for raw ISO content or through volumes
     # containing configuration drive's content.
     "partition",
+    "local",   # Cloud-drive is just a local folder
 }
 
 POLICY_IGNORE_ALL_FAILURES = "ignoreallfailures"
