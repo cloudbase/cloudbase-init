@@ -171,7 +171,7 @@ reno===4.1.0
 ncclient===0.6.19
 imagesize===1.4.1
 pydot===4.0.1
-urllib3===2.6.0
+urllib3===2.6.3
 graphviz===0.21
 PyKMIP===0.10.0
 python-observabilityclient===1.2.0
