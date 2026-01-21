@@ -800,6 +800,8 @@ class WindowsUtils(base.BaseOSUtils):
                 'w32tm failed to configure NTP.\nOutput: %(out)s\nError:'
                 ' %(err)s' % {'out': out, 'err': err})
 
+    @retry_decorator.retry_decorator(
+        max_retry_count=30, exceptions=exception.ItemNotFoundException)
     def get_network_adapter_name_by_mac_address(self, mac_address):
         iface_index_list = [
             net_addr for net_addr
