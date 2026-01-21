@@ -659,7 +659,7 @@ class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):
 
     def __init__(self):
         super(NoCloudConfigDriveService, self).__init__(
-            'cidata', CONF.nocloud.metadata_file,
+            CONF.nocloud.drive_label, CONF.nocloud.metadata_file,
             CONF.nocloud.userdata_file)
         self._meta_data = {}
 
