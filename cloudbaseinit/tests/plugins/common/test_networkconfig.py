@@ -473,3 +473,96 @@ class TestNetworkConfigPlugin(unittest.TestCase):
 
     def test_execute_network_details_v2_ipv6_dns_list(self):
         self._test_execute_network_details_v2(both_ipv6_dns_list=True)
+
+    @mock.patch("cloudbaseinit.osutils.factory.get_os_utils")
+    def test_execute_network_details_v2_no_rename_without_set_name(
+            self, mock_get_os_utils):
+        """When link.id == link.name (no set-name), skip adapter rename."""
+        link1 = network_model.Link(
+            id="eth0",
+            name="eth0",
+            type=network_model.LINK_TYPE_PHYSICAL,
+            enabled=True,
+            mac_address=u"00:00:00:00:00:01",
+            mtu=1500,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None)
+
+        route1 = network_model.Route(
+            network_cidr=u"0.0.0.0/0",
+            gateway=u"10.0.0.254")
+
+        network1 = network_model.Network(
+            link="eth0",
+            address_cidr=u"10.0.0.1/24",
+            dns_nameservers=["10.0.0.1"],
+            routes=[route1])
+
+        network_details = network_model.NetworkDetailsV2(
+            links=[link1],
+            networks=[network1],
+            services=[])
+
+        service = mock.Mock()
+        service.get_network_details_v2.return_value = network_details
+
+        mock_os_utils = mock.Mock()
+        mock_get_os_utils.return_value = mock_os_utils
+        mock_os_utils.get_network_adapter_name_by_mac_address.return_value = \
+            "Ethernet 3"
+
+        plugin = networkconfig.NetworkConfigPlugin()
+        plugin.execute(service, {})
+
+        # Should NOT rename when link.id == link.name (no set-name)
+        mock_os_utils.rename_network_adapter.assert_not_called()
+
+        # Should use actual adapter name for all operations
+        mock_os_utils.enable_network_adapter.assert_called_once_with(
+            "Ethernet 3", True)
+        mock_os_utils.set_network_adapter_mtu.assert_called_once_with(
+            "Ethernet 3", 1500)
+        mock_os_utils.set_static_network_config.assert_called_once_with(
+            "Ethernet 3", "10.0.0.1", "24", "10.0.0.254", ["10.0.0.1"])
+
+    @mock.patch("cloudbaseinit.osutils.factory.get_os_utils")
+    def test_execute_network_details_v2_rename_with_set_name(
+            self, mock_get_os_utils):
+        """When link.id != link.name (set-name used), rename adapter."""
+        link1 = network_model.Link(
+            id="eth0",
+            name="my-nic",
+            type=network_model.LINK_TYPE_PHYSICAL,
+            enabled=True,
+            mac_address=u"00:00:00:00:00:01",
+            mtu=None,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None)
+
+        network1 = network_model.Network(
+            link="my-nic",
+            address_cidr=u"10.0.0.1/24",
+            dns_nameservers=["10.0.0.1"],
+            routes=[])
+
+        network_details = network_model.NetworkDetailsV2(
+            links=[link1],
+            networks=[network1],
+            services=[])
+
+        service = mock.Mock()
+        service.get_network_details_v2.return_value = network_details
+
+        mock_os_utils = mock.Mock()
+        mock_get_os_utils.return_value = mock_os_utils
+        mock_os_utils.get_network_adapter_name_by_mac_address.return_value = \
+            "Ethernet"
+
+        plugin = networkconfig.NetworkConfigPlugin()
+        plugin.execute(service, {})
+
+        # Should rename when link.id != link.name (set-name was used)
+        mock_os_utils.rename_network_adapter.assert_called_once_with(
+            "Ethernet", "my-nic")
