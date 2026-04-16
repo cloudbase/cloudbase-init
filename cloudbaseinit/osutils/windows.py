@@ -789,9 +789,9 @@ class WindowsUtils(base.BaseOSUtils):
 
         # Convert the NTP hosts list to a string, in order to pass
         # it to w32tm.
-        ntp_hosts = ",".join(ntp_hosts)
+        ntp_hosts = " ".join(ntp_hosts)
 
-        args = [w32tm_path, '/config', '/manualpeerlist:%s' % ntp_hosts,
+        args = [w32tm_path, '/config', '/manualpeerlist:"%s"' % ntp_hosts,
                 '/syncfromflags:manual', '/update']
 
         (out, err, ret_val) = self.execute_process(args, shell=False)
