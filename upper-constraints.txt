@@ -175,7 +175,7 @@ mock===5.2.0
 PyYAML===6.0.3
 beautifulsoup4===4.14.3
 ovs===3.7.1
-cryptography===46.0.6
+cryptography===46.0.7
 httpcore===1.0.9
 URLObject===3.0.0
 psycopg2-binary===2.9.11
