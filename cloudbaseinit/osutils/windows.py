@@ -1020,7 +1020,29 @@ class WindowsUtils(base.BaseOSUtils):
 
         conn.MSFT_NetIPAddress.create(
             AddressFamily=family, InterfaceAlias=name, IPAddress=address,
-            PrefixLength=prefix_len, DefaultGateway=gateway)
+            PrefixLength=prefix_len)
+
+        if gateway:
+            gw_is_v4 = netaddr.valid_ipv4(gateway)
+            gw_is_v6 = netaddr.valid_ipv6(gateway)
+            addr_is_v4 = (family == AF_INET)
+
+            if (gw_is_v4 and addr_is_v4) or (gw_is_v6 and not addr_is_v4):
+                gw_prefix_len = "32" if gw_is_v4 else "128"
+                defroute = "0.0.0.0/0" if gw_is_v4 else "::/0"
+
+                # Create on-link route to the gateway so it is reachable
+                # even when it is outside the address subnet (e.g. /32).
+                try:
+                    conn.MSFT_NetRoute.create(
+                        AddressFamily=family, InterfaceAlias=name,
+                        DestinationPrefix="%s/%s" % (gateway, gw_prefix_len))
+                except Exception:
+                    pass
+
+                conn.MSFT_NetRoute.create(
+                    AddressFamily=family, InterfaceAlias=name,
+                    DestinationPrefix=defroute, NextHop=gateway)
 
     def set_static_network_config(self, name, address, prefix_len_or_netmask,
                                   gateway, dnsnameservers):
