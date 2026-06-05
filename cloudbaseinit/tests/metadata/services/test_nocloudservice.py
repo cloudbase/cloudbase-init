@@ -516,6 +516,19 @@ class TestNoCloudConfigDriveService(unittest.TestCase):
         result = self._config_drive.get_public_keys()
         self.assertEqual(result, expected_result)
 
+    @mock.patch(MODULE_PATH + '.NoCloudConfigDriveService._get_meta_data')
+    def test_get_public_keys_dict_of_strings(self, mock_get_metadata):
+        fake_key0 = 'ssh-rsa AAAA0 user0@host'
+        fake_key1 = 'ssh-rsa AAAA1 user1@host'
+        mock_get_metadata.return_value = {
+            'public-keys': {
+                'key0': fake_key0,
+                'key1': fake_key1,
+            }
+        }
+        result = sorted(self._config_drive.get_public_keys())
+        self.assertEqual(result, sorted([fake_key0, fake_key1]))
+
     @ddt.data(('', ('V2 network metadata is empty', None)),
               ('1', ('V2 network metadata is not a dictionary', None)),
               ('{}', ('V2 network metadata is empty', None)),
