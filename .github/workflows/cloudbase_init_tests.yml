@@ -62,7 +62,7 @@ jobs:
       matrix:
         python-version: [ "3.14"]
         architecture: ["x64", "x86"]
-        cloud: ["empty", "nocloud", "vmwareguest"]
+        cloud: ["empty", "nocloud", "vmwareguest", "oracle"]
 
     steps:
     - name: Checkout cloudbase-init repository
