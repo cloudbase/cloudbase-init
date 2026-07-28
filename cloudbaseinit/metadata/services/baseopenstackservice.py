@@ -308,3 +308,16 @@ class BaseOpenStackService(base.BaseMetadataService):
                 LOG.debug("user_data metadata not present")
 
         return list(set((cert.strip() for cert in certs)))
+
+    def get_kms_host(self):
+        meta_data = self._get_meta_data()
+        meta = meta_data.get("meta")
+
+        if meta and "kms_host" in meta:
+            kms_host = meta["kms_host"]
+        elif "kms_host" in meta_data:
+            kms_host = meta_data["kms_host"]
+        else:
+            kms_host = None
+
+        return kms_host

@@ -1,7 +1,7 @@
 name: Cloudbase-Init tests
 
 env:
-  UPPER_CONSTRAINTS: "https://git.openstack.org/cgit/openstack/requirements/plain/upper-constraints.txt"
+  UPPER_CONSTRAINTS: "upper-constraints.txt"
   TEST_RESOURCES: "https://github.com/cloudbase/cloudbase-init-test-resources"
   TEST_RESOURCES_BRANCH: "master"
 
@@ -9,11 +9,11 @@ on: [push, pull_request]
 
 jobs:
   linux-unit-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.12"]
+        python-version: [ "3.14"]
         architecture: ["x64"]
 
     steps:
@@ -36,8 +36,8 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ "3.9", "3.12"]
-        architecture: ["x64", "x86"]
+        python-version: [ "3.14"]
+        architecture: ["x64"]
 
     steps:
     - name: Checkout cloudbase-init repository
@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.12"]
+        python-version: [ "3.14"]
         architecture: ["x64", "x86"]
         cloud: ["empty", "nocloud", "vmwareguest"]
 
@@ -98,3 +98,11 @@ jobs:
             exit 1
         }
         Invoke-Pester test-resources/functional-tests -Output Detailed -FullNameFilter TestVerifyAfterAllPlugins
+    - name: Audit Cloudbase-Init pip packages
+      shell: powershell
+      run: |
+        python -W ignore -m pip install pip-audit
+        pip-audit.exe
+        if ($LASTEXITCODE) {
+            exit 1
+        }

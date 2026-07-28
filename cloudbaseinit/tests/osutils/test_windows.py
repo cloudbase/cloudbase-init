@@ -2073,7 +2073,7 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         mock_get_system32_dir.return_value = fake_base_dir
 
         args = [w32tm_path, '/config',
-                '/manualpeerlist:%s' % ",".join(ntp_hosts),
+                '/manualpeerlist:"%s"' % " ".join(ntp_hosts),
                 '/syncfromflags:manual', '/update']
 
         if ret_val:
