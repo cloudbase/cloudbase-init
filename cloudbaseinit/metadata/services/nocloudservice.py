@@ -662,6 +662,7 @@ class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):
             'cidata', CONF.nocloud.metadata_file,
             CONF.nocloud.userdata_file)
         self._meta_data = {}
+        self._network_file = CONF.nocloud.network_file
 
     def get_user_data(self):
         return self._get_cache_data(self._userdata_file)
@@ -706,7 +707,7 @@ class NoCloudConfigDriveService(baseconfigdrive.BaseConfigDriveService):
 
     def get_network_details_v2(self):
         try:
-            raw_network_data = self._get_cache_data("network-config",
+            raw_network_data = self._get_cache_data(self._network_file,
                                                     decode=True)
             network_data = serialization.parse_json_yaml(raw_network_data)
             if not network_data:
