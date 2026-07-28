@@ -34,6 +34,9 @@ class NoCloudOptions(conf_base.Options):
                 "userdata_file", default="user-data",
                 help="The file name where the service looks for"
                      "userdata"),
+            cfg.StrOpt("network_file", default="network-config",
+                help="The file name where the service looks for"
+                     "network configuration"),
         ]
 
     def register(self):
