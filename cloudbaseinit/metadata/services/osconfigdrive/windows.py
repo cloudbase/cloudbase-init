@@ -182,6 +182,12 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
                 return True
         return False
 
+    def _get_config_drive_from_local(self, drive_label, metadata_file):
+        os.rmdir(self.target_path)
+        shutil.copytree(drive_label, self.target_path)
+        return True
+
+
     def _get_config_drive_from_volume(self, drive_label, metadata_file):
         """Look through all the volumes for config drive."""
         volumes = self._osutils.get_volumes()
@@ -231,6 +237,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
     @property
     def config_drive_type_location(self):
         return {
+            "local_local": self._get_config_drive_from_local,
             "cdrom_iso": self._get_config_drive_from_cdrom_drive,
             "hdd_iso": self._get_config_drive_from_raw_hdd,
             "hdd_vfat": self._get_config_drive_from_vfat,
