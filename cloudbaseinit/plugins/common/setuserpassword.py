@@ -84,6 +84,14 @@ class SetUserPasswordPlugin(base.BasePlugin):
                 CONF.user_password_length)
 
         osutils.set_user_password(user_name, password)
+        if injected:
+            service.confirm_admin_password(password)
+        elif service.can_update_password:
+            # Consume metadata password even when not injected, to avoid
+            # resetting the guest password on every boot.
+            metadata_password = service.get_admin_password()
+            if metadata_password:
+                service.confirm_admin_password(metadata_password)
         self._change_logon_behaviour(user_name, password_injected=injected)
         return password
 
