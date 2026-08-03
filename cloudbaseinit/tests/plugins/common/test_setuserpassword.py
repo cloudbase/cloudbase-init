@@ -189,10 +189,11 @@ class SetUserPasswordPluginTests(unittest.TestCase):
             elif can_update_password:
                 mock_service.get_admin_password.assert_called_once_with()
                 if metadata_password:
-                    mock_service.confirm_admin_password.assert_called_once_with(
-                        metadata_password)
+                    (mock_service.confirm_admin_password.
+                     assert_called_once_with(metadata_password))
                 else:
-                    self.assertFalse(mock_service.confirm_admin_password.called)
+                    self.assertFalse(
+                        mock_service.confirm_admin_password.called)
             else:
                 self.assertFalse(mock_service.confirm_admin_password.called)
                 self.assertFalse(mock_service.get_admin_password.called)
