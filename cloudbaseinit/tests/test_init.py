@@ -89,32 +89,6 @@ class TestInitManager(unittest.TestCase):
         self.osutils.set_config_value.assert_called_once_with(
             'fake plugin', 'status', mock_get_plugins_section())
 
-    @mock.patch('cloudbaseinit.init.InitManager._get_plugin_status')
-    @mock.patch('cloudbaseinit.init.InitManager._set_plugin_status')
-    def _test_exec_plugin(self, status, mock_set_plugin_status,
-                          mock_get_plugin_status):
-        fake_name = 'fake name'
-        self.plugin.get_name.return_value = fake_name
-        self.plugin.execute.return_value = (status, True)
-        mock_get_plugin_status.return_value = status
-
-        response = self._init._exec_plugin(osutils=self.osutils,
-                                           service='fake service',
-                                           plugin=self.plugin,
-                                           instance_id='fake id',
-                                           shared_data='shared data')
-
-        mock_get_plugin_status.assert_called_once_with(self.osutils,
-                                                       'fake id',
-                                                       fake_name)
-        if status is base.PLUGIN_EXECUTE_ON_NEXT_BOOT:
-            self.plugin.execute.assert_called_once_with('fake service',
-                                                        'shared data')
-            mock_set_plugin_status.assert_called_once_with(self.osutils,
-                                                           'fake id',
-                                                           fake_name, status)
-            self.assertTrue(response)
-
     def test_exec_plugin_exception_occurs(self):
         fake_name = 'fake name'
         mock_plugin = mock.MagicMock()
@@ -130,11 +104,58 @@ class TestInitManager(unittest.TestCase):
                                     shared_data='shared data')
         self.assertEqual(expected_logging, snatcher.output[:2])
 
+    @mock.patch('cloudbaseinit.init.InitManager._get_plugin_status')
+    @mock.patch('cloudbaseinit.init.InitManager._set_plugin_status')
+    def _test_exec_plugin(self, status, expected_log,
+                          patched_per_boot_configs,
+                          mock_set_plugin_status,
+                          mock_get_plugin_status):
+        fake_name = 'fake name'
+        self.plugin.get_name.return_value = fake_name
+        self.plugin.execute.return_value = (status, True)
+        self.plugin.__class__.__module__ = fake_name
+        self.plugin.__class__.__qualname__ = fake_name
+        mock_get_plugin_status.return_value = status
+
+        with testutils.ConfPatcher("plugins_per_boot",
+                                   patched_per_boot_configs):
+            with testutils.LogSnatcher('cloudbaseinit.init') as snatcher:
+                response = self._init._exec_plugin(osutils=self.osutils,
+                                                   service='fake service',
+                                                   plugin=self.plugin,
+                                                   instance_id='fake id',
+                                                   shared_data='shared data')
+        self.assertEqual(expected_log, snatcher.output[:2])
+
+        mock_get_plugin_status.assert_called_once_with(self.osutils,
+                                                       'fake id',
+                                                       fake_name)
+        if status is base.PLUGIN_EXECUTE_ON_NEXT_BOOT:
+            self.plugin.execute.assert_called_once_with('fake service',
+                                                        'shared data')
+            mock_set_plugin_status.assert_called_once_with(self.osutils,
+                                                           'fake id',
+                                                           fake_name, status)
+            self.assertTrue(response)
+
+    def test_exec_plugin_execution_done_but_per_boot(self):
+        expected_logging = [
+            "Plugin 'fake name' was executed in a previous run",
+            "Plugin 'fake name' is configured to run at every boot"]
+        self._test_exec_plugin(base.PLUGIN_EXECUTION_DONE,
+                               expected_logging, ["fake name.fake name"])
+
     def test_exec_plugin_execution_done(self):
-        self._test_exec_plugin(base.PLUGIN_EXECUTION_DONE)
+        expected_logging = [
+            "Plugin 'fake name' was executed in a previous run",
+            "Plugin 'fake name' execution already done, skipping"]
+        self._test_exec_plugin(base.PLUGIN_EXECUTION_DONE,
+                               expected_logging, [])
 
     def test_exec_plugin(self):
-        self._test_exec_plugin(base.PLUGIN_EXECUTE_ON_NEXT_BOOT)
+        expected_logging = ["Executing plugin 'fake name'"]
+        self._test_exec_plugin(base.PLUGIN_EXECUTE_ON_NEXT_BOOT,
+                               expected_logging, [])
 
     def _test_check_plugin_os_requirements(self, requirements):
         sys.platform = 'win32'

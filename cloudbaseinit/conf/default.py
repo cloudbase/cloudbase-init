@@ -205,6 +205,12 @@ class GlobalOptions(conf_base.Options):
                 help='List of enabled plugin classes, '
                      'to be executed in the provided order'),
             cfg.ListOpt(
+                'plugins_per_boot',
+                default=[],
+                help='List of enabled plugin classes, '
+                     'to be executed on every boot.'
+                     'This list should be a subset of the enabled plugins'),
+            cfg.ListOpt(
                 'user_data_plugins',
                 default=[
                     'cloudbaseinit.plugins.common.userdataplugins.parthandler.'

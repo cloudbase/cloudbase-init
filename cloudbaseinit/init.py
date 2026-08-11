@@ -51,13 +51,28 @@ class InitManager(object):
 
     def _exec_plugin(self, osutils, service, plugin, instance_id, shared_data):
         plugin_name = plugin.get_name()
+        module_name = plugin.__class__.__module__
+        class_name = plugin.__class__.__qualname__
+        plugin_fqdn = "%s.%s" % (module_name, class_name)
 
+        execute_plugin = True
         reboot_required = None
         success = True
         status = None
         if instance_id is not None:
             status = self._get_plugin_status(osutils, instance_id, plugin_name)
+
         if status == plugins_base.PLUGIN_EXECUTION_DONE:
+            LOG.debug('Plugin \'%s\' was executed in a previous run',
+                      plugin_name)
+            execute_plugin = False
+
+        if plugin_fqdn in CONF.plugins_per_boot:
+            LOG.debug('Plugin \'%s\' is configured to run at every boot',
+                      plugin_name)
+            execute_plugin = True
+
+        if not execute_plugin:
             LOG.debug('Plugin \'%s\' execution already done, skipping',
                       plugin_name)
         else:
