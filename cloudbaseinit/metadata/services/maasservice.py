@@ -74,7 +74,7 @@ class MaaSHttpService(base.BaseHTTPMetadataService):
         super(MaaSHttpService, self).load()
 
         if not CONF.maas.metadata_base_url:
-            LOG.debug('MaaS metadata url not set')
+            LOG.debug('MAAS metadata url not set')
         else:
             try:
                 self._get_cache_data('%s/meta-data/' % self._metadata_version)
