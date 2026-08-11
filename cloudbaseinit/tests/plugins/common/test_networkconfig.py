@@ -458,9 +458,14 @@ class TestNetworkConfigPlugin(unittest.TestCase):
             any_order=False)
 
         ip_address, prefix_len = mock.sentinel.address_cidr1.split("/")
+        # When address is IPv6 but gateway is IPv4-only, gateway should
+        # be None because the address family filter excludes it.
+        expected_gateway = mock.sentinel.gateway1
+        if ":" in ip_address:
+            expected_gateway = None
         mock_os_utils.set_static_network_config.assert_called_once_with(
             mock.sentinel.link_id1, ip_address, prefix_len,
-            mock.sentinel.gateway1, expected_dns_list)
+            expected_gateway, expected_dns_list)
 
     def test_execute_network_details_v2(self):
         self._test_execute_network_details_v2()
@@ -473,3 +478,61 @@ class TestNetworkConfigPlugin(unittest.TestCase):
 
     def test_execute_network_details_v2_ipv6_dns_list(self):
         self._test_execute_network_details_v2(both_ipv6_dns_list=True)
+
+    @mock.patch("cloudbaseinit.osutils.factory.get_os_utils")
+    def test_execute_network_details_v2_dual_stack_gateways(
+            self, mock_get_os_utils):
+        """IPv4 address gets IPv4 gateway, IPv6 address gets IPv6 gateway."""
+        link1 = network_model.Link(
+            id="eth0",
+            name="eth0",
+            type=network_model.LINK_TYPE_PHYSICAL,
+            enabled=True,
+            mac_address=u"00:00:00:00:00:01",
+            mtu=None,
+            bond=None,
+            vlan_link=None,
+            vlan_id=None)
+
+        route_v4 = network_model.Route(
+            network_cidr=u"0.0.0.0/0",
+            gateway=u"169.254.0.1")
+        route_v6 = network_model.Route(
+            network_cidr=u"::/0",
+            gateway=u"fe80::1")
+
+        network_v4 = network_model.Network(
+            link="eth0",
+            address_cidr=u"10.0.0.1/32",
+            dns_nameservers=["1.1.1.1"],
+            routes=[route_v4, route_v6])
+        network_v6 = network_model.Network(
+            link="eth0",
+            address_cidr=u"2001:db8::1/96",
+            dns_nameservers=["1.1.1.1"],
+            routes=[route_v4, route_v6])
+
+        network_details = network_model.NetworkDetailsV2(
+            links=[link1],
+            networks=[network_v4, network_v6],
+            services=[])
+
+        service = mock.Mock()
+        service.get_network_details_v2.return_value = network_details
+
+        mock_os_utils = mock.Mock()
+        mock_get_os_utils.return_value = mock_os_utils
+        mock_os_utils.get_network_adapter_name_by_mac_address.return_value = \
+            "eth0"
+
+        plugin = networkconfig.NetworkConfigPlugin()
+        plugin.execute(service, {})
+
+        calls = mock_os_utils.set_static_network_config.call_args_list
+        self.assertEqual(len(calls), 2)
+        # IPv4 address should get IPv4 gateway
+        self.assertEqual(calls[0], mock.call(
+            "eth0", "10.0.0.1", "32", "169.254.0.1", ["1.1.1.1"]))
+        # IPv6 address should get IPv6 gateway
+        self.assertEqual(calls[1], mock.call(
+            "eth0", "2001:db8::1", "96", "fe80::1", ["1.1.1.1"]))

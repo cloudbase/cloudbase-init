@@ -263,9 +263,13 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
             ip_address, prefix_len = net.address_cidr.split("/")
 
             gateway = None
+            is_ipv6 = netaddr.valid_ipv6(ip_address)
+            expected_version = 6 if is_ipv6 else 4
             default_gw_route = [
                 r for r in net.routes if
-                netaddr.IPNetwork(r.network_cidr).prefixlen == 0]
+                netaddr.IPNetwork(r.network_cidr).prefixlen == 0 and
+                netaddr.IPNetwork(r.network_cidr).version ==
+                expected_version]
             if default_gw_route:
                 gateway = default_gw_route[0].gateway
 
