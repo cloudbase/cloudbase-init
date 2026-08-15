@@ -290,7 +290,7 @@ class CloudStackTest(unittest.TestCase):
 
         self.assertEqual(mock.sentinel.password, password)
         self.assertEqual(1, mock_get_password.call_count)
-        self.assertEqual(1, mock_delete_password.call_count)
+        self.assertFalse(mock_delete_password.called)
 
     @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack.'
                 '_delete_password')
@@ -302,7 +302,19 @@ class CloudStackTest(unittest.TestCase):
 
         self.assertIsNone(self._service.get_admin_password())
         self.assertEqual(1, mock_get_password.call_count)
-        self.assertEqual(0, mock_delete_password.call_count)
+        self.assertFalse(mock_delete_password.called)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack.'
+                '_delete_password')
+    def test_confirm_admin_password(self, mock_delete_password):
+        self._service.confirm_admin_password(mock.sentinel.password)
+        mock_delete_password.assert_called_once_with()
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.CloudStack.'
+                '_delete_password')
+    def test_confirm_admin_password_none(self, mock_delete_password):
+        self._service.confirm_admin_password(None)
+        self.assertFalse(mock_delete_password.called)
 
     def test_can_update_password(self):
         self.assertTrue(self._service.can_update_password)
@@ -312,3 +324,132 @@ class CloudStackTest(unittest.TestCase):
     def test_is_password_changed(self, mock_get_password):
         mock_get_password.return_value = True
         self.assertTrue(self._service.is_password_changed())
+
+
+class CloudStackConfigDriveTest(unittest.TestCase):
+
+    def setUp(self):
+        self._service = cloudstack.ConfigDrive()
+
+    def test_init_uses_cloudstack_marker(self):
+        self.assertEqual('config-2', self._service._drive_label)
+        self.assertEqual('cloudstack\\metadata\\instance-id.txt',
+                         self._service._metadata_file)
+
+    def test_preprocess_options(self):
+        self._service._preprocess_options()
+        self.assertEqual(set(['iso']), self._service._searched_types)
+        self.assertEqual(set(['cdrom']), self._service._searched_locations)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_cache_data')
+    def test_get_instance_id(self, mock_get_cache_data):
+        mock_get_cache_data.return_value = 'i-123\r\n'
+
+        self.assertEqual('i-123', self._service.get_instance_id())
+        mock_get_cache_data.assert_called_once_with(
+            'cloudstack/metadata/instance-id.txt', decode=True)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_cache_data')
+    def test_get_password(self, mock_get_cache_data):
+        mock_get_cache_data.return_value = 's3cret\r\n'
+
+        self.assertEqual('s3cret', self._service._get_password())
+        mock_get_cache_data.assert_called_once_with(
+            'cloudstack/password/vm_password.txt', decode=True)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_cache_data')
+    def test_get_password_sentinels(self, mock_get_cache_data):
+        for value in ('', '  ', cloudstack.SAVED_PASSWORD,
+                      cloudstack.SAVED_PASSWORD + '\r\n'):
+            mock_get_cache_data.return_value = value
+            self.assertIsNone(self._service._get_password())
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_cache_data')
+    def test_get_password_missing(self, mock_get_cache_data):
+        mock_get_cache_data.side_effect = base.NotExistingMetadataException()
+        self.assertIsNone(self._service._get_password())
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_persist_password_hash')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_password')
+    def test_get_admin_password(self, mock_get_password, mock_persist):
+        mock_get_password.return_value = 's3cret'
+
+        self.assertEqual('s3cret', self._service.get_admin_password())
+        self.assertFalse(mock_persist.called)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_persist_password_hash')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_password')
+    def test_get_admin_password_none(self, mock_get_password, mock_persist):
+        mock_get_password.return_value = None
+
+        self.assertIsNone(self._service.get_admin_password())
+        self.assertFalse(mock_persist.called)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_persist_password_hash')
+    def test_confirm_admin_password(self, mock_persist):
+        self._service.confirm_admin_password('s3cret')
+        mock_persist.assert_called_once_with('s3cret')
+
+    def test_can_update_password(self):
+        self.assertTrue(self._service.can_update_password)
+
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                'get_instance_id')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_password')
+    def test_is_password_changed(self, mock_get_password, mock_instance_id,
+                                 mock_get_os_utils):
+        mock_get_password.return_value = 's3cret'
+        mock_instance_id.return_value = 'i-1'
+        mock_osutils = mock_get_os_utils.return_value
+        mock_osutils.get_config_value.return_value = None
+
+        self.assertTrue(self._service.is_password_changed())
+        mock_osutils.get_config_value.assert_called_once_with(
+            'PasswordHash', 'i-1')
+        self.assertFalse(mock_osutils.set_config_value.called)
+
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                'get_instance_id')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_password')
+    def test_is_password_changed_same_hash(self, mock_get_password,
+                                           mock_instance_id,
+                                           mock_get_os_utils):
+        password = 's3cret'
+        mock_get_password.return_value = password
+        mock_instance_id.return_value = 'i-1'
+        mock_osutils = mock_get_os_utils.return_value
+        mock_osutils.get_config_value.return_value = (
+            self._service._password_hash(password))
+
+        self.assertFalse(self._service.is_password_changed())
+        self.assertFalse(mock_osutils.set_config_value.called)
+
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                '_get_password')
+    def test_is_password_changed_no_password(self, mock_get_password):
+        mock_get_password.return_value = None
+        self.assertFalse(self._service.is_password_changed())
+
+    @mock.patch('cloudbaseinit.osutils.factory.get_os_utils')
+    @mock.patch('cloudbaseinit.metadata.services.cloudstack.ConfigDrive.'
+                'get_instance_id')
+    def test_persist_password_hash(self, mock_instance_id, mock_get_os_utils):
+        mock_instance_id.return_value = 'i-1'
+        mock_osutils = mock_get_os_utils.return_value
+
+        self._service._persist_password_hash('s3cret')
+        mock_osutils.set_config_value.assert_called_once_with(
+            'PasswordHash', self._service._password_hash('s3cret'), 'i-1')

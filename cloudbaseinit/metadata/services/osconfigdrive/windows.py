@@ -61,7 +61,7 @@ class WindowsConfigDriveManager(base.BaseConfigDriveManager):
     def _check_for_config_drive(self, drive, required_drive_label,
                                 metadata_file):
         label = self._osutils.get_volume_label(drive)
-        if label and label.lower() == required_drive_label and \
+        if label and label.lower() == required_drive_label.lower() and \
                 self._meta_data_file_exists(drive, metadata_file):
             LOG.info('Config Drive found on %s', drive)
             return True
