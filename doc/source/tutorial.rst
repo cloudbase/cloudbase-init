@@ -51,7 +51,8 @@ services and plugins ready for execution and also customizing user experience.
     # What user to create and in which group(s) to be put.
     username=Admin
     groups=Administrators
-    inject_user_password=true  # Use password from the metadata (not random).
+    # Use password from the metadata (not random).
+    inject_user_password=true
     # Which devices to inspect for a possible configuration drive (metadata).
     config_drive_raw_hhd=true
     config_drive_cdrom=true
@@ -79,7 +80,8 @@ services and plugins ready for execution and also customizing user experience.
     plugins=cloudbaseinit.plugins.common.mtu.MTUPlugin,
             cloudbaseinit.plugins.common.sethostname.SetHostNamePlugin
     # Miscellaneous.
-    allow_reboot=false    # allow the service to reboot the system
+    # allow the service to reboot the system
+    allow_reboot=false
     stop_service_on_exit=false
 
 The "cloudbase-init-unattend.conf" configuration file is similar to the
