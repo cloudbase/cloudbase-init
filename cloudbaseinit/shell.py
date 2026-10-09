@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import atexit
+import signal
 import sys
 
 from oslo_log import log as oslo_logging
@@ -28,6 +30,20 @@ LOG = oslo_logging.getLogger(__name__)
 def main():
     CONF(sys.argv[1:])
     logging.setup('cloudbaseinit')
+
+    def atexit_handler():
+        LOG.debug("Process is exiting")
+    try:
+        atexit.register(atexit_handler)
+    except Exception as exc:
+        LOG.exception(exc)
+
+    def on_sigterm_handler(sig, frame):
+        LOG.debug("Process has received sigterm")
+    try:
+        signal.signal(signal.SIGTERM, on_sigterm_handler)
+    except Exception as exc:
+        LOG.exception(exc)
 
     try:
         init.InitManager().configure_host()
