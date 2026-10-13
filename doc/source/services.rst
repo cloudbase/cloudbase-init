@@ -274,14 +274,15 @@ Config options for `default` section:
 .. note:: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 
-Apache CloudStack
------------------
+Apache CloudStack (DataServer)
+------------------------------
 
-.. class:: cloudbaseinit.metadata.services.cloudstack.CloudStack
+.. class:: cloudbaseinit.metadata.services.cloudstack.DataServer
 
-Another web-based service which usually uses "10.1.1.1" or DHCP addresses for
+Another web-based service which usually uses "data-server" DNS record or DHCP addresses for
 retrieving content. If no metadata can be found at the `metadata_base_url`,
 the service will look for the metadata at the DHCP server URL.
+The legacy class name `CloudStack` remains available as an alias.
 
 Capabilities:
 
@@ -289,14 +290,14 @@ Capabilities:
     * hostname
     * public keys
     * admin user password
-    * poll for, post, delete admin user password (each reboot)
+    * poll for admin user password updates (each reboot)
     * user data
 
 Config options for `cloudstack` section:
 
-    * metadata_base_url (string: "http://10.1.1.1/")
+    * metadata_base_url (string: "http://data-server/")
     * password_server_port (int: 8080)
-    * add_metadata_private_ip_route (bool: True)
+    * add_metadata_private_ip_route (bool: False)
     * https_allow_insecure (bool: False)
     * https_ca_bundle (string: None)
 
@@ -306,11 +307,48 @@ Config options for `default` section:
     * retry_count_interval (integer: 4)
 
 .. note:: By design, this service can update the password anytime, so it will
-          cause the `setuserpassword` plugin to run at every boot and
-          by security concerns, the password is deleted right after retrieval
-          and no updating will occur until a new password is available on the
-          server.
+          cause the `setuserpassword` plugin to run at every boot. The password
+          is deleted from the Password Server only after it has been
+          successfully applied on the guest.
 
+.. _cloudstackconfigdrive:
+
+Apache CloudStack (ConfigDrive)
+-------------------------------
+
+.. class:: cloudbaseinit.metadata.services.cloudstack.ConfigDrive
+
+CloudStack also provides meta-data and user-data via CD-ROM without requiring
+network access. Only ISO/CD-ROM is supported. The volume label defaults to
+``config-2``; discovery uses the marker
+``cloudstack/metadata/instance-id.txt`` so OpenStack config drives are not
+claimed. It is listed before OpenStack ConfigDrive in the default
+``metadata_services`` order.
+
+This service is usually faster than the HTTP twin, as there is no timeout
+waiting for the network to be up.
+
+Metadata version used: `latest`.
+
+Capabilities:
+
+    * instance id
+    * hostname
+    * public keys
+    * admin user password
+    * poll for admin user password updates (each reboot)
+    * user data
+    * static network configuration (via ``network_data.json``)
+
+Config options for `cloudstack` section:
+
+    * disk_label (string: "config-2")
+
+.. note:: By design, this service can update the password anytime, so it will
+          cause the `setuserpassword` plugin to run at every boot. The password
+          is read from ``cloudstack/password/vm_password.txt``. A hash is stored
+          after it is applied, and no updating will occur until a new password
+          is available on the ConfigDrive.
 
 OpenNebula Service
 ------------------

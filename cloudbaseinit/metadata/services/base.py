@@ -142,6 +142,9 @@ class BaseMetadataService(object, metaclass=abc.ABCMeta):
     def get_admin_password(self):
         pass
 
+    def confirm_admin_password(self, password):
+        """Mark the admin password as applied (no-op by default)."""
+
     @property
     def can_post_password(self):
         return False

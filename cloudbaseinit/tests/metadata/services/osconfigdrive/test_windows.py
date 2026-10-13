@@ -88,6 +88,17 @@ class TestWindowsConfigDriveManager(unittest.TestCase):
     def test_check_for_config_drive_exists_upper_label(self):
         self._test_check_for_config_drive(label="CONFIG-2")
 
+    @mock.patch('os.path.exists')
+    def test_check_for_config_drive_upper_required_label(self, mock_exists):
+        drive = "C:\\"
+        self.osutils.get_volume_label.return_value = "config-2"
+        mock_exists.return_value = True
+
+        response = self._config_manager._check_for_config_drive(
+            drive, "CONFIG-2", self._fake_metadata_file)
+
+        self.assertTrue(response)
+
     def test_check_for_config_drive_missing(self):
         self._test_check_for_config_drive(exists=False, fail=True)
 

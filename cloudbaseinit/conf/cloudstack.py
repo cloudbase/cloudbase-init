@@ -27,7 +27,7 @@ class CloudStackOptions(conf_base.Options):
         super(CloudStackOptions, self).__init__(config, group="cloudstack")
         self._options = [
             cfg.StrOpt(
-                "metadata_base_url", default="http://10.1.1.1/",
+                "metadata_base_url", default="http://data-server/",
                 help="The base URL where the service looks for metadata",
                 deprecated_name="cloudstack_metadata_ip",
                 deprecated_group="DEFAULT"),
@@ -46,6 +46,10 @@ class CloudStackOptions(conf_base.Options):
             cfg.BoolOpt(
                 "add_metadata_private_ip_route", default=False,
                 help="Add a route for the metadata ip address to the gateway"),
+            cfg.StrOpt(
+                "disk_label", default="config-2",
+                help="Disk label of ConfigDrive"
+            )
         ]
 
     def register(self):
