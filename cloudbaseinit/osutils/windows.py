@@ -1100,16 +1100,16 @@ class WindowsUtils(base.BaseOSUtils):
     def wait_for_boot_completion(self):
         try:
             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                                "SYSTEM\\Setup\\Status\\SysprepStatus", 0,
+                                "SYSTEM\\Setup\\Status\\ChildCompletion", 0,
                                 winreg.KEY_READ) as key:
                 while True:
                     gen_state = winreg.QueryValueEx(key,
-                                                    "GeneralizationState")[0]
-                    if gen_state == 7:
+                                                    "SetupFinalTasks")[0]
+                    if gen_state == 3:
                         break
                     time.sleep(1)
                     LOG.info('Waiting for sysprep completion. '
-                             'GeneralizationState: %d', gen_state)
+                             'SetupFinalTasks: %d', gen_state)
         except WindowsError as ex:
             if ex.winerror == 2:
                 LOG.debug('Sysprep data not found in the registry, '
