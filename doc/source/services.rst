@@ -335,7 +335,7 @@ Config options for `default` section:
     * retry_count_interval (integer: 4)
 
 
-Ubuntu MaaS
+Canonical MAAS
 -----------
 
 .. class:: cloudbaseinit.metadata.services.maasservice.MaaSHttpService
