@@ -67,3 +67,11 @@ class OracleCloudService(base.BaseHTTPMetadataService):
     def get_host_name(self):
         return self._get_cache_data('opc/%s/instance/hostname' %
                                     self._metadata_version, decode=True)
+
+    def get_public_keys(self):
+        try:
+            return self._get_cache_data(
+                'opc/%s/instance/metadata/ssh_authorized_keys' %
+                self._metadata_version, decode=True).splitlines()
+        except base.NotExistingMetadataException:
+            return []
