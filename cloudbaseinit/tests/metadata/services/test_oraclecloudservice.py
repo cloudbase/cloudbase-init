@@ -20,6 +20,7 @@ except ImportError:
     import mock
 
 from cloudbaseinit import conf as cloudbaseinit_conf
+from cloudbaseinit.metadata.services import base
 from cloudbaseinit.metadata.services import oraclecloudservice
 from cloudbaseinit.tests import testutils
 
@@ -102,3 +103,16 @@ class OracleCloudServiceTest(unittest.TestCase):
             'opc/%s/instance/hostname' % self._service._metadata_version,
             decode=True)
         self.assertEqual(mock_get_cache_data.return_value, response)
+
+    @mock.patch('cloudbaseinit.metadata.services.oraclecloudservice.'
+                'OracleCloudService._get_cache_data')
+    def test_get_public_keys(self, mock_get_cache_data):
+        mock_get_cache_data.side_effect = [
+            'ssh-rsa AAAA first\nssh-ed25519 BBBB second\n',
+            base.NotExistingMetadataException(),
+        ]
+        response = self._service.get_public_keys()
+        self.assertEqual(
+            ['ssh-rsa AAAA first', 'ssh-ed25519 BBBB second'], response)
+        response = self._service.get_public_keys()
+        self.assertEqual([], response)
