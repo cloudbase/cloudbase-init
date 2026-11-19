@@ -9,11 +9,11 @@ on: [push, pull_request]
 
 jobs:
   linux-unit-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.14"]
+        python-version: [ "3.15"]
         architecture: ["x64"]
 
     steps:
@@ -36,7 +36,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [ "3.14"]
+        python-version: [ "3.15"]
         architecture: ["x64"]
 
     steps:
@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.14"]
+        python-version: [ "3.15"]
         architecture: ["x64"]
         cloud: ["empty", "nocloud", "vmwareguest", "oracle"]
 
