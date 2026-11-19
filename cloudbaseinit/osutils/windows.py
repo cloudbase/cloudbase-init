@@ -938,7 +938,12 @@ class WindowsUtils(base.BaseOSUtils):
 
         return reboot_required
 
+    # A network adapter created just before, like a team NIC, gets its IP
+    # interface a moment later.
     @staticmethod
+    @retry_decorator.retry_decorator(
+        max_retry_count=10, max_sleep_time=5,
+        exceptions=exception.ItemNotFoundException)
     def _fix_network_adapter_dhcp(interface_name,
                                   enable_dhcp,
                                   address_family):

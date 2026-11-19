@@ -2022,7 +2022,12 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
     def test_fix_network_adapter_dhcp_no_network_adapter(self):
         self._test_fix_network_adapter_dhcp(False)
 
-    def _test_fix_network_adapter_dhcp(self, no_net_interface_found):
+    def test_fix_network_adapter_dhcp_network_adapter_late(self):
+        self._test_fix_network_adapter_dhcp(False, found_after=2)
+
+    @mock.patch('time.sleep')
+    def _test_fix_network_adapter_dhcp(self, no_net_interface_found,
+                                       mock_sleep, found_after=0):
         mock_interface_name = "eth12"
         mock_enable_dhcp = True
         mock_address_family = self.windows_utils.AF_INET
@@ -2031,22 +2036,30 @@ class TestWindowsUtils(testutils.CloudbaseInitTestBase):
         existing_net_interface = mock.Mock()
         existing_net_interface.Dhcp = 0
 
-        if not no_net_interface_found:
+        if found_after:
+            conn.MSFT_NetIPInterface.side_effect = (
+                [[]] * found_after + [[existing_net_interface]])
+        elif not no_net_interface_found:
             conn.MSFT_NetIPInterface.return_value = [existing_net_interface]
 
-        if no_net_interface_found:
+        if no_net_interface_found and not found_after:
             with self.assertRaises(exception.ItemNotFoundException):
                 self._winutils._fix_network_adapter_dhcp(
                     mock_interface_name, mock_enable_dhcp,
                     mock_address_family)
+            self.assertEqual(11, conn.MSFT_NetIPInterface.call_count)
+            self.assertEqual(10, mock_sleep.call_count)
         else:
             self._winutils._fix_network_adapter_dhcp(
                 mock_interface_name, mock_enable_dhcp,
                 mock_address_family)
 
-            conn.MSFT_NetIPInterface.assert_called_once_with(
+            conn.MSFT_NetIPInterface.assert_called_with(
                 InterfaceAlias=mock_interface_name,
                 AddressFamily=mock_address_family)
+            self.assertEqual(found_after + 1,
+                             conn.MSFT_NetIPInterface.call_count)
+            self.assertEqual(found_after, mock_sleep.call_count)
             self.assertEqual(existing_net_interface.Dhcp, 1)
             existing_net_interface.put.assert_called_once()
 
