@@ -20,6 +20,31 @@ from cloudbaseinit.tests.metadata import fake_json_response
 from cloudbaseinit.tests import testutils
 from cloudbaseinit.utils import debiface
 
+# As written by Proxmox VE (PVE::QemuServer::Cloudinit::configdrive2_network)
+# for "ipconfig0: ip=...,gw=...,ip6=...,gw6=..." and "ipconfig1: ip=dhcp,
+# ip6=...": the IPv6 settings of an interface get their own inet6 stanza.
+PROXMOX_DUAL_STACK = """\
+auto lo
+iface lo inet loopback
+
+        dns_nameservers 192.0.2.53 2001:db8::53
+        dns_search example.com
+auto eth0
+iface eth0 inet static
+        address 192.0.2.10
+        netmask 255.255.255.0
+        gateway 192.0.2.1
+iface eth0 inet6 static
+        address 2001:db8:10::10
+        netmask 64
+        gateway 2001:db8:10::1
+auto eth1
+iface eth1 inet dhcp
+iface eth1 inet6 static
+        address 2001:db8:11::10
+        netmask 64
+"""
+
 
 class TestInterfacesParser(unittest.TestCase):
 
@@ -85,3 +110,20 @@ class TestInterfacesParser(unittest.TestCase):
 
     def test_parse(self):
         self._test_parse_nics()
+
+    def test_parse_inet6_stanza_same_iface(self):
+        nics = debiface.parse(PROXMOX_DUAL_STACK)
+
+        fields = ("name", "mac", "address", "netmask", "gateway",
+                  "address6", "netmask6", "gateway6")
+        found = [tuple(getattr(nic, field) for field in fields)
+                 for nic in nics]
+        self.assertEqual([
+            # The inet6 stanza of eth0 is the IPv6 half of eth0, not a
+            # second eth0 which would replace the IPv4 settings.
+            ("eth0", None, "192.0.2.10", "255.255.255.0", "192.0.2.1",
+             "2001:db8:10::10", "64", "2001:db8:10::1"),
+            # No static IPv4 to merge into: unchanged behaviour.
+            ("eth1", None, "2001:db8:11::10", "64", None,
+             None, None, None),
+        ], found)

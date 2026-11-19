@@ -67,24 +67,38 @@ DETAIL_PREPROCESS = {
     MAC: lambda value: value.upper(),
     DNSNS: lambda value: value.strip().split()
 }
+IFACE_STANZA = re.compile(r"iface\s+(?P<name>\S+)\s+(?P<family>inet6?)"
+                          r"\s+(?P<method>\S+)")
 
 
 def _get_iface_blocks(data):
     """"Yield interface blocks as pairs of v4 and v6 halves."""
     lines, lines6 = [], []
     crt_lines = lines
+    static_name = None    # name of the current static IPv4 stanza
     for line in data.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         if "iface" in line:
-            if "inet6" in line:
+            stanza = IFACE_STANZA.match(line)
+            if (stanza and static_name and
+                    stanza.group("family") == "inet6" and
+                    stanza.group("name") == static_name):
+                # IPv6 stanza of an interface that already has a static
+                # IPv4 one (e.g. Proxmox VE): it is the v6 half of the
+                # same NIC, not a new NIC.
                 crt_lines = lines6
-            if lines:
-                yield lines, lines6
-            lines[:] = []
-            lines6[:] = []
-            crt_lines = lines
+            else:
+                if lines:
+                    yield lines, lines6
+                lines[:] = []
+                lines6[:] = []
+                crt_lines = lines
+                static_name = None
+                if (stanza and stanza.group("family", "method") ==
+                        ("inet", "static")):
+                    static_name = stanza.group("name")
         crt_lines.append(line)
     if lines:
         yield lines, lines6
