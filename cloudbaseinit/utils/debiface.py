@@ -52,8 +52,10 @@ FIELDS = {
                         r"(?P<{}>\S+)".format(GATEWAY)),
     GATEWAY6: re.compile(r"post-up ip -6 route add default via "
                          r"(?P<{}>.+) dev".format(GATEWAY6)),
-    DNSNS: re.compile(r"dns-nameservers\s+(?P<{}>.+)".format(DNSNS))
+    # Proxmox VE writes "dns_nameservers".
+    DNSNS: re.compile(r"dns[-_]nameservers\s+(?P<{}>.+)".format(DNSNS))
 }
+LOOPBACK = re.compile(r"iface\s+\S+\s+inet\s+loopback")
 IFACE_TEMPLATE = dict.fromkeys(FIELDS.keys())
 # Map IPv6 availability by value index under `NetworkDetails`.
 V6_PROXY = {
@@ -114,6 +116,7 @@ def parse(data):
 
     LOG.info("Parsing Debian config...\n%s", data)
     nics = []    # list of NetworkDetails objects
+    lo_dnsns = None    # nameservers set on the loopback stanza
     for lines_pair in _get_iface_blocks(data):
         iface = IFACE_TEMPLATE.copy()
         for lines, use_proxy in zip(lines_pair, (False, True)):
@@ -125,6 +128,14 @@ def parse(data):
                             continue
                     func = DETAIL_PREPROCESS.get(field, lambda value: value)
                     iface[field] = func(value) if value != "None" else None
+        if LOOPBACK.match(lines_pair[0][0]):
+            # Proxmox VE puts the nameservers on the loopback stanza,
+            # they apply to every NIC without nameservers of its own.
+            lo_dnsns = iface[DNSNS] or lo_dnsns
+            continue
         _add_nic(iface, nics)
 
+    if lo_dnsns:
+        nics = [nic if nic.dnsnameservers else
+                nic._replace(dnsnameservers=lo_dnsns) for nic in nics]
     return nics

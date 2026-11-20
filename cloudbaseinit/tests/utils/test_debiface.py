@@ -83,5 +83,46 @@ class TestInterfacesParser(unittest.TestCase):
             self.data = data
             self._test_parse_nics(no_nics=True)
 
+    def _test_parse_loopback_dns(self, lines, expected_dns):
+        nics = debiface.parse("\n".join(lines))
+
+        self.assertEqual(expected_dns, [nic.dnsnameservers for nic in nics])
+
+    def test_parse_loopback_dns(self):
+        # As written by Proxmox VE
+        # (PVE::QemuServer::Cloudinit::configdrive2_network).
+        self._test_parse_loopback_dns([
+            "auto lo",
+            "iface lo inet loopback",
+            "",
+            "        dns_nameservers 192.0.2.53 192.0.2.54",
+            "        dns_search example.com",
+            "auto eth0",
+            "iface eth0 inet static",
+            "        address 192.0.2.10",
+            "        netmask 255.255.255.0",
+            "        gateway 192.0.2.1",
+            "auto eth1",
+            "iface eth1 inet static",
+            "        address 198.51.100.10",
+            "        netmask 255.255.255.0",
+        ], [["192.0.2.53", "192.0.2.54"], ["192.0.2.53", "192.0.2.54"]])
+
+    def test_parse_loopback_dns_iface_dns_wins(self):
+        self._test_parse_loopback_dns([
+            "auto lo",
+            "iface lo inet loopback",
+            "    dns-nameservers 192.0.2.53",
+            "auto eth0",
+            "iface eth0 inet static",
+            "    address 192.0.2.10",
+            "    netmask 255.255.255.0",
+            "    dns-nameservers 198.51.100.53",
+            "auto eth1",
+            "iface eth1 inet static",
+            "    address 198.51.100.10",
+            "    netmask 255.255.255.0",
+        ], [["198.51.100.53"], ["192.0.2.53"]])
+
     def test_parse(self):
         self._test_parse_nics()
