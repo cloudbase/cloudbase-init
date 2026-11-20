@@ -24,8 +24,13 @@ from cloudbaseinit.plugins.common.userdataplugins.cloudconfigplugins import (
     base
 )
 
+
 CONF = cloudbaseinit_conf.CONF
 LOG = oslo_logging.getLogger(__name__)
+
+# The default Win32-OpenSSH config assumes that the built-in Administrators
+# group with SID S-1-5-32-544 does not have an internationalized name.
+ADMINISTRATORS = "Administrators"
 
 
 class UsersPlugin(base.BaseCloudConfigPlugin):
@@ -154,6 +159,7 @@ class UsersPlugin(base.BaseCloudConfigPlugin):
                 "Can't process the type of data %r" % type(data))
 
         osutils = osutils_factory.get_os_utils()
+        administrators_authorized_keys = []
         for item in data:
             if not isinstance(item, dict):
                 continue
@@ -171,5 +177,26 @@ class UsersPlugin(base.BaseCloudConfigPlugin):
             except Exception as ex:
                 LOG.warning("An error occurred during user '%s' creation: '%s"
                             % (user_name, ex))
+
+            if ADMINISTRATORS in self._get_groups(item):
+                admin_public_keys = item.get('ssh_authorized_keys', [])
+                administrators_authorized_keys.extend(admin_public_keys)
+
+        if osutils.group_exists(ADMINISTRATORS):
+            program_data_dir = os.getenv("PROGRAMDATA", "C:\ProgramData")
+            program_data_ssh_dir = os.path.join(program_data_dir, "ssh")
+            if not os.path.exists(program_data_ssh_dir):
+                os.makedirs(program_data_ssh_dir)
+
+            administrators_authorized_keys_path = os.path.join(
+                program_data_ssh_dir, "administrators_authorized_keys"
+            )
+
+            LOG.info("Writing SSH public keys in: %s",
+                     administrators_authorized_keys_path)
+
+            with open(administrators_authorized_keys_path, 'w') as f:
+                for authorized_key in administrators_authorized_keys:
+                    f.write(authorized_key + "\n")
 
         return False
