@@ -54,6 +54,9 @@ class TestBase(unittest.TestCase):
     def test_is_password_changed(self):
         self.assertFalse(self._service.is_password_changed())
 
+    def test_confirm_admin_password(self):
+        self.assertIsNone(self._service.confirm_admin_password('s3cret'))
+
     @mock.patch('cloudbaseinit.metadata.services.base.'
                 'BaseMetadataService.get_public_keys')
     def test_get_user_pwd_encryption_key(self, mock_get_public_keys):

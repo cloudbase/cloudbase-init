@@ -161,6 +161,7 @@ class GlobalOptions(conf_base.Options):
                 'metadata_services',
                 default=[
                     'cloudbaseinit.metadata.services.httpservice.HttpService',
+                    'cloudbaseinit.metadata.services.cloudstack.ConfigDrive',
                     'cloudbaseinit.metadata.services'
                     '.configdrive.ConfigDriveService',
                     'cloudbaseinit.metadata.services.ec2service.EC2Service',

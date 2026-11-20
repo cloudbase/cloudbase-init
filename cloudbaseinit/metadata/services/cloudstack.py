@@ -13,6 +13,7 @@
 #    under the License.
 
 import contextlib
+import hashlib
 import http.client
 import posixpath
 import urllib
@@ -21,6 +22,8 @@ from oslo_log import log as oslo_logging
 
 from cloudbaseinit import conf as cloudbaseinit_conf
 from cloudbaseinit.metadata.services import base
+from cloudbaseinit.metadata.services import baseconfigdrive
+from cloudbaseinit.metadata.services import baseopenstackservice
 from cloudbaseinit.osutils import factory as osutils_factory
 from cloudbaseinit.utils import encoding
 from cloudbaseinit.utils import network
@@ -33,9 +36,9 @@ SAVED_PASSWORD = "saved_password"
 TIMEOUT = 10
 
 
-class CloudStack(base.BaseHTTPMetadataService):
+class DataServer(base.BaseHTTPMetadataService):
 
-    """Metadata service for Apache CloudStack.
+    """Metadata service based on DataServer for Apache CloudStack.
 
     Apache CloudStack is an open source software designed to deploy and
     manage large networks of virtual machines, as a highly available,
@@ -44,7 +47,7 @@ class CloudStack(base.BaseHTTPMetadataService):
     """
 
     def __init__(self):
-        super(CloudStack, self).__init__(
+        super(DataServer, self).__init__(
             # Note(alexcoman): The base url used by the current metadata
             # service will be updated later by the `_test_api` method.
             base_url=None,
@@ -83,7 +86,7 @@ class CloudStack(base.BaseHTTPMetadataService):
 
     def load(self):
         """Obtain all the required information."""
-        super(CloudStack, self).load()
+        super(DataServer, self).load()
 
         if CONF.cloudstack.add_metadata_private_ip_route:
             network.check_metadata_ip_route(CONF.cloudstack.metadata_base_url)
@@ -240,16 +243,14 @@ class CloudStack(base.BaseHTTPMetadataService):
     def get_admin_password(self):
         """Get the admin password from the Password Server.
 
-        .. note:
-            The password is deleted from the Password Server after the first
-            call of this method.
-            Another request for password will work only if the password was
-            changed and sent to the Password Server.
+        The password is deleted only after confirm_admin_password().
         """
-        password = self._get_password()
+        return self._get_password()
+
+    def confirm_admin_password(self, password):
+        """Delete the password from the Password Server."""
         if password:
             self._delete_password()
-        return password
 
     @property
     def can_update_password(self):
@@ -259,3 +260,74 @@ class CloudStack(base.BaseHTTPMetadataService):
     def is_password_changed(self):
         """Check if a new password exists in the Password Server."""
         return bool(self._get_password())
+
+
+# For backward compatibility, CloudStack Class is an alias to DataServer Class
+CloudStack = DataServer
+
+
+class ConfigDrive(baseconfigdrive.BaseConfigDriveService,
+                  baseopenstackservice.BaseOpenStackService):
+
+    def __init__(self):
+        # CloudStack marker rejects plain OpenStack config drives early.
+        super(ConfigDrive, self).__init__(
+            CONF.cloudstack.disk_label,
+            'cloudstack\\metadata\\instance-id.txt')
+
+    def _preprocess_options(self):
+        self._searched_types = set(['iso'])
+        self._searched_locations = set(['cdrom'])
+
+    def get_instance_id(self):
+        return self._get_cache_data(
+            posixpath.join('cloudstack', 'metadata', 'instance-id.txt'),
+            decode=True).strip()
+
+    @staticmethod
+    def _password_hash(password):
+        return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+    def _persist_password_hash(self, password):
+        osutils = osutils_factory.get_os_utils()
+        osutils.set_config_value(
+            'PasswordHash', self._password_hash(password),
+            self.get_instance_id())
+
+    def _get_password(self):
+        path = posixpath.normpath(
+            posixpath.join('cloudstack', 'password', 'vm_password.txt'))
+        try:
+            password = self._get_cache_data(path, decode=True).strip()
+        except base.NotExistingMetadataException:
+            LOG.info('No password file was found in ConfigDrive')
+            return None
+
+        if not password or password == SAVED_PASSWORD:
+            LOG.info('No password available in ConfigDrive')
+            return None
+
+        LOG.info('Password file was found in ConfigDrive')
+        return password
+
+    def get_admin_password(self):
+        return self._get_password()
+
+    def confirm_admin_password(self, password):
+        self._persist_password_hash(password)
+
+    @property
+    def can_update_password(self):
+        return True
+
+    def is_password_changed(self):
+        password = self._get_password()
+        if not password:
+            return False
+        osutils = osutils_factory.get_os_utils()
+        old_password_hash = osutils.get_config_value(
+            'PasswordHash', self.get_instance_id())
+        if old_password_hash != self._password_hash(password):
+            LOG.debug('New password is detected')
+            return True
+        return False

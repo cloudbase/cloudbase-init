@@ -142,7 +142,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
                            mock_change_logon_behaviour,
                            password, can_update_password,
                            is_password_changed, max_password_length=20,
-                           injected=False):
+                           injected=False, metadata_password=None):
         expected_password = password
         expected_logging = []
         user = 'fake_user'
@@ -157,6 +157,7 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         mock_osutils.generate_random_password.return_value = expected_password
         mock_service.can_update_password = can_update_password
         mock_service.is_password_changed.return_value = is_password_changed
+        mock_service.get_admin_password.return_value = metadata_password
 
         with testutils.ConfPatcher('user_password_length',
                                    max_password_length):
@@ -179,6 +180,26 @@ class SetUserPasswordPluginTests(unittest.TestCase):
 
         self.assertEqual(expected_password, response)
         self.assertEqual(expected_logging, snatcher.output)
+        if expected_password:
+            mock_osutils.set_user_password.assert_called_once_with(
+                user, expected_password)
+            if injected:
+                mock_service.confirm_admin_password.assert_called_once_with(
+                    expected_password)
+            elif can_update_password:
+                mock_service.get_admin_password.assert_called_once_with()
+                if metadata_password:
+                    (mock_service.confirm_admin_password.
+                     assert_called_once_with(metadata_password))
+                else:
+                    self.assertFalse(
+                        mock_service.confirm_admin_password.called)
+            else:
+                self.assertFalse(mock_service.confirm_admin_password.called)
+                self.assertFalse(mock_service.get_admin_password.called)
+        else:
+            self.assertFalse(mock_osutils.set_user_password.called)
+            self.assertFalse(mock_service.confirm_admin_password.called)
         if password and can_update_password and is_password_changed:
             mock_change_logon_behaviour.assert_called_once_with(
                 user, password_injected=injected)
@@ -201,6 +222,15 @@ class SetUserPasswordPluginTests(unittest.TestCase):
         self._test_set_password(password='Password',
                                 can_update_password=True,
                                 is_password_changed=False)
+        self._test_set_password(password='Password',
+                                can_update_password=True,
+                                is_password_changed=True,
+                                injected=True)
+        self._test_set_password(password=None,
+                                can_update_password=True,
+                                is_password_changed=True,
+                                injected=False,
+                                metadata_password='s3cret')
 
     @mock.patch('cloudbaseinit.plugins.common.setuserpassword.'
                 'SetUserPasswordPlugin._set_password')
