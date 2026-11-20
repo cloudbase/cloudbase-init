@@ -13,6 +13,7 @@
 #    under the License.
 
 import re
+import time
 
 import netaddr
 from oslo_log import log as oslo_logging
@@ -198,11 +199,27 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
                 link.mac_address)
 
             if adapter_name != link.name:
-                LOG.info(
-                    "Renaming network adapter \"%(old_name)s\" to "
-                    "\"%(new_name)s\"",
-                    {"old_name": adapter_name, "new_name": link.name})
-                osutils.rename_network_adapter(adapter_name, link.name)
+                if link.id != link.name:
+                    # set-name was explicitly provided, honor the rename
+                    LOG.info(
+                        "Renaming network adapter \"%(old_name)s\" to "
+                        "\"%(new_name)s\"",
+                        {"old_name": adapter_name, "new_name": link.name})
+                    osutils.rename_network_adapter(adapter_name, link.name)
+                else:
+                    # No set-name, use the actual adapter name to avoid
+                    # unreliable WMI rename (see issues #82, #101, #151)
+                    LOG.info(
+                        "Network adapter \"%(adapter_name)s\" found by "
+                        "MAC for config name \"%(config_name)s\", "
+                        "skipping rename",
+                        {"adapter_name": adapter_name,
+                         "config_name": link.name})
+                    for idx, net in enumerate(network_details.networks):
+                        if net.link == link.name:
+                            network_details.networks[idx] = net._replace(
+                                link=adapter_name)
+                    link = link._replace(name=adapter_name)
 
             NetworkConfigPlugin._process_link_common(osutils, link)
 
@@ -259,7 +276,16 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
         ipv4_ns, ipv6_ns = NetworkConfigPlugin._get_default_dns_nameservers(
             network_details)
 
+        # Build name -> MAC map for re-lookup on adapter disappearance
+        # (handles vDPA/SR-IOV reactivation during boot)
+        mac_by_name = {}
+        for link in network_details.links:
+            if link.mac_address and \
+                    link.type == network_model.LINK_TYPE_PHYSICAL:
+                mac_by_name[link.name] = link.mac_address
+
         for net in network_details.networks:
+            adapter_name = net.link
             ip_address, prefix_len = net.address_cidr.split("/")
 
             gateway = None
@@ -276,14 +302,45 @@ class NetworkConfigPlugin(plugin_base.BasePlugin):
                 else:
                     nameservers = ipv4_ns
 
+            # Re-lookup adapter by MAC if available, with retry for
+            # transient disappearance (e.g. vDPA/SR-IOV reactivation)
+            if adapter_name in mac_by_name:
+                mac = mac_by_name[adapter_name]
+                for attempt in range(10):
+                    try:
+                        current_name = \
+                            osutils.get_network_adapter_name_by_mac_address(
+                                mac)
+                        if current_name != adapter_name:
+                            LOG.info(
+                                "Adapter name changed from "
+                                "\"%(old)s\" to \"%(new)s\"",
+                                {"old": adapter_name, "new": current_name})
+                        adapter_name = current_name
+                        break
+                    except exception.ItemNotFoundException:
+                        if attempt < 9:
+                            LOG.warning(
+                                "Adapter with MAC %(mac)s not found "
+                                "(attempt %(n)d/10), retrying in 3s",
+                                {"mac": mac, "n": attempt + 1})
+                            time.sleep(3)
+                        else:
+                            LOG.error(
+                                "Adapter with MAC %(mac)s not found "
+                                "after 10 attempts",
+                                {"mac": mac})
+                            raise
+
             LOG.info(
                 "Setting static IP configuration on network adapter "
                 "\"%(name)s\". IP: %(ip)s, prefix length: %(prefix_len)s, "
                 "gateway: %(gateway)s, dns: %(dns)s",
-                {"name": net.link, "ip": ip_address, "prefix_len": prefix_len,
+                {"name": adapter_name, "ip": ip_address,
+                 "prefix_len": prefix_len,
                  "gateway": gateway, "dns": nameservers})
             reboot = osutils.set_static_network_config(
-                net.link, ip_address, prefix_len, gateway, nameservers)
+                adapter_name, ip_address, prefix_len, gateway, nameservers)
             reboot_required = reboot or reboot_required
 
         return reboot_required
