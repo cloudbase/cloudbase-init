@@ -157,6 +157,11 @@ class GlobalOptions(conf_base.Options):
                      'the password is a clear text password, coming from the '
                      'metadata. The last option is `no`, when the user is '
                      'never forced to change the password.'),
+            cfg.IntOpt(
+                'parallel_metadata_workers', default=4,
+                help='Maximum number of metadata services probed at the same '
+                     'time when "--parallel" is enabled. Set to 0 or 1 to '
+                     'disable concurrency'),
             cfg.ListOpt(
                 'metadata_services',
                 default=[
@@ -298,6 +303,12 @@ class GlobalOptions(conf_base.Options):
         ]
 
         self._cli_options = [
+            cfg.BoolOpt(
+                'parallel', default=False,
+                help='Search the metadata sources listed in "metadata_'
+                     'services" concurrently instead of one by one. The '
+                     'first available service is still picked according to '
+                     'the order in which the services are listed.'),
             cfg.BoolOpt(
                 'reset_service_password', default=True,
                 help='If set to True, the service user password will be '
