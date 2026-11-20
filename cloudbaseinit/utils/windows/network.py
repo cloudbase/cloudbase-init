@@ -120,6 +120,7 @@ def get_adapter_addresses():
 
                 if dhcp_enabled:
                     if not xp_data_only:
+                        dhcp_addr = None
                         if curr_addr.Flags & iphlpapi.IP_ADAPTER_IPV4_ENABLED:
                             dhcp_addr = curr_addr.Dhcpv4Server
 
