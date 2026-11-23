@@ -14,6 +14,7 @@
 
 import os
 import shutil
+import stat
 
 from oslo_log import log as oslo_logging
 
@@ -96,7 +97,22 @@ class BaseConfigDriveService(base.BaseMetadataService):
         except IOError:
             raise base.NotExistingMetadataException()
 
+    @staticmethod
+    def _remove_readonly_attribute(path):
+        # Files copied from a read-only ConfigDrive keep the read-only
+        # attribute, which prevents their deletion on Windows.
+        for root, _, files in os.walk(path):
+            for name in files:
+                os.chmod(os.path.join(root, name),
+                         stat.S_IREAD | stat.S_IWRITE)
+
     def cleanup(self):
-        LOG.debug('Deleting metadata folder: %r', self._mgr.target_path)
-        shutil.rmtree(self._mgr.target_path, ignore_errors=True)
+        target_path = self._mgr.target_path
+        LOG.debug('Deleting metadata folder: %r', target_path)
+        try:
+            self._remove_readonly_attribute(target_path)
+            shutil.rmtree(target_path)
+        except OSError as ex:
+            LOG.warning('Failed to delete metadata folder %r: %s',
+                        target_path, ex)
         self._metadata_path = None

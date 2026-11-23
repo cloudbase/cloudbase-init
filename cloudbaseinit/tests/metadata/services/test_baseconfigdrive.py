@@ -15,6 +15,7 @@
 
 import importlib
 import os
+import stat
 import unittest
 import unittest.mock as mock
 
@@ -122,13 +123,49 @@ class TestBaseConfigDriveService(unittest.TestCase):
             mock_normpath.assert_called_once_with(mock_join.return_value)
 
     @mock.patch('shutil.rmtree')
-    def test_cleanup(self, mock_rmtree):
+    @mock.patch(MODULE_PATH + '.BaseConfigDriveService.'
+                '_remove_readonly_attribute')
+    def _test_cleanup(self, mock_remove_readonly, mock_rmtree,
+                      exc=None):
         fake_path = os.path.join('fake', 'path')
         self._config_drive._metadata_path = fake_path
         mock_mgr = mock.Mock()
         self._config_drive._mgr = mock_mgr
         mock_mgr.target_path = fake_path
-        self._config_drive.cleanup()
-        mock_rmtree.assert_called_once_with(fake_path,
-                                            ignore_errors=True)
+        mock_rmtree.side_effect = exc
+        with self.snatcher:
+            self._config_drive.cleanup()
+        mock_remove_readonly.assert_called_once_with(fake_path)
+        mock_rmtree.assert_called_once_with(fake_path)
         self.assertEqual(None, self._config_drive._metadata_path)
+        expected_logging = [
+            'Deleting metadata folder: %r' % fake_path]
+        if exc:
+            expected_logging.append(
+                'Failed to delete metadata folder %r: %s' % (fake_path, exc))
+        self.assertEqual(expected_logging, self.snatcher.output)
+
+    def test_cleanup(self):
+        self._test_cleanup()
+
+    def test_cleanup_fails(self):
+        self._test_cleanup(exc=OSError('fake error'))
+
+    def test_cleanup_readonly_files(self):
+        with testutils.create_tempdir() as tempdir:
+            target_path = os.path.join(tempdir, 'metadata')
+            metadata_dir = os.path.join(target_path, 'openstack', 'latest')
+            os.makedirs(metadata_dir)
+            metadata_file = os.path.join(metadata_dir, 'meta_data.json')
+            with open(metadata_file, 'w') as stream:
+                stream.write('{}')
+            os.chmod(metadata_file, stat.S_IREAD)
+            mock_mgr = mock.Mock()
+            mock_mgr.target_path = target_path
+            self._config_drive._mgr = mock_mgr
+            self._config_drive._metadata_path = target_path
+
+            self._config_drive.cleanup()
+
+            self.assertFalse(os.path.exists(target_path))
+            self.assertEqual(None, self._config_drive._metadata_path)
