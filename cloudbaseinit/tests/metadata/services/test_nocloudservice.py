@@ -481,15 +481,17 @@ class TestNoCloudConfigDriveService(unittest.TestCase):
             mock_normpath.assert_called_once_with(mock_join.return_value)
 
     @mock.patch('shutil.rmtree')
-    def test_cleanup(self, mock_rmtree):
+    @mock.patch('cloudbaseinit.metadata.services.baseconfigdrive.'
+                'BaseConfigDriveService._remove_readonly_attribute')
+    def test_cleanup(self, mock_remove_readonly, mock_rmtree):
         fake_path = os.path.join('fake', 'path')
         self._config_drive._metadata_path = fake_path
         mock_mgr = mock.Mock()
         self._config_drive._mgr = mock_mgr
         mock_mgr.target_path = fake_path
         self._config_drive.cleanup()
-        mock_rmtree.assert_called_once_with(fake_path,
-                                            ignore_errors=True)
+        mock_remove_readonly.assert_called_once_with(fake_path)
+        mock_rmtree.assert_called_once_with(fake_path)
         self.assertEqual(None, self._config_drive._metadata_path)
 
     @mock.patch(MODULE_PATH + '.NoCloudConfigDriveService._get_meta_data')
